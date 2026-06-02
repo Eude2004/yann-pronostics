@@ -43,8 +43,10 @@ function Dashboard() {
             <p className="mt-2 text-muted-foreground">{user?.email}</p>
           </div>
           {isAdmin && (
-            <Button className="bg-gold-gradient text-primary-foreground font-semibold shadow-gold">
-              <Shield className="w-4 h-4 mr-2" /> Panneau administrateur
+            <Button asChild className="bg-gold-gradient text-primary-foreground font-semibold shadow-gold">
+              <Link to="/admin">
+                <Shield className="w-4 h-4 mr-2" /> Panneau administrateur
+              </Link>
             </Button>
           )}
         </div>
