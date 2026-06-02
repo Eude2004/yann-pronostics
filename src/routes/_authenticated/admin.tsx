@@ -173,9 +173,11 @@ function CouponsAdmin() {
       status: form.status,
       is_featured: form.is_featured,
     };
+    const slug = form.coupon_type + "-" + Date.now();
+    const insertPayload = { ...basePayload, slug };
     const { error } = editing
       ? await supabase.from("coupons").update(basePayload).eq("id", editing.id)
-      : await supabase.from("coupons").insert({ ...basePayload, slug: `${form.coupon_type}-${Date.now()}` });
+      : await supabase.from("coupons").insert(insertPayload);
     if (error) return toast.error(error.message);
     toast.success(editing ? "Coupon mis à jour" : "Coupon créé");
     setOpen(false); load();
