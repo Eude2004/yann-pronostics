@@ -25,7 +25,7 @@ import {
   ArrowLeft, Plus, Pencil, Trash2, Check, X, Star, Shield, LogOut,
   Save, Download, FileText, TrendingUp, FlaskConical, Users, History,
   LayoutDashboard, Ticket, Receipt, MessageSquare, Settings as SettingsIcon,
-  DollarSign, ShoppingCart, Package, ArrowUpRight, Menu,
+  DollarSign, ShoppingCart, Package, ArrowUpRight, Menu, Wifi, WifiOff, EyeOff,
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
