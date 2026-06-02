@@ -161,12 +161,21 @@ function CouponsAdmin() {
 
   const save = async () => {
     const meta = COUPON_TYPES.find(t => t.value === form.coupon_type)!;
-    const payload: Record<string, unknown> = {
+    const basePayload = {
       coupon_type: form.coupon_type,
       title: meta.label,
       price_xaf: meta.price,
-      slug: `${form.coupon_type}-${Date.now()}`,
       description: form.description || null,
+      image_url: form.image_url || null,
+      video_url: form.video_url || null,
+      start_date: form.start_date ? new Date(form.start_date).toISOString() : null,
+      end_date: form.end_date ? new Date(form.end_date).toISOString() : null,
+      status: form.status,
+      is_featured: form.is_featured,
+    };
+    const { error } = editing
+      ? await supabase.from("coupons").update(basePayload).eq("id", editing.id)
+      : await supabase.from("coupons").insert({ ...basePayload, slug: `${form.coupon_type}-${Date.now()}` });
       image_url: form.image_url || null,
       video_url: form.video_url || null,
       start_date: form.start_date ? new Date(form.start_date).toISOString() : null,
