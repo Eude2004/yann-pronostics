@@ -37,7 +37,7 @@ import {
   SidebarProvider, SidebarTrigger, useSidebar,
 } from "@/components/ui/sidebar";
 import { setTestPayMode as setTestPayModeFn } from "@/lib/payments.functions";
-import { listAdminUsers, setUserAdmin, deleteAppUser } from "@/lib/admin-users.functions";
+import { listAdminUsers as listAdminUsersFn, setUserAdmin as setUserAdminFn, deleteAppUser as deleteAppUserFn } from "@/lib/admin-users.functions";
 import { logAdminAction } from "@/lib/audit";
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -1206,9 +1206,9 @@ function UsersAdmin() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
-  const fetchUsers = useServerFn(listAdminUsers);
-  const toggleAdmin = useServerFn(setUserAdmin);
-  const removeUser = useServerFn(deleteAppUser);
+  const fetchUsers = useServerFn(listAdminUsersFn);
+  const toggleAdmin = useServerFn(setUserAdminFn);
+  const removeUser = useServerFn(deleteAppUserFn);
 
   const load = async () => {
     setLoading(true);
