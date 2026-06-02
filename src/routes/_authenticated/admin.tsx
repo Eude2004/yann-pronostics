@@ -232,7 +232,7 @@ function AdminSidebar({ view, setView }: { view: AdminView; setView: (v: AdminVi
             <Button asChild variant="outline" size="sm" className="flex-1">
               <Link to="/">
                 <ArrowLeft className="w-4 h-4 mr-1" />
-                {!collapsed && "Boutique"}
+                {!collapsed && "Accueil"}
               </Link>
             </Button>
             <Button variant="ghost" size="sm" onClick={signOut} aria-label="Déconnexion">
