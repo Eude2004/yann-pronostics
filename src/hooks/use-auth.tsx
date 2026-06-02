@@ -49,6 +49,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    if (typeof window !== "undefined") {
+      window.location.assign("/");
+    }
   };
 
   // loading = true until we've checked the session AND (if signed in) loaded the roles
