@@ -866,42 +866,146 @@ function StatsAdmin() {
   const revenueMonth = completed.filter(t => new Date(t.created_at) >= startMonth).reduce((s, t) => s + t.amount_xaf, 0);
   const revenueDay = completed.filter(t => new Date(t.created_at) >= startDay).reduce((s, t) => s + t.amount_xaf, 0);
 
+  const completedCount = completed.length;
+  const pendingCount = txs.filter(t => t.status === "pending").length;
+  const avgBasket = completedCount > 0 ? Math.round(revenueTotal / completedCount) : 0;
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-display flex items-center gap-2"><TrendingUp className="w-5 h-5 text-gold" /> Tableau de bord</h2>
-        <p className="text-xs text-muted-foreground">Vue d'ensemble revenus et activité.</p>
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="bg-card border border-border/60 h-11 p-1">
+          <TabsTrigger value="overview" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <LayoutDashboard className="w-4 h-4 mr-1.5" /> Vue d'ensemble
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <TrendingUp className="w-4 h-4 mr-1.5" /> Analytics
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="mt-5 space-y-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <BigStatCard
+              label="Chiffre d'affaires"
+              value={`${revenueTotal.toLocaleString("fr-FR")} XAF`}
+              Icon={DollarSign}
+              tone="emerald"
+            />
+            <BigStatCard
+              label="Transactions"
+              value={txs.length.toString()}
+              hint={pendingCount > 0 ? `${pendingCount} en attente` : undefined}
+              Icon={ShoppingCart}
+              tone="blue"
+            />
+            <BigStatCard
+              label="Coupons publiés"
+              value={couponsCount.toString()}
+              Icon={Package}
+              tone="violet"
+            />
+            <BigStatCard
+              label="Clients"
+              value={usersCount.toString()}
+              Icon={Users}
+              tone="amber"
+            />
+          </div>
+
+          <div className="rounded-2xl border border-border/60 bg-card">
+            <div className="p-5 border-b border-border/40">
+              <h3 className="font-display text-lg">Transactions récentes</h3>
+            </div>
+            <div className="divide-y divide-border/40">
+              {txs.slice(0, 6).map((t) => (
+                <div key={t.id} className="flex items-center justify-between gap-3 px-5 py-3">
+                  <div className="min-w-0">
+                    <p className="font-mono text-xs truncate">
+                      {(t.reference ?? t.id).slice(0, 18)}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {new Date(t.created_at).toLocaleString("fr-FR")}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="font-display text-gold text-sm">{t.amount_xaf.toLocaleString("fr-FR")} XAF</p>
+                    <p className="text-[11px]">
+                      {t.status === "completed" && <span className="text-emerald-500">Validée</span>}
+                      {t.status === "pending" && <span className="text-muted-foreground">En attente</span>}
+                      {t.status === "failed" && <span className="text-destructive">Échouée</span>}
+                      {t.status === "refunded" && <span className="text-muted-foreground">Remboursée</span>}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              {txs.length === 0 && (
+                <p className="text-center text-sm text-muted-foreground py-8">Aucune transaction</p>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border/60 bg-card p-5">
+            <h3 className="font-display text-base mb-3">Exporter l'historique</h3>
+            <div className="flex gap-2 flex-wrap">
+              <Button onClick={() => exportTransactionsCSV(txs)} variant="outline" size="sm">
+                <Download className="w-4 h-4 mr-2" /> CSV
+              </Button>
+              <Button onClick={() => exportTransactionsPDF(txs)} size="sm" className="bg-gold-gradient text-primary-foreground">
+                <FileText className="w-4 h-4 mr-2" /> PDF
+              </Button>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="mt-5 space-y-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-gold" />
+              <h2 className="font-display text-lg">Analytics</h2>
+            </div>
+            <Badge variant="outline" className="border-border/60">Ce mois</Badge>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <BigStatCard label="CA du mois" value={`${revenueMonth.toLocaleString("fr-FR")} XAF`} Icon={DollarSign} tone="emerald" />
+            <BigStatCard label="CA du jour" value={`${revenueDay.toLocaleString("fr-FR")} XAF`} Icon={ArrowUpRight} tone="blue" />
+            <BigStatCard label="Panier moyen" value={`${avgBasket.toLocaleString("fr-FR")} XAF`} Icon={TrendingUp} tone="violet" />
+            <BigStatCard label="Ventes validées" value={completedCount.toString()} Icon={Check} tone="amber" />
+          </div>
+
+          <StatsCharts txs={txs} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+const TONE_CLASSES: Record<string, string> = {
+  emerald: "bg-emerald-500/15 text-emerald-500",
+  blue: "bg-blue-500/15 text-blue-500",
+  violet: "bg-violet-500/15 text-violet-500",
+  amber: "bg-amber-500/15 text-amber-500",
+};
+
+function BigStatCard({
+  label, value, hint, Icon, tone = "emerald",
+}: {
+  label: string; value: string; hint?: string;
+  Icon: any; tone?: keyof typeof TONE_CLASSES;
+}) {
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card p-5 flex items-center justify-between gap-3 hover:border-primary/40 transition">
+      <div className="min-w-0">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="mt-1 font-display text-2xl truncate">{value}</p>
+        {hint && <p className="text-[11px] text-muted-foreground mt-0.5">{hint}</p>}
       </div>
-
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Revenus du jour" value={`${revenueDay.toLocaleString()} XAF`} accent />
-        <StatCard label="Revenus du mois" value={`${revenueMonth.toLocaleString()} XAF`} accent />
-        <StatCard label="Revenus totaux" value={`${revenueTotal.toLocaleString()} XAF`} />
-        <StatCard label="Ventes validées" value={completed.length.toString()} />
-        <StatCard label="Utilisateurs inscrits" value={usersCount.toString()} />
-        <StatCard label="Coupons publiés" value={couponsCount.toString()} />
-        <StatCard label="Transactions totales" value={txs.length.toString()} />
-        <StatCard label="Panier moyen" value={`${completed.length > 0 ? Math.round(revenueTotal / completed.length).toLocaleString() : 0} XAF`} />
-      </div>
-
-      <StatsCharts txs={txs} />
-
-
-
-      <div>
-        <h3 className="font-display text-lg mb-3">Export historique transactions</h3>
-        <div className="flex gap-2 flex-wrap">
-          <Button onClick={() => exportTransactionsCSV(txs)} variant="outline">
-            <Download className="w-4 h-4 mr-2" /> Exporter CSV
-          </Button>
-          <Button onClick={() => exportTransactionsPDF(txs)} className="bg-gold-gradient text-primary-foreground">
-            <FileText className="w-4 h-4 mr-2" /> Exporter PDF
-          </Button>
-        </div>
+      <div className={`h-12 w-12 rounded-full flex items-center justify-center shrink-0 ${TONE_CLASSES[tone]}`}>
+        <Icon className="w-5 h-5" />
       </div>
     </div>
   );
 }
+
 
 
 const CHART_COLORS = ["hsl(var(--primary))", "#22c55e", "#ef4444", "#a855f7", "#3b82f6", "#f97316"];
