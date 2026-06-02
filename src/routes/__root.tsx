@@ -138,6 +138,6 @@ function RootComponent() {
 }
 
 function ThemedToaster() {
-  const { theme } = useTheme();
-  return <Toaster richColors position="top-center" theme={theme} />;
+  const { resolvedTheme } = useTheme();
+  return <Toaster richColors position="top-center" theme={resolvedTheme} />;
 }
