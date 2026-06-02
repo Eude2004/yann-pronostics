@@ -1,6 +1,7 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import logo from "@/assets/yann-logo.png";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +10,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { useSettings, whatsappLink } from "@/hooks/use-settings";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import { initiatePayment } from "@/lib/payments.functions";
+import { VisitorSignupPrompt } from "@/components/VisitorSignupPrompt";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
@@ -56,6 +59,7 @@ function Home() {
 }
 
 function Header() {
+  const { t } = useTranslation();
   const { session, loading, isAdmin } = useAuth();
   return (
     <header className="sticky top-0 z-40 backdrop-blur-xl bg-background/70 border-b border-border/50">
@@ -65,22 +69,23 @@ function Header() {
           <span className="font-display text-lg tracking-wider text-gold hidden sm:block">YANN PRONOSTICS</span>
         </Link>
         <div className="hidden md:flex items-center gap-8 text-sm">
-          <a href="#coupons" className="hover:text-primary transition-colors">Coupons</a>
-          <a href="#why" className="hover:text-primary transition-colors">Pourquoi nous</a>
-          <a href="#contact" className="hover:text-primary transition-colors">Contact</a>
+          <a href="#coupons" className="hover:text-primary transition-colors">{t("nav.coupons")}</a>
+          <a href="#why" className="hover:text-primary transition-colors">{t("nav.why")}</a>
+          <a href="#contact" className="hover:text-primary transition-colors">{t("nav.contact")}</a>
         </div>
         <div className="flex items-center gap-2">
+          <LanguageToggle />
           <ThemeToggle />
           {loading ? null : session ? (
             <Link to={isAdmin ? "/admin" : "/dashboard"}>
               <Button size="sm" className="bg-gold-gradient text-primary-foreground hover:opacity-90 font-semibold shadow-gold">
-                <LayoutDashboard className="w-4 h-4 mr-2" /> {isAdmin ? "Admin" : "Mon espace"}
+                <LayoutDashboard className="w-4 h-4 mr-2" /> {isAdmin ? t("common.admin") : t("common.myspace")}
               </Button>
             </Link>
           ) : (
             <Link to="/auth">
               <Button size="sm" className="bg-gold-gradient text-primary-foreground hover:opacity-90 font-semibold shadow-gold">
-                Se connecter
+                {t("common.login")}
               </Button>
             </Link>
           )}
@@ -89,6 +94,7 @@ function Header() {
     </header>
   );
 }
+
 
 
 function Hero() {
@@ -200,10 +206,11 @@ function CouponsSection() {
 }
 
 function CouponCard({ coupon }: { coupon: Coupon }) {
+  const { t } = useTranslation();
   const { session } = useAuth();
-  const navigate = useNavigate();
   const initiate = useServerFn(initiatePayment);
   const [loadingBuy, setLoadingBuy] = useState(false);
+  const [promptOpen, setPromptOpen] = useState(false);
   const meta = coupon.coupon_type ? TYPE_META[coupon.coupon_type] : TYPE_META.cote_10;
   const Icon = meta.icon;
 
@@ -213,8 +220,8 @@ function CouponCard({ coupon }: { coupon: Coupon }) {
 
   const handleBuy = async () => {
     if (!session) {
-      toast.info("Connectez-vous pour acheter ce coupon");
-      navigate({ to: "/auth", search: { redirect: "/" } as never });
+      // Show signup/login prompt — purchase resumes after auth
+      setPromptOpen(true);
       return;
     }
     if (!coupon.id || coupon.id.length < 30) {
@@ -236,7 +243,7 @@ function CouponCard({ coupon }: { coupon: Coupon }) {
       });
       window.location.href = res.paymentUrl;
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Impossible d'initier le paiement");
+      toast.error(e instanceof Error ? e.message : t("coupon.init_failed"));
       setLoadingBuy(false);
     }
   };
@@ -290,7 +297,7 @@ function CouponCard({ coupon }: { coupon: Coupon }) {
 
         <div className="mt-6 flex items-center justify-between gap-2">
           <div>
-            <div className="text-xs text-muted-foreground">Prix</div>
+            <div className="text-xs text-muted-foreground">{t("coupon.price")}</div>
             <div className="font-display text-2xl text-gold">{coupon.price_xaf.toLocaleString("fr-FR")} XAF</div>
           </div>
           <Button
@@ -298,10 +305,11 @@ function CouponCard({ coupon }: { coupon: Coupon }) {
             disabled={loadingBuy}
             className="bg-gold-gradient text-primary-foreground hover:opacity-90 font-semibold shadow-gold"
           >
-            {loadingBuy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Acheter"}
+            {loadingBuy ? <Loader2 className="w-4 h-4 animate-spin" /> : t("coupon.buy")}
           </Button>
         </div>
       </div>
+      <VisitorSignupPrompt open={promptOpen} onOpenChange={setPromptOpen} couponId={coupon.id} />
     </div>
   );
 }

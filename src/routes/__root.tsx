@@ -16,6 +16,7 @@ import { ThemeProvider, useTheme } from "@/hooks/use-theme";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Toaster } from "@/components/ui/sonner";
 import { WhatsAppFloat } from "@/components/WhatsAppFloat";
+import "@/lib/i18n";
 
 function NotFoundComponent() {
   return (

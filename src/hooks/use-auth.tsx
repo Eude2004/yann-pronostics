@@ -16,36 +16,43 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [roles, setRoles] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [sessionChecked, setSessionChecked] = useState(false);
+  const [rolesChecked, setRolesChecked] = useState(false);
+
+  const loadRoles = async (userId: string | null) => {
+    if (!userId) {
+      setRoles([]);
+      setRolesChecked(true);
+      return;
+    }
+    const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+    setRoles((data ?? []).map((r) => r.role));
+    setRolesChecked(true);
+  };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
-      if (s?.user) {
-        // defer to avoid recursion in callback
-        setTimeout(() => loadRoles(s.user.id), 0);
-      } else {
-        setRoles([]);
-      }
+      setRolesChecked(false);
+      // defer to avoid recursion
+      setTimeout(() => loadRoles(s?.user?.id ?? null), 0);
     });
 
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
-      if (data.session?.user) loadRoles(data.session.user.id);
-      setLoading(false);
+      setSessionChecked(true);
+      loadRoles(data.session?.user?.id ?? null);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const loadRoles = async (userId: string) => {
-    const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
-    setRoles((data ?? []).map((r) => r.role));
-  };
-
   const signOut = async () => {
     await supabase.auth.signOut();
   };
+
+  // loading = true until we've checked the session AND (if signed in) loaded the roles
+  const loading = !sessionChecked || (!!session && !rolesChecked);
 
   return (
     <AuthContext.Provider
