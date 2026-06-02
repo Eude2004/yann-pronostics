@@ -1132,7 +1132,7 @@ const STATUS_LABEL: Record<string, string> = {
   completed: "Validé", pending: "En attente", failed: "Échoué", refunded: "Remboursé",
 };
 
-function StatsCharts({ txs }: { txs: Transaction[] }) {
+function StatsCharts({ txs, coupons }: { txs: Transaction[]; coupons: Coupon[] }) {
   // Revenue per day (last 14 days)
   const days: { day: string; revenue: number; ventes: number }[] = [];
   const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -1154,14 +1154,34 @@ function StatsCharts({ txs }: { txs: Transaction[] }) {
     value: txs.filter(t => t.status === s).length,
   })).filter(s => s.value > 0);
 
-  // Revenue by coupon (need coupon types) — we only have coupon_id in tx, so aggregate by coupon_id
+  // Top coupons by revenue (named via coupons list)
+  const couponMap = new Map(coupons.map(c => [c.id, c]));
   const byCoupon = new Map<string, number>();
+  const countCoupon = new Map<string, number>();
   txs.filter(t => t.status === "completed" && t.coupon_id).forEach(t => {
     byCoupon.set(t.coupon_id!, (byCoupon.get(t.coupon_id!) ?? 0) + t.amount_xaf);
+    countCoupon.set(t.coupon_id!, (countCoupon.get(t.coupon_id!) ?? 0) + 1);
   });
-  const couponBars = Array.from(byCoupon.entries()).map(([id, v], i) => ({
-    name: `Coupon ${i + 1}`, _id: id, revenue: v,
+  const topCoupons = Array.from(byCoupon.entries())
+    .map(([id, v]) => ({
+      name: (couponMap.get(id)?.title ?? `Coupon ${id.slice(0, 6)}`).slice(0, 22),
+      revenue: v,
+      ventes: countCoupon.get(id) ?? 0,
+    }))
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 5);
+
+  // Hourly sales distribution (0-23h) — uses completed txs over all time
+  const hours = Array.from({ length: 24 }, (_, h) => ({
+    hour: `${h.toString().padStart(2, "0")}h`,
+    ventes: 0,
+    revenue: 0,
   }));
+  txs.filter(t => t.status === "completed").forEach(t => {
+    const h = new Date(t.created_at).getHours();
+    hours[h].ventes += 1;
+    hours[h].revenue += t.amount_xaf;
+  });
 
   return (
     <div className="grid lg:grid-cols-2 gap-4">
