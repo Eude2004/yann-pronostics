@@ -7,6 +7,7 @@ import { Lock, TrendingUp, Trophy, Zap, ShieldCheck, Star, Flame, ArrowRight, Me
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { useSettings, whatsappLink } from "@/hooks/use-settings";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -66,6 +67,7 @@ function Header() {
           <a href="#contact" className="hover:text-primary transition-colors">Contact</a>
         </div>
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           {loading ? null : session ? (
             <Link to="/dashboard">
               <Button size="sm" className="bg-gold-gradient text-primary-foreground hover:opacity-90 font-semibold shadow-gold">
