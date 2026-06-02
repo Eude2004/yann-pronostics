@@ -73,8 +73,23 @@ type Review = {
   rating: number; comment: string; status: ReviewStatus; created_at: string;
 };
 
+type AdminView =
+  | "stats" | "coupons" | "transactions" | "reviews"
+  | "users" | "audit" | "settings";
+
+const NAV_ITEMS: { id: AdminView; label: string; icon: any }[] = [
+  { id: "stats", label: "Tableau de bord", icon: LayoutDashboard },
+  { id: "coupons", label: "Coupons", icon: Ticket },
+  { id: "transactions", label: "Transactions", icon: Receipt },
+  { id: "reviews", label: "Avis", icon: MessageSquare },
+  { id: "users", label: "Utilisateurs", icon: Users },
+  { id: "audit", label: "Journal", icon: History },
+  { id: "settings", label: "Paramètres", icon: SettingsIcon },
+];
+
 function AdminPage() {
-  const { isAdmin, loading, signOut } = useAuth();
+  const { isAdmin, loading } = useAuth();
+  const [view, setView] = useState<AdminView>("stats");
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Chargement…</div>;
@@ -90,54 +105,128 @@ function AdminPage() {
     );
   }
 
+  const current = NAV_ITEMS.find(n => n.id === view) ?? NAV_ITEMS[0];
+
   return (
-    <div className="min-h-screen">
-      <header className="border-b border-border/50 bg-background/80 backdrop-blur sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link to="/" className="text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <img src={logo} alt="" className="h-9 w-9 object-contain" />
-            <div>
-              <p className="font-display tracking-wider text-gold leading-none">YANN PRONOSTICS</p>
-              <p className="text-xs text-muted-foreground">Panneau administrateur</p>
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-background">
+        <AdminSidebar view={view} setView={setView} />
+
+        <div className="flex-1 flex flex-col min-w-0">
+          <header className="sticky top-0 z-30 h-14 border-b border-border/50 bg-background/90 backdrop-blur flex items-center gap-3 px-3 sm:px-5">
+            <SidebarTrigger className="-ml-1">
+              <Menu className="w-5 h-5" />
+            </SidebarTrigger>
+            <h1 className="font-display tracking-wider text-base sm:text-lg uppercase truncate">
+              {current.label}
+            </h1>
+            <div className="ml-auto flex items-center gap-2">
+              <Badge className="bg-primary/15 text-primary border border-primary/30 hidden sm:inline-flex">
+                <Shield className="w-3 h-3 mr-1" /> Admin
+              </Badge>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge className="bg-primary/15 text-primary border border-primary/30">
-              <Shield className="w-3 h-3 mr-1" /> Admin
-            </Badge>
-            <Button variant="ghost" size="sm" onClick={signOut}>
-              <LogOut className="w-4 h-4 mr-2" /> Déconnexion
+          </header>
+
+          <main className="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto">
+            {view === "stats" && <StatsAdmin />}
+            {view === "coupons" && <CouponsAdmin />}
+            {view === "transactions" && <TransactionsAdmin />}
+            {view === "reviews" && <ReviewsAdmin />}
+            {view === "users" && <UsersAdmin />}
+            {view === "audit" && <AuditAdmin />}
+            {view === "settings" && <SettingsAdmin />}
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
+  );
+}
+
+function AdminSidebar({ view, setView }: { view: AdminView; setView: (v: AdminView) => void }) {
+  const { signOut, user } = useAuth();
+  const { state, setOpenMobile, isMobile } = useSidebar();
+  const collapsed = state === "collapsed";
+  const name = (user?.user_metadata?.full_name as string) || user?.email?.split("@")[0] || "Admin";
+  const initials = name.slice(0, 2).toUpperCase();
+
+  const select = (id: AdminView) => {
+    setView(id);
+    if (isMobile) setOpenMobile(false);
+  };
+
+  return (
+    <Sidebar collapsible="icon">
+      <SidebarHeader className="border-b border-border/50">
+        <div className="flex items-center gap-3 px-2 py-3">
+          <img src={logo} alt="" className="h-9 w-9 object-contain shrink-0" />
+          {!collapsed && (
+            <div className="min-w-0">
+              <p className="font-display tracking-wider text-gold text-sm leading-none truncate">YANN PRONOSTICS</p>
+              <p className="text-[11px] text-muted-foreground mt-1">Administration</p>
+            </div>
+          )}
+        </div>
+      </SidebarHeader>
+
+      <SidebarContent>
+        <SidebarGroup>
+          {!collapsed && <SidebarGroupLabel>Menu</SidebarGroupLabel>}
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {NAV_ITEMS.map((item) => {
+                const active = view === item.id;
+                const Icon = item.icon;
+                return (
+                  <SidebarMenuItem key={item.id}>
+                    <SidebarMenuButton
+                      isActive={active}
+                      onClick={() => select(item.id)}
+                      tooltip={item.label}
+                      className={active
+                        ? "bg-gold-gradient text-primary-foreground font-semibold shadow-gold hover:opacity-90 hover:text-primary-foreground data-[active=true]:bg-gold-gradient data-[active=true]:text-primary-foreground"
+                        : ""}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span>{item.label}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarFooter className="border-t border-border/50">
+        <div className="px-2 py-2 space-y-2">
+          {!collapsed && (
+            <div className="flex items-center gap-2 px-2">
+              <div className="h-9 w-9 rounded-full bg-primary/15 text-primary flex items-center justify-center text-xs font-bold border border-primary/30">
+                {initials}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium truncate">{name}</p>
+                <p className="text-[11px] text-muted-foreground">Admin</p>
+              </div>
+            </div>
+          )}
+          <div className="flex gap-2">
+            <Button asChild variant="outline" size="sm" className="flex-1">
+              <Link to="/">
+                <ArrowLeft className="w-4 h-4 mr-1" />
+                {!collapsed && "Boutique"}
+              </Link>
+            </Button>
+            <Button variant="ghost" size="sm" onClick={signOut} aria-label="Déconnexion">
+              <LogOut className="w-4 h-4" />
             </Button>
           </div>
         </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <Tabs defaultValue="stats" className="w-full">
-          <TabsList className="flex-wrap h-auto">
-            <TabsTrigger value="stats">Tableau de bord</TabsTrigger>
-            <TabsTrigger value="coupons">Coupons du jour</TabsTrigger>
-            <TabsTrigger value="transactions">Transactions</TabsTrigger>
-            <TabsTrigger value="reviews">Avis</TabsTrigger>
-            <TabsTrigger value="users"><Users className="w-3.5 h-3.5 mr-1" />Utilisateurs</TabsTrigger>
-            <TabsTrigger value="audit"><History className="w-3.5 h-3.5 mr-1" />Journal</TabsTrigger>
-            <TabsTrigger value="settings">Paramètres</TabsTrigger>
-          </TabsList>
-          <TabsContent value="stats" className="mt-6"><StatsAdmin /></TabsContent>
-          <TabsContent value="coupons" className="mt-6"><CouponsAdmin /></TabsContent>
-          <TabsContent value="transactions" className="mt-6"><TransactionsAdmin /></TabsContent>
-          <TabsContent value="reviews" className="mt-6"><ReviewsAdmin /></TabsContent>
-          <TabsContent value="users" className="mt-6"><UsersAdmin /></TabsContent>
-          <TabsContent value="audit" className="mt-6"><AuditAdmin /></TabsContent>
-          <TabsContent value="settings" className="mt-6"><SettingsAdmin /></TabsContent>
-        </Tabs>
-      </main>
-    </div>
+      </SidebarFooter>
+    </Sidebar>
   );
 }
+
 
 /* ---------------- COUPONS ---------------- */
 
