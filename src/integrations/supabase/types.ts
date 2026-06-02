@@ -14,6 +14,107 @@ export type Database = {
   }
   public: {
     Tables: {
+      categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      coupons: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          event_date: string | null
+          id: string
+          image_url: string | null
+          is_featured: boolean
+          odds: number | null
+          preview_content: string | null
+          price_xaf: number
+          private_content: string
+          slug: string
+          sport: string | null
+          status: Database["public"]["Enums"]["publish_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          event_date?: string | null
+          id?: string
+          image_url?: string | null
+          is_featured?: boolean
+          odds?: number | null
+          preview_content?: string | null
+          price_xaf?: number
+          private_content?: string
+          slug: string
+          sport?: string | null
+          status?: Database["public"]["Enums"]["publish_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          event_date?: string | null
+          id?: string
+          image_url?: string | null
+          is_featured?: boolean
+          odds?: number | null
+          preview_content?: string | null
+          price_xaf?: number
+          private_content?: string
+          slug?: string
+          sport?: string | null
+          status?: Database["public"]["Enums"]["publish_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupons_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -43,6 +144,53 @@ export type Database = {
           whatsapp?: string | null
         }
         Relationships: []
+      }
+      reviews: {
+        Row: {
+          comment: string
+          coupon_id: string | null
+          created_at: string
+          id: string
+          moderated_at: string | null
+          moderated_by: string | null
+          rating: number
+          status: Database["public"]["Enums"]["review_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          comment: string
+          coupon_id?: string | null
+          created_at?: string
+          id?: string
+          moderated_at?: string | null
+          moderated_by?: string | null
+          rating: number
+          status?: Database["public"]["Enums"]["review_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          comment?: string
+          coupon_id?: string | null
+          created_at?: string
+          id?: string
+          moderated_at?: string | null
+          moderated_by?: string | null
+          rating?: number
+          status?: Database["public"]["Enums"]["review_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -80,6 +228,8 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      publish_status: "draft" | "published" | "archived"
+      review_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -208,6 +358,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      publish_status: ["draft", "published", "archived"],
+      review_status: ["pending", "approved", "rejected"],
     },
   },
 } as const
