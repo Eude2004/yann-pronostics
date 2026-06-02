@@ -123,16 +123,16 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <AuthProvider>
+      <AuthProvider>
+        <ThemeProvider>
           <Outlet />
           <WhatsAppFloat />
           <div className="fixed bottom-4 left-4 z-50">
             <ThemeToggle />
           </div>
           <ThemedToaster />
-        </AuthProvider>
-      </ThemeProvider>
+        </ThemeProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
