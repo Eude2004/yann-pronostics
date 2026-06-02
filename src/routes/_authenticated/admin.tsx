@@ -143,6 +143,7 @@ function CouponsAdmin() {
   const [editing, setEditing] = useState<Coupon | null>(null);
   const [form, setForm] = useState({ ...emptyCouponForm });
   const [uploading, setUploading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const uploadVideo = async (file: File) => {
     if (!file) return;
@@ -162,6 +163,30 @@ function CouponsAdmin() {
       setUploading(false);
     }
   };
+
+  const uploadImage = async (file: File) => {
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `coupons/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage
+        .from("coupon-images")
+        .upload(path, file, { contentType: file.type || "image/*", upsert: false });
+      if (error) throw error;
+      const { data: signed, error: signErr } = await supabase.storage
+        .from("coupon-images")
+        .createSignedUrl(path, 60 * 60 * 24 * 365);
+      if (signErr) throw signErr;
+      setForm((f) => ({ ...f, image_url: signed.signedUrl }));
+      toast.success("Image téléversée");
+    } catch (e: any) {
+      toast.error(e.message ?? "Échec du téléversement");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
 
   const load = async () => {
     const { data, error } = await supabase.from("coupons").select("*")
