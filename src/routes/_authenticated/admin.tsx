@@ -865,3 +865,183 @@ function SettingsAdmin() {
     </div>
   );
 }
+
+/* ---------------- STATISTIQUES VIP ---------------- */
+
+function VipStats() {
+  const [txs, setTxs] = useState<Transaction[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [subs, setSubs] = useState<Subscription[]>([]);
+  const [usersCount, setUsersCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      const [t, p, s, u] = await Promise.all([
+        supabase.from("transactions").select("*").order("created_at", { ascending: false }),
+        supabase.from("subscription_plans").select("*"),
+        supabase.from("subscriptions").select("*"),
+        supabase.from("profiles").select("id", { count: "exact", head: true }),
+      ]);
+      setTxs((t.data as Transaction[]) ?? []);
+      setPlans((p.data as Plan[]) ?? []);
+      setSubs((s.data as Subscription[]) ?? []);
+      setUsersCount(u.count ?? 0);
+      setLoading(false);
+    })();
+  }, []);
+
+  if (loading) return <div className="text-muted-foreground">Chargement…</div>;
+
+  const completedVip = txs.filter(t => t.status === "completed" && t.kind === "subscription");
+  const completedCoupons = txs.filter(t => t.status === "completed" && t.kind === "coupon");
+  const revenueVip = completedVip.reduce((s, t) => s + t.amount_xaf, 0);
+  const revenueCoupons = completedCoupons.reduce((s, t) => s + t.amount_xaf, 0);
+  const revenueTotal = revenueVip + revenueCoupons;
+  const activeVipUsers = new Set(subs.filter(s => s.status === "active").map(s => s.user_id)).size;
+  const conversionRate = usersCount > 0 ? (activeVipUsers / usersCount) * 100 : 0;
+
+  const salesByPlan = plans.map(p => {
+    const planSubs = subs.filter(s => s.plan_id === p.id);
+    const planTxIds = planSubs.map(s => s.id);
+    const txMatched = completedVip.filter(t => t.subscription_id && planTxIds.includes(t.subscription_id));
+    return {
+      plan: p,
+      activeCount: planSubs.filter(s => s.status === "active").length,
+      totalCount: planSubs.length,
+      revenue: txMatched.reduce((s, t) => s + t.amount_xaf, 0),
+    };
+  });
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-display flex items-center gap-2"><TrendingUp className="w-5 h-5 text-gold" /> Statistiques VIP</h2>
+        <p className="text-xs text-muted-foreground">Vue d'ensemble revenus, conversion et performance par plan.</p>
+      </div>
+
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard label="Revenus totaux" value={`${revenueTotal.toLocaleString()} XAF`} accent />
+        <StatCard label="Revenus VIP" value={`${revenueVip.toLocaleString()} XAF`} />
+        <StatCard label="Revenus coupons" value={`${revenueCoupons.toLocaleString()} XAF`} />
+        <StatCard label="VIP actifs" value={activeVipUsers.toString()} />
+        <StatCard label="Utilisateurs inscrits" value={usersCount.toString()} />
+        <StatCard label="Taux de conversion VIP" value={`${conversionRate.toFixed(1)} %`} accent />
+        <StatCard label="Transactions VIP validées" value={completedVip.length.toString()} />
+        <StatCard label="Transactions coupons validées" value={completedCoupons.length.toString()} />
+      </div>
+
+      <div>
+        <h3 className="font-display text-lg mb-3">Ventes par plan</h3>
+        <div className="rounded-xl border border-border/60 bg-card overflow-x-auto">
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead>Plan</TableHead><TableHead>Prix</TableHead>
+              <TableHead>Abos actifs</TableHead><TableHead>Abos total</TableHead>
+              <TableHead>Revenus générés</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {salesByPlan.map(({ plan, activeCount, totalCount, revenue }) => (
+                <TableRow key={plan.id}>
+                  <TableCell className="font-medium">{plan.name}</TableCell>
+                  <TableCell>{plan.price_xaf.toLocaleString()} XAF</TableCell>
+                  <TableCell>{activeCount}</TableCell>
+                  <TableCell>{totalCount}</TableCell>
+                  <TableCell className="font-semibold text-gold">{revenue.toLocaleString()} XAF</TableCell>
+                </TableRow>
+              ))}
+              {salesByPlan.length === 0 && (
+                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Aucun plan</TableCell></TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="font-display text-lg mb-3">Export historique transactions</h3>
+        <div className="flex gap-2 flex-wrap">
+          <Button onClick={() => exportTransactionsCSV(txs)} variant="outline">
+            <Download className="w-4 h-4 mr-2" /> Exporter CSV
+          </Button>
+          <Button onClick={() => exportTransactionsPDF(txs)} className="bg-gold-gradient text-primary-foreground">
+            <FileText className="w-4 h-4 mr-2" /> Exporter PDF
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <div className={`rounded-xl border bg-card p-4 ${accent ? "border-primary/40 shadow-glow" : "border-border/60"}`}>
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className={`mt-1 font-display text-2xl ${accent ? "text-gold" : ""}`}>{value}</div>
+    </div>
+  );
+}
+
+function exportTransactionsCSV(txs: Transaction[]) {
+  const headers = ["Date", "ID", "Utilisateur", "Type", "Montant XAF", "Méthode", "Référence", "Statut"];
+  const rows = txs.map(t => [
+    new Date(t.created_at).toLocaleString("fr-FR"),
+    t.id,
+    t.user_id,
+    t.kind,
+    t.amount_xaf.toString(),
+    t.payment_method ?? "",
+    t.reference ?? "",
+    t.status,
+  ]);
+  const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
+  const csv = [headers, ...rows].map(r => r.map(escape).join(",")).join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+  downloadBlob(blob, `transactions-${new Date().toISOString().slice(0, 10)}.csv`);
+  toast.success("Export CSV téléchargé");
+}
+
+function exportTransactionsPDF(txs: Transaction[]) {
+  const total = txs.filter(t => t.status === "completed").reduce((s, t) => s + t.amount_xaf, 0);
+  const rows = txs.map(t => `
+    <tr>
+      <td>${new Date(t.created_at).toLocaleString("fr-FR")}</td>
+      <td>${t.user_id.slice(0, 8)}…</td>
+      <td>${t.kind === "subscription" ? "VIP" : "Coupon"}</td>
+      <td style="text-align:right">${t.amount_xaf.toLocaleString()} XAF</td>
+      <td>${t.payment_method ?? "—"}</td>
+      <td>${t.reference ?? "—"}</td>
+      <td>${t.status}</td>
+    </tr>`).join("");
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Transactions YANN PRONOSTICS</title>
+    <style>
+      body{font-family:Arial,sans-serif;color:#111;padding:24px}
+      h1{color:#b8893a;margin:0 0 4px}
+      .meta{color:#666;font-size:12px;margin-bottom:16px}
+      table{width:100%;border-collapse:collapse;font-size:12px}
+      th,td{border:1px solid #ddd;padding:6px 8px;text-align:left}
+      th{background:#f4f4f4}
+      .total{margin-top:16px;font-weight:bold;color:#b8893a}
+    </style></head><body>
+    <h1>YANN PRONOSTICS — Historique des transactions</h1>
+    <div class="meta">Exporté le ${new Date().toLocaleString("fr-FR")} · ${txs.length} transactions</div>
+    <table>
+      <thead><tr><th>Date</th><th>Utilisateur</th><th>Type</th><th>Montant</th><th>Méthode</th><th>Référence</th><th>Statut</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="total">Total validé : ${total.toLocaleString()} XAF</div>
+    <script>window.onload=()=>{setTimeout(()=>window.print(),300)}</script>
+    </body></html>`;
+  const w = window.open("", "_blank");
+  if (!w) return toast.error("Veuillez autoriser les pop-ups pour l'export PDF.");
+  w.document.write(html);
+  w.document.close();
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
