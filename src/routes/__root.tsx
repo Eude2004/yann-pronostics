@@ -13,7 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ThemeProvider, useTheme } from "@/hooks/use-theme";
-import { ThemeToggle } from "@/components/ThemeToggle";
+
 import { Toaster } from "@/components/ui/sonner";
 import { WhatsAppFloat } from "@/components/WhatsAppFloat";
 import "@/lib/i18n";
@@ -128,9 +128,6 @@ function RootComponent() {
         <ThemeProvider>
           <Outlet />
           <WhatsAppFloat />
-          <div className="fixed bottom-4 left-4 z-50">
-            <ThemeToggle />
-          </div>
           <ThemedToaster />
         </ThemeProvider>
       </AuthProvider>
