@@ -14,6 +14,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { Loader2, Mail, Lock, User as UserIcon, Phone } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    tab: s.tab === "signup" ? "signup" : "login",
+  }),
   head: () => ({
     meta: [
       { title: "Connexion — YANN PRONOSTICS" },
@@ -31,6 +34,7 @@ const whatsappSchema = z.string().trim().regex(/^[0-9+\s]{8,20}$/, "Numéro What
 function AuthPage() {
   const { session, loading, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const search = Route.useSearch();
 
   useEffect(() => {
     if (!loading && session) {
@@ -51,7 +55,7 @@ function AuthPage() {
         </Link>
 
         <div className="rounded-2xl border border-border/60 bg-card p-6 sm:p-8 shadow-glow">
-          <Tabs defaultValue="login">
+          <Tabs defaultValue={search.tab}>
             <TabsList className="w-full grid grid-cols-2 mb-6">
               <TabsTrigger value="login">Connexion</TabsTrigger>
               <TabsTrigger value="signup">Inscription</TabsTrigger>
