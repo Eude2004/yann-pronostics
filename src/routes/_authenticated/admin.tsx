@@ -685,6 +685,7 @@ function TransactionsAdmin() {
   }[s]);
 
   const userLabel = (t: Transaction) => {
+    if (anonymous) return "Anonyme";
     const p = profiles[t.user_id];
     return p?.full_name || p?.username || `${t.user_id.slice(0, 8)}…`;
   };
