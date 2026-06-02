@@ -622,7 +622,7 @@ function TransactionsAdmin() {
           <h2 className="text-xl font-display">Transactions ({items.length})</h2>
           <p className="text-xs text-muted-foreground">Total validé : <span className="text-gold font-semibold">{total.toLocaleString()} XAF</span></p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Select value={filter} onValueChange={(v) => setFilter(v as any)}>
             <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -633,6 +633,12 @@ function TransactionsAdmin() {
               <SelectItem value="refunded">Remboursées</SelectItem>
             </SelectContent>
           </Select>
+          <Button onClick={() => exportTransactionsCSV(items)} variant="outline" size="sm">
+            <Download className="w-4 h-4 mr-2" /> CSV
+          </Button>
+          <Button onClick={() => exportTransactionsPDF(items)} variant="outline" size="sm">
+            <FileText className="w-4 h-4 mr-2" /> PDF
+          </Button>
           <Button onClick={() => setOpen(true)} className="bg-gold-gradient text-primary-foreground"><Plus className="w-4 h-4 mr-2" />Manuelle</Button>
         </div>
       </div>
