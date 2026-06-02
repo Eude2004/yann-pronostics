@@ -649,7 +649,14 @@ function ReviewsAdmin() {
     const { data, error } = await q;
     if (error) toast.error(error.message); else setItems((data as Review[]) ?? []);
   };
-  useEffect(() => { load(); }, [filter]);
+  useEffect(() => {
+    load();
+    const channel = supabase
+      .channel(`admin-reviews-${filter}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "reviews" }, load)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [filter]);
 
   const moderate = async (id: string, status: ReviewStatus) => {
     const { error } = await supabase.from("reviews").update({
