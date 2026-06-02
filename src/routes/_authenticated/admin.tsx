@@ -23,9 +23,11 @@ import { toast } from "sonner";
 import logo from "@/assets/yann-logo.png";
 import {
   ArrowLeft, Plus, Pencil, Trash2, Check, X, Star, Shield, LogOut,
-  Save, Download, FileText, TrendingUp, FlaskConical,
+  Save, Download, FileText, TrendingUp, FlaskConical, Users, History,
 } from "lucide-react";
 import { setTestPayMode } from "@/lib/payments.functions";
+import { listAdminUsers, setUserAdmin, deleteAppUser } from "@/lib/admin-users.functions";
+import { logAdminAction } from "@/lib/audit";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [{ title: "Admin — YANN PRONOSTICS" }] }),
@@ -109,12 +111,16 @@ function AdminPage() {
             <TabsTrigger value="coupons">Coupons du jour</TabsTrigger>
             <TabsTrigger value="transactions">Transactions</TabsTrigger>
             <TabsTrigger value="reviews">Avis</TabsTrigger>
+            <TabsTrigger value="users"><Users className="w-3.5 h-3.5 mr-1" />Utilisateurs</TabsTrigger>
+            <TabsTrigger value="audit"><History className="w-3.5 h-3.5 mr-1" />Journal</TabsTrigger>
             <TabsTrigger value="settings">Paramètres</TabsTrigger>
           </TabsList>
           <TabsContent value="stats" className="mt-6"><StatsAdmin /></TabsContent>
           <TabsContent value="coupons" className="mt-6"><CouponsAdmin /></TabsContent>
           <TabsContent value="transactions" className="mt-6"><TransactionsAdmin /></TabsContent>
           <TabsContent value="reviews" className="mt-6"><ReviewsAdmin /></TabsContent>
+          <TabsContent value="users" className="mt-6"><UsersAdmin /></TabsContent>
+          <TabsContent value="audit" className="mt-6"><AuditAdmin /></TabsContent>
           <TabsContent value="settings" className="mt-6"><SettingsAdmin /></TabsContent>
         </Tabs>
       </main>
