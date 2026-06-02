@@ -539,28 +539,58 @@ function CouponsAdmin() {
 
 function TransactionsAdmin() {
   const [items, setItems] = useState<Transaction[]>([]);
+  const [profiles, setProfiles] = useState<Record<string, { full_name: string | null; username: string | null }>>({});
   const [filter, setFilter] = useState<TxStatus | "all">("all");
+  const [search, setSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   const load = async () => {
     let q = supabase.from("transactions").select("*").eq("kind", "coupon")
-      .order("created_at", { ascending: false }).limit(200);
+      .order("created_at", { ascending: false }).limit(1000);
     if (filter !== "all") q = q.eq("status", filter);
+    if (dateFrom) q = q.gte("created_at", new Date(dateFrom).toISOString());
+    if (dateTo) {
+      const end = new Date(dateTo); end.setHours(23, 59, 59, 999);
+      q = q.lte("created_at", end.toISOString());
+    }
     const { data, error } = await q;
-    if (error) toast.error(error.message); else setItems((data as Transaction[]) ?? []);
+    if (error) { toast.error(error.message); return; }
+    const txs = (data as Transaction[]) ?? [];
+    setItems(txs);
+    const ids = Array.from(new Set(txs.map(t => t.user_id)));
+    if (ids.length) {
+      const { data: profs } = await supabase.from("profiles").select("id, full_name, username").in("id", ids);
+      const map: Record<string, { full_name: string | null; username: string | null }> = {};
+      (profs ?? []).forEach((p: any) => { map[p.id] = { full_name: p.full_name, username: p.username }; });
+      setProfiles(map);
+    }
   };
-  useEffect(() => { load(); }, [filter]);
+
+  useEffect(() => {
+    load();
+    const channel = supabase
+      .channel(`admin-tx-${filter}-${dateFrom}-${dateTo}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "transactions" }, load)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [filter, dateFrom, dateTo]);
+
+  useEffect(() => { setPage(1); }, [filter, search, dateFrom, dateTo]);
 
   const setStatus = async (id: string, status: TxStatus) => {
     const { error } = await supabase.from("transactions").update({ status }).eq("id", id);
     if (error) return toast.error(error.message);
-    toast.success("Statut mis à jour"); load();
+    toast.success("Statut mis à jour");
   };
 
   const remove = async (id: string) => {
     if (!confirm("Supprimer cette transaction ?")) return;
     const { error } = await supabase.from("transactions").delete().eq("id", id);
     if (error) return toast.error(error.message);
-    toast.success("Supprimée"); load();
+    toast.success("Supprimée");
   };
 
   const badge = (s: TxStatus) => ({
@@ -570,34 +600,72 @@ function TransactionsAdmin() {
     refunded: <Badge variant="outline">Remboursée</Badge>,
   }[s]);
 
-  const total = items.filter(i => i.status === "completed").reduce((s, i) => s + i.amount_xaf, 0);
+  const userLabel = (t: Transaction) => {
+    const p = profiles[t.user_id];
+    return p?.full_name || p?.username || `${t.user_id.slice(0, 8)}…`;
+  };
+
+  const searched = items.filter(t => {
+    if (!search.trim()) return true;
+    const s = search.toLowerCase();
+    return (
+      (t.reference ?? "").toLowerCase().includes(s) ||
+      t.user_id.toLowerCase().includes(s) ||
+      userLabel(t).toLowerCase().includes(s) ||
+      (t.payment_method ?? "").toLowerCase().includes(s) ||
+      t.amount_xaf.toString().includes(s)
+    );
+  });
+
+  const pageCount = Math.max(1, Math.ceil(searched.length / PAGE_SIZE));
+  const pageItems = searched.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const total = searched.filter(i => i.status === "completed").reduce((s, i) => s + i.amount_xaf, 0);
+
+  const resetFilters = () => { setFilter("all"); setSearch(""); setDateFrom(""); setDateTo(""); };
 
   return (
     <div>
       <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
         <div>
-          <h2 className="text-xl font-display">Transactions ({items.length})</h2>
-          <p className="text-xs text-muted-foreground">Total validé : <span className="text-gold font-semibold">{total.toLocaleString()} XAF</span></p>
+          <h2 className="text-xl font-display">Transactions ({searched.length})</h2>
+          <p className="text-xs text-muted-foreground">Total validé : <span className="text-gold font-semibold">{total.toLocaleString("fr-FR")} XAF</span></p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Select value={filter} onValueChange={(v) => setFilter(v as TxStatus | "all")}>
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous</SelectItem>
-              <SelectItem value="pending">En attente</SelectItem>
-              <SelectItem value="completed">Validées</SelectItem>
-              <SelectItem value="failed">Échouées</SelectItem>
-              <SelectItem value="refunded">Remboursées</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button onClick={() => exportTransactionsCSV(items)} variant="outline" size="sm">
+          <Button onClick={() => exportTransactionsCSV(searched)} variant="outline" size="sm">
             <Download className="w-4 h-4 mr-2" /> CSV
           </Button>
-          <Button onClick={() => exportTransactionsPDF(items)} variant="outline" size="sm">
+          <Button onClick={() => exportTransactionsPDF(searched)} variant="outline" size="sm">
             <FileText className="w-4 h-4 mr-2" /> PDF
           </Button>
         </div>
       </div>
+
+      <div className="rounded-xl border border-border/60 bg-card p-3 mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+        <Input
+          placeholder="Rechercher (réf, utilisateur, montant…)"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="lg:col-span-2"
+        />
+        <Select value={filter} onValueChange={(v) => setFilter(v as TxStatus | "all")}>
+          <SelectTrigger><SelectValue placeholder="Statut" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tous statuts</SelectItem>
+            <SelectItem value="pending">En attente</SelectItem>
+            <SelectItem value="completed">Validées</SelectItem>
+            <SelectItem value="failed">Échouées</SelectItem>
+            <SelectItem value="refunded">Remboursées</SelectItem>
+          </SelectContent>
+        </Select>
+        <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} aria-label="Du" />
+        <div className="flex gap-2">
+          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} aria-label="Au" className="flex-1" />
+          <Button variant="ghost" size="sm" onClick={resetFilters} title="Réinitialiser">
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+
       <div className="rounded-xl border border-border/60 bg-card overflow-x-auto">
         <Table>
           <TableHeader><TableRow>
@@ -607,11 +675,11 @@ function TransactionsAdmin() {
             <TableHead className="text-right">Actions</TableHead>
           </TableRow></TableHeader>
           <TableBody>
-            {items.map(t => (
+            {pageItems.map(t => (
               <TableRow key={t.id}>
-                <TableCell className="text-xs">{new Date(t.created_at).toLocaleString("fr-FR")}</TableCell>
-                <TableCell className="font-mono text-xs">{t.user_id.slice(0, 8)}…</TableCell>
-                <TableCell className="font-semibold text-gold">{t.amount_xaf.toLocaleString()} XAF</TableCell>
+                <TableCell className="text-xs whitespace-nowrap">{new Date(t.created_at).toLocaleString("fr-FR")}</TableCell>
+                <TableCell className="text-xs">{userLabel(t)}</TableCell>
+                <TableCell className="font-semibold text-gold whitespace-nowrap">{t.amount_xaf.toLocaleString("fr-FR")} XAF</TableCell>
                 <TableCell className="text-xs">{t.payment_method ?? "—"}</TableCell>
                 <TableCell className="text-xs font-mono">{t.reference ?? "—"}</TableCell>
                 <TableCell>{badge(t.status)}</TableCell>
@@ -629,10 +697,20 @@ function TransactionsAdmin() {
                 </TableCell>
               </TableRow>
             ))}
-            {items.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Aucune transaction</TableCell></TableRow>}
+            {pageItems.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Aucune transaction</TableCell></TableRow>}
           </TableBody>
         </Table>
       </div>
+
+      {pageCount > 1 && (
+        <div className="flex items-center justify-between mt-3 text-xs">
+          <span className="text-muted-foreground">Page {page} / {pageCount}</span>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>Précédent</Button>
+            <Button size="sm" variant="outline" disabled={page >= pageCount} onClick={() => setPage(p => Math.min(pageCount, p + 1))}>Suivant</Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
