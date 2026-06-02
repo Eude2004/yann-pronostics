@@ -293,7 +293,14 @@ function CouponsAdmin() {
       .order("created_at", { ascending: false });
     if (error) toast.error(error.message); else setItems((data as Coupon[]) ?? []);
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    const channel = supabase
+      .channel("admin-coupons")
+      .on("postgres_changes", { event: "*", schema: "public", table: "coupons" }, load)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const openNew = () => { setEditing(null); setForm({ ...emptyCouponForm }); setOpen(true); };
   const openEdit = (c: Coupon) => {
