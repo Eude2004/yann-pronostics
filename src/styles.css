@@ -115,6 +115,33 @@
     min-height: 100vh;
   }
   h1, h2, h3, .font-display { font-family: var(--font-display); letter-spacing: 0.02em; }
+
+  /* Smooth color/background transition only when explicitly armed during a theme switch */
+  html.theme-transition,
+  html.theme-transition body,
+  html.theme-transition *:not(svg):not(path) {
+    transition: background-color 300ms ease, color 300ms ease, border-color 300ms ease, fill 300ms ease, stroke 300ms ease !important;
+  }
+
+  /* User-requested or OS-level prefers-reduced-motion */
+  html.reduce-motion,
+  html.reduce-motion *,
+  html.reduce-motion *::before,
+  html.reduce-motion *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
 @layer utilities {
