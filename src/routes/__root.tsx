@@ -128,9 +128,6 @@ function RootComponent() {
         <ThemeProvider>
           <Outlet />
           <WhatsAppFloat />
-          <div className="fixed bottom-4 left-4 z-50">
-            <ThemeToggle />
-          </div>
           <ThemedToaster />
         </ThemeProvider>
       </AuthProvider>
