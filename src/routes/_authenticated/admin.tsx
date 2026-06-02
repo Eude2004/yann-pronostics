@@ -1241,21 +1241,36 @@ function StatsCharts({ txs, coupons }: { txs: Transaction[]; coupons: Coupon[] }
       </div>
 
       <div className="rounded-xl border border-border/60 bg-card p-4">
-        <h3 className="font-display text-base mb-3">Revenus par coupon</h3>
+        <h3 className="font-display text-base mb-3">Top 5 coupons (revenus)</h3>
         <div className="h-64">
-          {couponBars.length === 0 ? (
+          {topCoupons.length === 0 ? (
             <div className="h-full flex items-center justify-center text-sm text-muted-foreground">Aucune donnée</div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={couponBars} layout="vertical" margin={{ top: 5, right: 10, left: 40, bottom: 0 }}>
+              <BarChart data={topCoupons} layout="vertical" margin={{ top: 5, right: 10, left: 80, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} formatter={(v: number) => `${v.toLocaleString()} XAF`} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} width={120} />
+                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} formatter={(v: number, n) => n === "revenue" ? `${v.toLocaleString()} XAF` : `${v} vente${v > 1 ? "s" : ""}`} />
                 <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[0, 6, 6, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border/60 bg-card p-4 lg:col-span-2">
+        <h3 className="font-display text-base mb-3">Ventes par tranche horaire</h3>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={hours} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis dataKey="hour" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} interval={1} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+              <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} formatter={(v: number, n) => n === "revenue" ? `${v.toLocaleString()} XAF` : v} />
+              <Bar dataKey="ventes" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>
