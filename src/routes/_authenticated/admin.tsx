@@ -294,7 +294,38 @@ function CouponsAdmin() {
             </div>
             <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Texte affiché sur la carte du coupon" /></div>
             <div><Label>Image (URL)</Label><Input value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="https://…" /></div>
-            <div><Label>Vidéo (URL, débloquée après achat)</Label><Input value={form.video_url} onChange={(e) => setForm({ ...form, video_url: e.target.value })} placeholder="https://…" /></div>
+            <div className="space-y-2">
+              <Label>Vidéo du coupon (débloquée après achat)</Label>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" size="sm" disabled={uploading}
+                  onClick={() => document.getElementById("video-pick")?.click()}>
+                  📁 Galerie / Fichier
+                </Button>
+                <Button type="button" variant="outline" size="sm" disabled={uploading}
+                  onClick={() => document.getElementById("video-cam")?.click()}>
+                  🎥 Filmer
+                </Button>
+                {form.video_url && (
+                  <Button type="button" variant="ghost" size="sm"
+                    onClick={() => setForm({ ...form, video_url: "" })}>
+                    <X className="w-4 h-4 mr-1" />Retirer
+                  </Button>
+                )}
+              </div>
+              <input id="video-pick" type="file" accept="video/*,.mkv,.mov,.avi,.webm,.mp4,.m4v,.3gp,.flv,.wmv,.ts"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && uploadVideo(e.target.files[0])} />
+              <input id="video-cam" type="file" accept="video/*" capture="environment"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && uploadVideo(e.target.files[0])} />
+              <Input value={form.video_url}
+                onChange={(e) => setForm({ ...form, video_url: e.target.value })}
+                placeholder="ou collez une URL / chemin de stockage" />
+              {uploading && <p className="text-xs text-muted-foreground">Téléversement en cours…</p>}
+              {form.video_url && !uploading && (
+                <p className="text-xs text-green-500 truncate">✓ {form.video_url}</p>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Date de début</Label><Input type="datetime-local" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} /></div>
               <div><Label>Date de fin</Label><Input type="datetime-local" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} /></div>
