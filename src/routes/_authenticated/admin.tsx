@@ -161,6 +161,57 @@ function AdminPage() {
   );
 }
 
+function RealtimeIndicator() {
+  const [connected, setConnected] = useState(false);
+  const [lastSync, setLastSync] = useState<Date | null>(null);
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("admin-realtime-indicator")
+      .on("postgres_changes", { event: "*", schema: "public", table: "transactions" }, () => setLastSync(new Date()))
+      .on("postgres_changes", { event: "*", schema: "public", table: "coupons" }, () => setLastSync(new Date()))
+      .on("postgres_changes", { event: "*", schema: "public", table: "reviews" }, () => setLastSync(new Date()))
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => setLastSync(new Date()))
+      .subscribe((status) => {
+        setConnected(status === "SUBSCRIBED");
+        if (status === "SUBSCRIBED") setLastSync(new Date());
+      });
+    const t = setInterval(() => setTick((x) => x + 1), 15000);
+    return () => { supabase.removeChannel(channel); clearInterval(t); };
+  }, []);
+
+  const ago = (() => {
+    if (!lastSync) return "—";
+    const s = Math.floor((Date.now() - lastSync.getTime()) / 1000);
+    if (s < 5) return "à l'instant";
+    if (s < 60) return `il y a ${s}s`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `il y a ${m}min`;
+    return lastSync.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  })();
+
+  return (
+    <div
+      title={connected ? `Temps réel actif — dernière maj ${ago}` : "Hors ligne"}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] ${
+        connected
+          ? "border-green-600/40 bg-green-600/10 text-green-500"
+          : "border-destructive/40 bg-destructive/10 text-destructive"
+      }`}
+    >
+      <span className="relative flex h-2 w-2">
+        {connected && (
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-60" />
+        )}
+        <span className={`relative inline-flex h-2 w-2 rounded-full ${connected ? "bg-green-500" : "bg-destructive"}`} />
+      </span>
+      {connected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+      <span className="hidden sm:inline">{connected ? ago : "hors ligne"}</span>
+    </div>
+  );
+}
+
 function AdminSidebar({ view, setView }: { view: AdminView; setView: (v: AdminView) => void }) {
   const { signOut, user } = useAuth();
   const { state, setOpenMobile, isMobile } = useSidebar();
