@@ -788,6 +788,10 @@ function StatsAdmin() {
         <StatCard label="Panier moyen" value={`${completed.length > 0 ? Math.round(revenueTotal / completed.length).toLocaleString() : 0} XAF`} />
       </div>
 
+      <StatsCharts txs={txs} />
+
+
+
       <div>
         <h3 className="font-display text-lg mb-3">Export historique transactions</h3>
         <div className="flex gap-2 flex-wrap">
