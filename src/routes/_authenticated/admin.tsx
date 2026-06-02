@@ -1084,8 +1084,14 @@ function StatsAdmin() {
             <BigStatCard label="Panier moyen" value={`${avgBasket.toLocaleString("fr-FR")} XAF`} Icon={TrendingUp} tone="violet" />
             <BigStatCard label="Ventes validées" value={completedCount.toString()} Icon={Check} tone="amber" />
           </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <BigStatCard label="ARPU (par acheteur)" value={`${arpu.toLocaleString("fr-FR")} XAF`} Icon={Users} tone="emerald" hint={`${uniqueBuyers} acheteur${uniqueBuyers > 1 ? "s" : ""}`} />
+            <BigStatCard label="Taux de conversion" value={`${conversionRate}%`} Icon={TrendingUp} tone="blue" hint={`${completedCount}/${txs.length} tx`} />
+            <BigStatCard label="En attente" value={pendingCount.toString()} Icon={ShoppingCart} tone="amber" />
+            <BigStatCard label="Coupons actifs" value={couponsCount.toString()} Icon={Package} tone="violet" />
+          </div>
 
-          <StatsCharts txs={txs} />
+          <StatsCharts txs={txs} coupons={coupons} />
         </TabsContent>
       </Tabs>
     </div>
