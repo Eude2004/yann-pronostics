@@ -111,8 +111,9 @@ function AdminPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <Tabs defaultValue="coupons" className="w-full">
+        <Tabs defaultValue="stats" className="w-full">
           <TabsList className="flex-wrap h-auto">
+            <TabsTrigger value="stats">Statistiques VIP</TabsTrigger>
             <TabsTrigger value="coupons">Coupons du jour</TabsTrigger>
             <TabsTrigger value="plans">Plans VIP</TabsTrigger>
             <TabsTrigger value="subscriptions">Abonnements</TabsTrigger>
@@ -120,6 +121,7 @@ function AdminPage() {
             <TabsTrigger value="reviews">Avis</TabsTrigger>
             <TabsTrigger value="settings">Paramètres</TabsTrigger>
           </TabsList>
+          <TabsContent value="stats" className="mt-6"><VipStats /></TabsContent>
           <TabsContent value="coupons" className="mt-6"><CouponsAdmin /></TabsContent>
           <TabsContent value="plans" className="mt-6"><PlansAdmin /></TabsContent>
           <TabsContent value="subscriptions" className="mt-6"><SubscriptionsAdmin /></TabsContent>
