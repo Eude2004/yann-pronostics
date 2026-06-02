@@ -174,7 +174,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       }
 
       // Local wins — push with our timestamp.
-      const payload: Record<string, unknown> = { preferences_updated_at: pending.ts };
+      const payload: { preferences_updated_at: string; theme_preference?: Theme; reduce_motion?: boolean } = {
+        preferences_updated_at: pending.ts,
+      };
       if (pending.theme_preference !== undefined) payload.theme_preference = pending.theme_preference;
       if (pending.reduce_motion !== undefined) payload.reduce_motion = pending.reduce_motion;
 
