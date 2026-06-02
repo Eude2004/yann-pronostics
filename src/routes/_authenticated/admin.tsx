@@ -1206,9 +1206,9 @@ function UsersAdmin() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
-  const fetchUsers = useServerFn(listAdminUsers);
-  const toggleAdmin = useServerFn(setUserAdmin);
-  const removeUser = useServerFn(deleteAppUser);
+  const fetchUsers = useServerFn(listAdminUsersFn);
+  const toggleAdmin = useServerFn(setUserAdminFn);
+  const removeUser = useServerFn(deleteAppUserFn);
 
   const load = async () => {
     setLoading(true);
