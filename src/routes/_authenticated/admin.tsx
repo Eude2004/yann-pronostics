@@ -24,11 +24,21 @@ import logo from "@/assets/yann-logo.png";
 import {
   ArrowLeft, Plus, Pencil, Trash2, Check, X, Star, Shield, LogOut,
   Save, Download, FileText, TrendingUp, FlaskConical, Users, History,
+  LayoutDashboard, Ticket, Receipt, MessageSquare, Settings as SettingsIcon,
+  DollarSign, ShoppingCart, Package, ArrowUpRight, Menu,
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
+import {
+  Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
+  SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
+  SidebarProvider, SidebarTrigger, useSidebar,
+} from "@/components/ui/sidebar";
+import { setTestPayMode } from "@/lib/payments.functions";
+import { listAdminUsers, setUserAdmin, deleteAppUser } from "@/lib/admin-users.functions";
+import { logAdminAction } from "@/lib/audit";
 import { setTestPayMode } from "@/lib/payments.functions";
 import { listAdminUsers, setUserAdmin, deleteAppUser } from "@/lib/admin-users.functions";
 import { logAdminAction } from "@/lib/audit";
