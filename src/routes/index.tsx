@@ -42,24 +42,38 @@ function Home() {
 }
 
 function Header() {
-  const [open, setOpen] = useState(false);
+  const { session, loading } = useAuth();
   return (
     <header className="sticky top-0 z-50 backdrop-blur-xl bg-background/70 border-b border-border/50">
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-        <a href="#" className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2">
           <img src={logo} alt="YANN PRONOSTICS" className="h-10 w-10 object-contain" />
           <span className="font-display text-lg tracking-wider text-gold hidden sm:block">YANN PRONOSTICS</span>
-        </a>
+        </Link>
         <div className="hidden md:flex items-center gap-8 text-sm">
           <a href="#coupons" className="hover:text-primary transition-colors">Coupons</a>
           <a href="#why" className="hover:text-primary transition-colors">Pourquoi nous</a>
           <a href="#contact" className="hover:text-primary transition-colors">Contact</a>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="hidden sm:inline-flex">Connexion</Button>
-          <Button size="sm" className="bg-gold-gradient text-primary-foreground hover:opacity-90 font-semibold shadow-gold">
-            S'inscrire
-          </Button>
+          {loading ? null : session ? (
+            <Link to="/dashboard">
+              <Button size="sm" className="bg-gold-gradient text-primary-foreground hover:opacity-90 font-semibold shadow-gold">
+                <LayoutDashboard className="w-4 h-4 mr-2" /> Mon espace
+              </Button>
+            </Link>
+          ) : (
+            <>
+              <Link to="/auth" className="hidden sm:inline-flex">
+                <Button variant="ghost" size="sm">Connexion</Button>
+              </Link>
+              <Link to="/auth">
+                <Button size="sm" className="bg-gold-gradient text-primary-foreground hover:opacity-90 font-semibold shadow-gold">
+                  S'inscrire
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
       </nav>
     </header>
