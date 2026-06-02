@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: string | null
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value?: string | null
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: string | null
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -50,9 +68,11 @@ export type Database = {
       coupons: {
         Row: {
           category_id: string | null
+          coupon_type: Database["public"]["Enums"]["coupon_type"] | null
           created_at: string
           created_by: string | null
           description: string | null
+          end_date: string | null
           event_date: string | null
           id: string
           image_url: string | null
@@ -61,17 +81,22 @@ export type Database = {
           preview_content: string | null
           price_xaf: number
           private_content: string
+          sales_count: number
           slug: string
           sport: string | null
+          start_date: string | null
           status: Database["public"]["Enums"]["publish_status"]
           title: string
           updated_at: string
+          video_url: string | null
         }
         Insert: {
           category_id?: string | null
+          coupon_type?: Database["public"]["Enums"]["coupon_type"] | null
           created_at?: string
           created_by?: string | null
           description?: string | null
+          end_date?: string | null
           event_date?: string | null
           id?: string
           image_url?: string | null
@@ -80,17 +105,22 @@ export type Database = {
           preview_content?: string | null
           price_xaf?: number
           private_content?: string
+          sales_count?: number
           slug: string
           sport?: string | null
+          start_date?: string | null
           status?: Database["public"]["Enums"]["publish_status"]
           title: string
           updated_at?: string
+          video_url?: string | null
         }
         Update: {
           category_id?: string | null
+          coupon_type?: Database["public"]["Enums"]["coupon_type"] | null
           created_at?: string
           created_by?: string | null
           description?: string | null
+          end_date?: string | null
           event_date?: string | null
           id?: string
           image_url?: string | null
@@ -99,11 +129,14 @@ export type Database = {
           preview_content?: string | null
           price_xaf?: number
           private_content?: string
+          sales_count?: number
           slug?: string
           sport?: string | null
+          start_date?: string | null
           status?: Database["public"]["Enums"]["publish_status"]
           title?: string
           updated_at?: string
+          video_url?: string | null
         }
         Relationships: [
           {
@@ -192,6 +225,149 @@ export type Database = {
           },
         ]
       }
+      subscription_plans: {
+        Row: {
+          created_at: string
+          description: string | null
+          duration_days: number
+          id: string
+          is_active: boolean
+          name: string
+          price_xaf: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          duration_days: number
+          id?: string
+          is_active?: boolean
+          name: string
+          price_xaf: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          duration_days?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          price_xaf?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          activated_by: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          notes: string | null
+          plan_id: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["subscription_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activated_by?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          plan_id?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activated_by?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          plan_id?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transactions: {
+        Row: {
+          amount_xaf: number
+          coupon_id: string | null
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["transaction_kind"]
+          notes: string | null
+          payment_method: string | null
+          reference: string | null
+          status: Database["public"]["Enums"]["transaction_status"]
+          subscription_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_xaf: number
+          coupon_id?: string | null
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["transaction_kind"]
+          notes?: string | null
+          payment_method?: string | null
+          reference?: string | null
+          status?: Database["public"]["Enums"]["transaction_status"]
+          subscription_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_xaf?: number
+          coupon_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["transaction_kind"]
+          notes?: string | null
+          payment_method?: string | null
+          reference?: string | null
+          status?: Database["public"]["Enums"]["transaction_status"]
+          subscription_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -228,8 +404,12 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      coupon_type: "cote_10" | "cote_30" | "cote_50" | "pair_corner"
       publish_status: "draft" | "published" | "archived"
       review_status: "pending" | "approved" | "rejected"
+      subscription_status: "active" | "inactive" | "expired" | "cancelled"
+      transaction_kind: "coupon" | "subscription"
+      transaction_status: "pending" | "completed" | "failed" | "refunded"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -358,8 +538,12 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      coupon_type: ["cote_10", "cote_30", "cote_50", "pair_corner"],
       publish_status: ["draft", "published", "archived"],
       review_status: ["pending", "approved", "rejected"],
+      subscription_status: ["active", "inactive", "expired", "cancelled"],
+      transaction_kind: ["coupon", "subscription"],
+      transaction_status: ["pending", "completed", "failed", "refunded"],
     },
   },
 } as const
