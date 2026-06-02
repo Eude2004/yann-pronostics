@@ -4,7 +4,7 @@ export async function logAdminAction(
   action: string,
   entity_type: string,
   entity_id?: string | null,
-  details: Record<string, unknown> = {},
+  details: Record<string, any> = {},
 ): Promise<void> {
   try {
     const { data } = await supabase.auth.getUser();
