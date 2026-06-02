@@ -1001,6 +1001,29 @@ function SettingsAdmin() {
           )}
         </div>
       </div>
+
+      <div>
+        <h2 className="text-xl font-display mb-4 flex items-center gap-2">
+          <EyeOff className="w-5 h-5 text-primary" /> Confidentialité
+        </h2>
+        <div className="rounded-xl border border-border/60 bg-card p-6 space-y-3">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="font-medium">Mode anonyme</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Masque les noms des clients dans la liste des transactions et l'analytics.
+                L'achat reste possible et les données restent en base.
+              </p>
+            </div>
+            <Switch checked={anonymous} onCheckedChange={onToggleAnonymous} disabled={savingAnon} />
+          </div>
+          {anonymous && (
+            <Badge className="bg-primary/15 text-primary border border-primary/30">
+              <EyeOff className="w-3 h-3 mr-1" /> Mode anonyme actif
+            </Badge>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
