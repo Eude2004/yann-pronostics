@@ -812,9 +812,6 @@ const CHART_COLORS = ["hsl(var(--primary))", "#22c55e", "#ef4444", "#a855f7", "#
 const STATUS_LABEL: Record<string, string> = {
   completed: "Validé", pending: "En attente", failed: "Échoué", refunded: "Remboursé",
 };
-const COUPON_TYPE_LABEL: Record<string, string> = {
-  cote_10: "Cote 10+", cote_30: "Cote 30+", cote_50: "Cote 50+", pair_corner: "Pair Corner",
-};
 
 function StatsCharts({ txs }: { txs: Transaction[] }) {
   // Revenue per day (last 14 days)
