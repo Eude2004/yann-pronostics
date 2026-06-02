@@ -936,17 +936,20 @@ function SettingsAdmin() {
 
 function StatsAdmin() {
   const [txs, setTxs] = useState<Transaction[]>([]);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [usersCount, setUsersCount] = useState(0);
   const [couponsCount, setCouponsCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const reload = async () => {
-    const [t, u, c] = await Promise.all([
+    const [t, u, c, cAll] = await Promise.all([
       supabase.from("transactions").select("*").eq("kind", "coupon").order("created_at", { ascending: false }),
       supabase.from("profiles").select("id", { count: "exact", head: true }),
       supabase.from("coupons").select("id", { count: "exact", head: true }).eq("status", "published"),
+      supabase.from("coupons").select("*"),
     ]);
     setTxs((t.data as Transaction[]) ?? []);
+    setCoupons((cAll.data as Coupon[]) ?? []);
     setUsersCount(u.count ?? 0);
     setCouponsCount(c.count ?? 0);
     setLoading(false);
@@ -954,16 +957,13 @@ function StatsAdmin() {
 
   useEffect(() => {
     reload();
-    // Realtime: refresh on any transaction/profile/coupon change
     const channel = supabase
       .channel("admin-stats")
       .on("postgres_changes", { event: "*", schema: "public", table: "transactions" }, reload)
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, reload)
       .on("postgres_changes", { event: "*", schema: "public", table: "coupons" }, reload)
       .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   if (loading) return <div className="text-muted-foreground">Chargement…</div>;
@@ -979,6 +979,9 @@ function StatsAdmin() {
   const completedCount = completed.length;
   const pendingCount = txs.filter(t => t.status === "pending").length;
   const avgBasket = completedCount > 0 ? Math.round(revenueTotal / completedCount) : 0;
+  const uniqueBuyers = new Set(completed.map(t => t.user_id)).size;
+  const arpu = uniqueBuyers > 0 ? Math.round(revenueTotal / uniqueBuyers) : 0;
+  const conversionRate = txs.length > 0 ? Math.round((completedCount / txs.length) * 100) : 0;
 
   return (
     <div className="space-y-6">
