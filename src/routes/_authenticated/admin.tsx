@@ -24,11 +24,18 @@ import logo from "@/assets/yann-logo.png";
 import {
   ArrowLeft, Plus, Pencil, Trash2, Check, X, Star, Shield, LogOut,
   Save, Download, FileText, TrendingUp, FlaskConical, Users, History,
+  LayoutDashboard, Ticket, Receipt, MessageSquare, Settings as SettingsIcon,
+  DollarSign, ShoppingCart, Package, ArrowUpRight, Menu,
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
+import {
+  Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
+  SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
+  SidebarProvider, SidebarTrigger, useSidebar,
+} from "@/components/ui/sidebar";
 import { setTestPayMode } from "@/lib/payments.functions";
 import { listAdminUsers, setUserAdmin, deleteAppUser } from "@/lib/admin-users.functions";
 import { logAdminAction } from "@/lib/audit";
@@ -66,8 +73,23 @@ type Review = {
   rating: number; comment: string; status: ReviewStatus; created_at: string;
 };
 
+type AdminView =
+  | "stats" | "coupons" | "transactions" | "reviews"
+  | "users" | "audit" | "settings";
+
+const NAV_ITEMS: { id: AdminView; label: string; icon: any }[] = [
+  { id: "stats", label: "Tableau de bord", icon: LayoutDashboard },
+  { id: "coupons", label: "Coupons", icon: Ticket },
+  { id: "transactions", label: "Transactions", icon: Receipt },
+  { id: "reviews", label: "Avis", icon: MessageSquare },
+  { id: "users", label: "Utilisateurs", icon: Users },
+  { id: "audit", label: "Journal", icon: History },
+  { id: "settings", label: "Paramètres", icon: SettingsIcon },
+];
+
 function AdminPage() {
-  const { isAdmin, loading, signOut } = useAuth();
+  const { isAdmin, loading } = useAuth();
+  const [view, setView] = useState<AdminView>("stats");
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Chargement…</div>;
@@ -83,54 +105,128 @@ function AdminPage() {
     );
   }
 
+  const current = NAV_ITEMS.find(n => n.id === view) ?? NAV_ITEMS[0];
+
   return (
-    <div className="min-h-screen">
-      <header className="border-b border-border/50 bg-background/80 backdrop-blur sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link to="/" className="text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <img src={logo} alt="" className="h-9 w-9 object-contain" />
-            <div>
-              <p className="font-display tracking-wider text-gold leading-none">YANN PRONOSTICS</p>
-              <p className="text-xs text-muted-foreground">Panneau administrateur</p>
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-background">
+        <AdminSidebar view={view} setView={setView} />
+
+        <div className="flex-1 flex flex-col min-w-0">
+          <header className="sticky top-0 z-30 h-14 border-b border-border/50 bg-background/90 backdrop-blur flex items-center gap-3 px-3 sm:px-5">
+            <SidebarTrigger className="-ml-1">
+              <Menu className="w-5 h-5" />
+            </SidebarTrigger>
+            <h1 className="font-display tracking-wider text-base sm:text-lg uppercase truncate">
+              {current.label}
+            </h1>
+            <div className="ml-auto flex items-center gap-2">
+              <Badge className="bg-primary/15 text-primary border border-primary/30 hidden sm:inline-flex">
+                <Shield className="w-3 h-3 mr-1" /> Admin
+              </Badge>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge className="bg-primary/15 text-primary border border-primary/30">
-              <Shield className="w-3 h-3 mr-1" /> Admin
-            </Badge>
-            <Button variant="ghost" size="sm" onClick={signOut}>
-              <LogOut className="w-4 h-4 mr-2" /> Déconnexion
+          </header>
+
+          <main className="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto">
+            {view === "stats" && <StatsAdmin />}
+            {view === "coupons" && <CouponsAdmin />}
+            {view === "transactions" && <TransactionsAdmin />}
+            {view === "reviews" && <ReviewsAdmin />}
+            {view === "users" && <UsersAdmin />}
+            {view === "audit" && <AuditAdmin />}
+            {view === "settings" && <SettingsAdmin />}
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
+  );
+}
+
+function AdminSidebar({ view, setView }: { view: AdminView; setView: (v: AdminView) => void }) {
+  const { signOut, user } = useAuth();
+  const { state, setOpenMobile, isMobile } = useSidebar();
+  const collapsed = state === "collapsed";
+  const name = (user?.user_metadata?.full_name as string) || user?.email?.split("@")[0] || "Admin";
+  const initials = name.slice(0, 2).toUpperCase();
+
+  const select = (id: AdminView) => {
+    setView(id);
+    if (isMobile) setOpenMobile(false);
+  };
+
+  return (
+    <Sidebar collapsible="icon">
+      <SidebarHeader className="border-b border-border/50">
+        <div className="flex items-center gap-3 px-2 py-3">
+          <img src={logo} alt="" className="h-9 w-9 object-contain shrink-0" />
+          {!collapsed && (
+            <div className="min-w-0">
+              <p className="font-display tracking-wider text-gold text-sm leading-none truncate">YANN PRONOSTICS</p>
+              <p className="text-[11px] text-muted-foreground mt-1">Administration</p>
+            </div>
+          )}
+        </div>
+      </SidebarHeader>
+
+      <SidebarContent>
+        <SidebarGroup>
+          {!collapsed && <SidebarGroupLabel>Menu</SidebarGroupLabel>}
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {NAV_ITEMS.map((item) => {
+                const active = view === item.id;
+                const Icon = item.icon;
+                return (
+                  <SidebarMenuItem key={item.id}>
+                    <SidebarMenuButton
+                      isActive={active}
+                      onClick={() => select(item.id)}
+                      tooltip={item.label}
+                      className={active
+                        ? "bg-gold-gradient text-primary-foreground font-semibold shadow-gold hover:opacity-90 hover:text-primary-foreground data-[active=true]:bg-gold-gradient data-[active=true]:text-primary-foreground"
+                        : ""}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span>{item.label}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarFooter className="border-t border-border/50">
+        <div className="px-2 py-2 space-y-2">
+          {!collapsed && (
+            <div className="flex items-center gap-2 px-2">
+              <div className="h-9 w-9 rounded-full bg-primary/15 text-primary flex items-center justify-center text-xs font-bold border border-primary/30">
+                {initials}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium truncate">{name}</p>
+                <p className="text-[11px] text-muted-foreground">Admin</p>
+              </div>
+            </div>
+          )}
+          <div className="flex gap-2">
+            <Button asChild variant="outline" size="sm" className="flex-1">
+              <Link to="/">
+                <ArrowLeft className="w-4 h-4 mr-1" />
+                {!collapsed && "Boutique"}
+              </Link>
+            </Button>
+            <Button variant="ghost" size="sm" onClick={signOut} aria-label="Déconnexion">
+              <LogOut className="w-4 h-4" />
             </Button>
           </div>
         </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <Tabs defaultValue="stats" className="w-full">
-          <TabsList className="flex-wrap h-auto">
-            <TabsTrigger value="stats">Tableau de bord</TabsTrigger>
-            <TabsTrigger value="coupons">Coupons du jour</TabsTrigger>
-            <TabsTrigger value="transactions">Transactions</TabsTrigger>
-            <TabsTrigger value="reviews">Avis</TabsTrigger>
-            <TabsTrigger value="users"><Users className="w-3.5 h-3.5 mr-1" />Utilisateurs</TabsTrigger>
-            <TabsTrigger value="audit"><History className="w-3.5 h-3.5 mr-1" />Journal</TabsTrigger>
-            <TabsTrigger value="settings">Paramètres</TabsTrigger>
-          </TabsList>
-          <TabsContent value="stats" className="mt-6"><StatsAdmin /></TabsContent>
-          <TabsContent value="coupons" className="mt-6"><CouponsAdmin /></TabsContent>
-          <TabsContent value="transactions" className="mt-6"><TransactionsAdmin /></TabsContent>
-          <TabsContent value="reviews" className="mt-6"><ReviewsAdmin /></TabsContent>
-          <TabsContent value="users" className="mt-6"><UsersAdmin /></TabsContent>
-          <TabsContent value="audit" className="mt-6"><AuditAdmin /></TabsContent>
-          <TabsContent value="settings" className="mt-6"><SettingsAdmin /></TabsContent>
-        </Tabs>
-      </main>
-    </div>
+      </SidebarFooter>
+    </Sidebar>
   );
 }
+
 
 /* ---------------- COUPONS ---------------- */
 
@@ -770,42 +866,146 @@ function StatsAdmin() {
   const revenueMonth = completed.filter(t => new Date(t.created_at) >= startMonth).reduce((s, t) => s + t.amount_xaf, 0);
   const revenueDay = completed.filter(t => new Date(t.created_at) >= startDay).reduce((s, t) => s + t.amount_xaf, 0);
 
+  const completedCount = completed.length;
+  const pendingCount = txs.filter(t => t.status === "pending").length;
+  const avgBasket = completedCount > 0 ? Math.round(revenueTotal / completedCount) : 0;
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-display flex items-center gap-2"><TrendingUp className="w-5 h-5 text-gold" /> Tableau de bord</h2>
-        <p className="text-xs text-muted-foreground">Vue d'ensemble revenus et activité.</p>
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="bg-card border border-border/60 h-11 p-1">
+          <TabsTrigger value="overview" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <LayoutDashboard className="w-4 h-4 mr-1.5" /> Vue d'ensemble
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <TrendingUp className="w-4 h-4 mr-1.5" /> Analytics
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="mt-5 space-y-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <BigStatCard
+              label="Chiffre d'affaires"
+              value={`${revenueTotal.toLocaleString("fr-FR")} XAF`}
+              Icon={DollarSign}
+              tone="emerald"
+            />
+            <BigStatCard
+              label="Transactions"
+              value={txs.length.toString()}
+              hint={pendingCount > 0 ? `${pendingCount} en attente` : undefined}
+              Icon={ShoppingCart}
+              tone="blue"
+            />
+            <BigStatCard
+              label="Coupons publiés"
+              value={couponsCount.toString()}
+              Icon={Package}
+              tone="violet"
+            />
+            <BigStatCard
+              label="Clients"
+              value={usersCount.toString()}
+              Icon={Users}
+              tone="amber"
+            />
+          </div>
+
+          <div className="rounded-2xl border border-border/60 bg-card">
+            <div className="p-5 border-b border-border/40">
+              <h3 className="font-display text-lg">Transactions récentes</h3>
+            </div>
+            <div className="divide-y divide-border/40">
+              {txs.slice(0, 6).map((t) => (
+                <div key={t.id} className="flex items-center justify-between gap-3 px-5 py-3">
+                  <div className="min-w-0">
+                    <p className="font-mono text-xs truncate">
+                      {(t.reference ?? t.id).slice(0, 18)}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {new Date(t.created_at).toLocaleString("fr-FR")}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="font-display text-gold text-sm">{t.amount_xaf.toLocaleString("fr-FR")} XAF</p>
+                    <p className="text-[11px]">
+                      {t.status === "completed" && <span className="text-emerald-500">Validée</span>}
+                      {t.status === "pending" && <span className="text-muted-foreground">En attente</span>}
+                      {t.status === "failed" && <span className="text-destructive">Échouée</span>}
+                      {t.status === "refunded" && <span className="text-muted-foreground">Remboursée</span>}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              {txs.length === 0 && (
+                <p className="text-center text-sm text-muted-foreground py-8">Aucune transaction</p>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border/60 bg-card p-5">
+            <h3 className="font-display text-base mb-3">Exporter l'historique</h3>
+            <div className="flex gap-2 flex-wrap">
+              <Button onClick={() => exportTransactionsCSV(txs)} variant="outline" size="sm">
+                <Download className="w-4 h-4 mr-2" /> CSV
+              </Button>
+              <Button onClick={() => exportTransactionsPDF(txs)} size="sm" className="bg-gold-gradient text-primary-foreground">
+                <FileText className="w-4 h-4 mr-2" /> PDF
+              </Button>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="mt-5 space-y-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-gold" />
+              <h2 className="font-display text-lg">Analytics</h2>
+            </div>
+            <Badge variant="outline" className="border-border/60">Ce mois</Badge>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <BigStatCard label="CA du mois" value={`${revenueMonth.toLocaleString("fr-FR")} XAF`} Icon={DollarSign} tone="emerald" />
+            <BigStatCard label="CA du jour" value={`${revenueDay.toLocaleString("fr-FR")} XAF`} Icon={ArrowUpRight} tone="blue" />
+            <BigStatCard label="Panier moyen" value={`${avgBasket.toLocaleString("fr-FR")} XAF`} Icon={TrendingUp} tone="violet" />
+            <BigStatCard label="Ventes validées" value={completedCount.toString()} Icon={Check} tone="amber" />
+          </div>
+
+          <StatsCharts txs={txs} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+const TONE_CLASSES: Record<string, string> = {
+  emerald: "bg-emerald-500/15 text-emerald-500",
+  blue: "bg-blue-500/15 text-blue-500",
+  violet: "bg-violet-500/15 text-violet-500",
+  amber: "bg-amber-500/15 text-amber-500",
+};
+
+function BigStatCard({
+  label, value, hint, Icon, tone = "emerald",
+}: {
+  label: string; value: string; hint?: string;
+  Icon: any; tone?: keyof typeof TONE_CLASSES;
+}) {
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card p-5 flex items-center justify-between gap-3 hover:border-primary/40 transition">
+      <div className="min-w-0">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="mt-1 font-display text-2xl truncate">{value}</p>
+        {hint && <p className="text-[11px] text-muted-foreground mt-0.5">{hint}</p>}
       </div>
-
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Revenus du jour" value={`${revenueDay.toLocaleString()} XAF`} accent />
-        <StatCard label="Revenus du mois" value={`${revenueMonth.toLocaleString()} XAF`} accent />
-        <StatCard label="Revenus totaux" value={`${revenueTotal.toLocaleString()} XAF`} />
-        <StatCard label="Ventes validées" value={completed.length.toString()} />
-        <StatCard label="Utilisateurs inscrits" value={usersCount.toString()} />
-        <StatCard label="Coupons publiés" value={couponsCount.toString()} />
-        <StatCard label="Transactions totales" value={txs.length.toString()} />
-        <StatCard label="Panier moyen" value={`${completed.length > 0 ? Math.round(revenueTotal / completed.length).toLocaleString() : 0} XAF`} />
-      </div>
-
-      <StatsCharts txs={txs} />
-
-
-
-      <div>
-        <h3 className="font-display text-lg mb-3">Export historique transactions</h3>
-        <div className="flex gap-2 flex-wrap">
-          <Button onClick={() => exportTransactionsCSV(txs)} variant="outline">
-            <Download className="w-4 h-4 mr-2" /> Exporter CSV
-          </Button>
-          <Button onClick={() => exportTransactionsPDF(txs)} className="bg-gold-gradient text-primary-foreground">
-            <FileText className="w-4 h-4 mr-2" /> Exporter PDF
-          </Button>
-        </div>
+      <div className={`h-12 w-12 rounded-full flex items-center justify-center shrink-0 ${TONE_CLASSES[tone]}`}>
+        <Icon className="w-5 h-5" />
       </div>
     </div>
   );
 }
+
 
 
 const CHART_COLORS = ["hsl(var(--primary))", "#22c55e", "#ef4444", "#a855f7", "#3b82f6", "#f97316"];
