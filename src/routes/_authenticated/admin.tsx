@@ -36,7 +36,7 @@ import {
   SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
   SidebarProvider, SidebarTrigger, useSidebar,
 } from "@/components/ui/sidebar";
-import { setTestPayMode } from "@/lib/payments.functions";
+import { setTestPayMode as setTestPayModeFn } from "@/lib/payments.functions";
 import { listAdminUsers, setUserAdmin, deleteAppUser } from "@/lib/admin-users.functions";
 import { logAdminAction } from "@/lib/audit";
 
@@ -733,7 +733,7 @@ function SettingsAdmin() {
   const [testPay, setTestPay] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const toggleTestPay = useServerFn(setTestPayMode);
+  const toggleTestPay = useServerFn(setTestPayModeFn);
 
   useEffect(() => {
     (async () => {
