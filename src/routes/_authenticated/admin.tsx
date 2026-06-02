@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,7 +40,15 @@ import { setTestPayMode as setTestPayModeFn } from "@/lib/payments.functions";
 import { listAdminUsers as listAdminUsersFn, setUserAdmin as setUserAdminFn, deleteAppUser as deleteAppUserFn } from "@/lib/admin-users.functions";
 import { logAdminAction } from "@/lib/audit";
 
+const ADMIN_VIEWS = ["stats", "coupons", "transactions", "reviews", "users", "audit", "settings"] as const;
+type AdminViewKey = (typeof ADMIN_VIEWS)[number];
+
 export const Route = createFileRoute("/_authenticated/admin")({
+  validateSearch: (s: Record<string, unknown>): { tab: AdminViewKey } => {
+    const t = typeof s.tab === "string" && (ADMIN_VIEWS as readonly string[]).includes(s.tab)
+      ? (s.tab as AdminViewKey) : "stats";
+    return { tab: t };
+  },
   head: () => ({ meta: [{ title: "Admin — YANN PRONOSTICS" }] }),
   component: AdminPage,
 });
@@ -87,9 +95,19 @@ const NAV_ITEMS: { id: AdminView; label: string; icon: any }[] = [
   { id: "settings", label: "Paramètres", icon: SettingsIcon },
 ];
 
+function readSidebarCookie(): boolean {
+  if (typeof document === "undefined") return true;
+  const m = document.cookie.match(/(?:^|; )sidebar_state=([^;]+)/);
+  return m ? m[1] === "true" : true;
+}
+
 function AdminPage() {
   const { isAdmin, loading } = useAuth();
-  const [view, setView] = useState<AdminView>("stats");
+  const { tab } = Route.useSearch();
+  const navigate = useNavigate();
+  const view = tab as AdminView;
+  const setView = (v: AdminView) => navigate({ to: "/admin", search: { tab: v as AdminViewKey }, replace: false });
+  const [sidebarDefault] = useState<boolean>(() => readSidebarCookie());
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Chargement…</div>;
@@ -108,7 +126,7 @@ function AdminPage() {
   const current = NAV_ITEMS.find(n => n.id === view) ?? NAV_ITEMS[0];
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={sidebarDefault}>
       <div className="min-h-screen flex w-full bg-background">
         <AdminSidebar view={view} setView={setView} />
 
@@ -293,7 +311,14 @@ function CouponsAdmin() {
       .order("created_at", { ascending: false });
     if (error) toast.error(error.message); else setItems((data as Coupon[]) ?? []);
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    const channel = supabase
+      .channel("admin-coupons")
+      .on("postgres_changes", { event: "*", schema: "public", table: "coupons" }, load)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const openNew = () => { setEditing(null); setForm({ ...emptyCouponForm }); setOpen(true); };
   const openEdit = (c: Coupon) => {
@@ -532,28 +557,58 @@ function CouponsAdmin() {
 
 function TransactionsAdmin() {
   const [items, setItems] = useState<Transaction[]>([]);
+  const [profiles, setProfiles] = useState<Record<string, { full_name: string | null; username: string | null }>>({});
   const [filter, setFilter] = useState<TxStatus | "all">("all");
+  const [search, setSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   const load = async () => {
     let q = supabase.from("transactions").select("*").eq("kind", "coupon")
-      .order("created_at", { ascending: false }).limit(200);
+      .order("created_at", { ascending: false }).limit(1000);
     if (filter !== "all") q = q.eq("status", filter);
+    if (dateFrom) q = q.gte("created_at", new Date(dateFrom).toISOString());
+    if (dateTo) {
+      const end = new Date(dateTo); end.setHours(23, 59, 59, 999);
+      q = q.lte("created_at", end.toISOString());
+    }
     const { data, error } = await q;
-    if (error) toast.error(error.message); else setItems((data as Transaction[]) ?? []);
+    if (error) { toast.error(error.message); return; }
+    const txs = (data as Transaction[]) ?? [];
+    setItems(txs);
+    const ids = Array.from(new Set(txs.map(t => t.user_id)));
+    if (ids.length) {
+      const { data: profs } = await supabase.from("profiles").select("id, full_name, username").in("id", ids);
+      const map: Record<string, { full_name: string | null; username: string | null }> = {};
+      (profs ?? []).forEach((p: any) => { map[p.id] = { full_name: p.full_name, username: p.username }; });
+      setProfiles(map);
+    }
   };
-  useEffect(() => { load(); }, [filter]);
+
+  useEffect(() => {
+    load();
+    const channel = supabase
+      .channel(`admin-tx-${filter}-${dateFrom}-${dateTo}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "transactions" }, load)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [filter, dateFrom, dateTo]);
+
+  useEffect(() => { setPage(1); }, [filter, search, dateFrom, dateTo]);
 
   const setStatus = async (id: string, status: TxStatus) => {
     const { error } = await supabase.from("transactions").update({ status }).eq("id", id);
     if (error) return toast.error(error.message);
-    toast.success("Statut mis à jour"); load();
+    toast.success("Statut mis à jour");
   };
 
   const remove = async (id: string) => {
     if (!confirm("Supprimer cette transaction ?")) return;
     const { error } = await supabase.from("transactions").delete().eq("id", id);
     if (error) return toast.error(error.message);
-    toast.success("Supprimée"); load();
+    toast.success("Supprimée");
   };
 
   const badge = (s: TxStatus) => ({
@@ -563,34 +618,72 @@ function TransactionsAdmin() {
     refunded: <Badge variant="outline">Remboursée</Badge>,
   }[s]);
 
-  const total = items.filter(i => i.status === "completed").reduce((s, i) => s + i.amount_xaf, 0);
+  const userLabel = (t: Transaction) => {
+    const p = profiles[t.user_id];
+    return p?.full_name || p?.username || `${t.user_id.slice(0, 8)}…`;
+  };
+
+  const searched = items.filter(t => {
+    if (!search.trim()) return true;
+    const s = search.toLowerCase();
+    return (
+      (t.reference ?? "").toLowerCase().includes(s) ||
+      t.user_id.toLowerCase().includes(s) ||
+      userLabel(t).toLowerCase().includes(s) ||
+      (t.payment_method ?? "").toLowerCase().includes(s) ||
+      t.amount_xaf.toString().includes(s)
+    );
+  });
+
+  const pageCount = Math.max(1, Math.ceil(searched.length / PAGE_SIZE));
+  const pageItems = searched.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const total = searched.filter(i => i.status === "completed").reduce((s, i) => s + i.amount_xaf, 0);
+
+  const resetFilters = () => { setFilter("all"); setSearch(""); setDateFrom(""); setDateTo(""); };
 
   return (
     <div>
       <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
         <div>
-          <h2 className="text-xl font-display">Transactions ({items.length})</h2>
-          <p className="text-xs text-muted-foreground">Total validé : <span className="text-gold font-semibold">{total.toLocaleString()} XAF</span></p>
+          <h2 className="text-xl font-display">Transactions ({searched.length})</h2>
+          <p className="text-xs text-muted-foreground">Total validé : <span className="text-gold font-semibold">{total.toLocaleString("fr-FR")} XAF</span></p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Select value={filter} onValueChange={(v) => setFilter(v as TxStatus | "all")}>
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous</SelectItem>
-              <SelectItem value="pending">En attente</SelectItem>
-              <SelectItem value="completed">Validées</SelectItem>
-              <SelectItem value="failed">Échouées</SelectItem>
-              <SelectItem value="refunded">Remboursées</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button onClick={() => exportTransactionsCSV(items)} variant="outline" size="sm">
+          <Button onClick={() => exportTransactionsCSV(searched)} variant="outline" size="sm">
             <Download className="w-4 h-4 mr-2" /> CSV
           </Button>
-          <Button onClick={() => exportTransactionsPDF(items)} variant="outline" size="sm">
+          <Button onClick={() => exportTransactionsPDF(searched)} variant="outline" size="sm">
             <FileText className="w-4 h-4 mr-2" /> PDF
           </Button>
         </div>
       </div>
+
+      <div className="rounded-xl border border-border/60 bg-card p-3 mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+        <Input
+          placeholder="Rechercher (réf, utilisateur, montant…)"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="lg:col-span-2"
+        />
+        <Select value={filter} onValueChange={(v) => setFilter(v as TxStatus | "all")}>
+          <SelectTrigger><SelectValue placeholder="Statut" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tous statuts</SelectItem>
+            <SelectItem value="pending">En attente</SelectItem>
+            <SelectItem value="completed">Validées</SelectItem>
+            <SelectItem value="failed">Échouées</SelectItem>
+            <SelectItem value="refunded">Remboursées</SelectItem>
+          </SelectContent>
+        </Select>
+        <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} aria-label="Du" />
+        <div className="flex gap-2">
+          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} aria-label="Au" className="flex-1" />
+          <Button variant="ghost" size="sm" onClick={resetFilters} title="Réinitialiser">
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+
       <div className="rounded-xl border border-border/60 bg-card overflow-x-auto">
         <Table>
           <TableHeader><TableRow>
@@ -600,11 +693,11 @@ function TransactionsAdmin() {
             <TableHead className="text-right">Actions</TableHead>
           </TableRow></TableHeader>
           <TableBody>
-            {items.map(t => (
+            {pageItems.map(t => (
               <TableRow key={t.id}>
-                <TableCell className="text-xs">{new Date(t.created_at).toLocaleString("fr-FR")}</TableCell>
-                <TableCell className="font-mono text-xs">{t.user_id.slice(0, 8)}…</TableCell>
-                <TableCell className="font-semibold text-gold">{t.amount_xaf.toLocaleString()} XAF</TableCell>
+                <TableCell className="text-xs whitespace-nowrap">{new Date(t.created_at).toLocaleString("fr-FR")}</TableCell>
+                <TableCell className="text-xs">{userLabel(t)}</TableCell>
+                <TableCell className="font-semibold text-gold whitespace-nowrap">{t.amount_xaf.toLocaleString("fr-FR")} XAF</TableCell>
                 <TableCell className="text-xs">{t.payment_method ?? "—"}</TableCell>
                 <TableCell className="text-xs font-mono">{t.reference ?? "—"}</TableCell>
                 <TableCell>{badge(t.status)}</TableCell>
@@ -622,10 +715,20 @@ function TransactionsAdmin() {
                 </TableCell>
               </TableRow>
             ))}
-            {items.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Aucune transaction</TableCell></TableRow>}
+            {pageItems.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Aucune transaction</TableCell></TableRow>}
           </TableBody>
         </Table>
       </div>
+
+      {pageCount > 1 && (
+        <div className="flex items-center justify-between mt-3 text-xs">
+          <span className="text-muted-foreground">Page {page} / {pageCount}</span>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>Précédent</Button>
+            <Button size="sm" variant="outline" disabled={page >= pageCount} onClick={() => setPage(p => Math.min(pageCount, p + 1))}>Suivant</Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -642,7 +745,14 @@ function ReviewsAdmin() {
     const { data, error } = await q;
     if (error) toast.error(error.message); else setItems((data as Review[]) ?? []);
   };
-  useEffect(() => { load(); }, [filter]);
+  useEffect(() => {
+    load();
+    const channel = supabase
+      .channel(`admin-reviews-${filter}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "reviews" }, load)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [filter]);
 
   const moderate = async (id: string, status: ReviewStatus) => {
     const { error } = await supabase.from("reviews").update({
@@ -826,17 +936,20 @@ function SettingsAdmin() {
 
 function StatsAdmin() {
   const [txs, setTxs] = useState<Transaction[]>([]);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [usersCount, setUsersCount] = useState(0);
   const [couponsCount, setCouponsCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const reload = async () => {
-    const [t, u, c] = await Promise.all([
+    const [t, u, c, cAll] = await Promise.all([
       supabase.from("transactions").select("*").eq("kind", "coupon").order("created_at", { ascending: false }),
       supabase.from("profiles").select("id", { count: "exact", head: true }),
       supabase.from("coupons").select("id", { count: "exact", head: true }).eq("status", "published"),
+      supabase.from("coupons").select("*"),
     ]);
     setTxs((t.data as Transaction[]) ?? []);
+    setCoupons((cAll.data as Coupon[]) ?? []);
     setUsersCount(u.count ?? 0);
     setCouponsCount(c.count ?? 0);
     setLoading(false);
@@ -844,16 +957,13 @@ function StatsAdmin() {
 
   useEffect(() => {
     reload();
-    // Realtime: refresh on any transaction/profile/coupon change
     const channel = supabase
       .channel("admin-stats")
       .on("postgres_changes", { event: "*", schema: "public", table: "transactions" }, reload)
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, reload)
       .on("postgres_changes", { event: "*", schema: "public", table: "coupons" }, reload)
       .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   if (loading) return <div className="text-muted-foreground">Chargement…</div>;
@@ -869,6 +979,9 @@ function StatsAdmin() {
   const completedCount = completed.length;
   const pendingCount = txs.filter(t => t.status === "pending").length;
   const avgBasket = completedCount > 0 ? Math.round(revenueTotal / completedCount) : 0;
+  const uniqueBuyers = new Set(completed.map(t => t.user_id)).size;
+  const arpu = uniqueBuyers > 0 ? Math.round(revenueTotal / uniqueBuyers) : 0;
+  const conversionRate = txs.length > 0 ? Math.round((completedCount / txs.length) * 100) : 0;
 
   return (
     <div className="space-y-6">
@@ -971,8 +1084,14 @@ function StatsAdmin() {
             <BigStatCard label="Panier moyen" value={`${avgBasket.toLocaleString("fr-FR")} XAF`} Icon={TrendingUp} tone="violet" />
             <BigStatCard label="Ventes validées" value={completedCount.toString()} Icon={Check} tone="amber" />
           </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <BigStatCard label="ARPU (par acheteur)" value={`${arpu.toLocaleString("fr-FR")} XAF`} Icon={Users} tone="emerald" hint={`${uniqueBuyers} acheteur${uniqueBuyers > 1 ? "s" : ""}`} />
+            <BigStatCard label="Taux de conversion" value={`${conversionRate}%`} Icon={TrendingUp} tone="blue" hint={`${completedCount}/${txs.length} tx`} />
+            <BigStatCard label="En attente" value={pendingCount.toString()} Icon={ShoppingCart} tone="amber" />
+            <BigStatCard label="Coupons actifs" value={couponsCount.toString()} Icon={Package} tone="violet" />
+          </div>
 
-          <StatsCharts txs={txs} />
+          <StatsCharts txs={txs} coupons={coupons} />
         </TabsContent>
       </Tabs>
     </div>
@@ -1013,7 +1132,7 @@ const STATUS_LABEL: Record<string, string> = {
   completed: "Validé", pending: "En attente", failed: "Échoué", refunded: "Remboursé",
 };
 
-function StatsCharts({ txs }: { txs: Transaction[] }) {
+function StatsCharts({ txs, coupons }: { txs: Transaction[]; coupons: Coupon[] }) {
   // Revenue per day (last 14 days)
   const days: { day: string; revenue: number; ventes: number }[] = [];
   const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -1035,14 +1154,34 @@ function StatsCharts({ txs }: { txs: Transaction[] }) {
     value: txs.filter(t => t.status === s).length,
   })).filter(s => s.value > 0);
 
-  // Revenue by coupon (need coupon types) — we only have coupon_id in tx, so aggregate by coupon_id
+  // Top coupons by revenue (named via coupons list)
+  const couponMap = new Map(coupons.map(c => [c.id, c]));
   const byCoupon = new Map<string, number>();
+  const countCoupon = new Map<string, number>();
   txs.filter(t => t.status === "completed" && t.coupon_id).forEach(t => {
     byCoupon.set(t.coupon_id!, (byCoupon.get(t.coupon_id!) ?? 0) + t.amount_xaf);
+    countCoupon.set(t.coupon_id!, (countCoupon.get(t.coupon_id!) ?? 0) + 1);
   });
-  const couponBars = Array.from(byCoupon.entries()).map(([id, v], i) => ({
-    name: `Coupon ${i + 1}`, _id: id, revenue: v,
+  const topCoupons = Array.from(byCoupon.entries())
+    .map(([id, v]) => ({
+      name: (couponMap.get(id)?.title ?? `Coupon ${id.slice(0, 6)}`).slice(0, 22),
+      revenue: v,
+      ventes: countCoupon.get(id) ?? 0,
+    }))
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 5);
+
+  // Hourly sales distribution (0-23h) — uses completed txs over all time
+  const hours = Array.from({ length: 24 }, (_, h) => ({
+    hour: `${h.toString().padStart(2, "0")}h`,
+    ventes: 0,
+    revenue: 0,
   }));
+  txs.filter(t => t.status === "completed").forEach(t => {
+    const h = new Date(t.created_at).getHours();
+    hours[h].ventes += 1;
+    hours[h].revenue += t.amount_xaf;
+  });
 
   return (
     <div className="grid lg:grid-cols-2 gap-4">
@@ -1102,21 +1241,36 @@ function StatsCharts({ txs }: { txs: Transaction[] }) {
       </div>
 
       <div className="rounded-xl border border-border/60 bg-card p-4">
-        <h3 className="font-display text-base mb-3">Revenus par coupon</h3>
+        <h3 className="font-display text-base mb-3">Top 5 coupons (revenus)</h3>
         <div className="h-64">
-          {couponBars.length === 0 ? (
+          {topCoupons.length === 0 ? (
             <div className="h-full flex items-center justify-center text-sm text-muted-foreground">Aucune donnée</div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={couponBars} layout="vertical" margin={{ top: 5, right: 10, left: 40, bottom: 0 }}>
+              <BarChart data={topCoupons} layout="vertical" margin={{ top: 5, right: 10, left: 80, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} formatter={(v: number) => `${v.toLocaleString()} XAF`} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} width={120} />
+                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} formatter={(v: number, n) => n === "revenue" ? `${v.toLocaleString()} XAF` : `${v} vente${v > 1 ? "s" : ""}`} />
                 <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[0, 6, 6, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border/60 bg-card p-4 lg:col-span-2">
+        <h3 className="font-display text-base mb-3">Ventes par tranche horaire</h3>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={hours} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis dataKey="hour" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} interval={1} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+              <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} formatter={(v: number, n) => n === "revenue" ? `${v.toLocaleString()} XAF` : v} />
+              <Bar dataKey="ventes" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>
