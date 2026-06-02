@@ -164,24 +164,27 @@ function CouponsSection() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const load = async () => {
+    const now = new Date().toISOString();
+    const { data } = await supabase
+      .from("coupons")
+      .select("*")
+      .eq("status", "published")
+      .or(`end_date.is.null,end_date.gte.${now}`)
+      .order("coupon_type");
+    setCoupons((data as Coupon[]) ?? []);
+    setLoading(false);
+  };
+
   useEffect(() => {
-    const load = async () => {
-      const now = new Date().toISOString();
-      const { data } = await supabase
-        .from("coupons")
-        .select("*")
-        .eq("status", "published")
-        .or(`end_date.is.null,end_date.gte.${now}`)
-        .order("coupon_type");
-      const dbCoupons = (data as Coupon[]) ?? [];
-      // Merge with fallback so the 4 types always show
-      const byType = new Map(dbCoupons.filter(c => c.coupon_type).map(c => [c.coupon_type, c]));
-      const merged = FALLBACK_COUPONS.map(f => byType.get(f.coupon_type!) ?? f);
-      setCoupons(merged);
-      setLoading(false);
-    };
     load();
+    const channel = supabase
+      .channel("home-coupons")
+      .on("postgres_changes", { event: "*", schema: "public", table: "coupons" }, load)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, []);
+
 
   return (
     <section id="coupons" className="py-20 sm:py-28">
