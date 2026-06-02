@@ -201,10 +201,16 @@ function CouponsAdmin() {
     };
     const slug = form.coupon_type + "-" + Date.now();
     const insertPayload = { ...basePayload, slug };
-    const { error } = editing
-      ? await supabase.from("coupons").update(basePayload).eq("id", editing.id)
-      : await supabase.from("coupons").insert(insertPayload);
+    const { data: saved, error } = editing
+      ? await supabase.from("coupons").update(basePayload).eq("id", editing.id).select("id").maybeSingle()
+      : await supabase.from("coupons").insert(insertPayload).select("id").maybeSingle();
     if (error) return toast.error(error.message);
+    await logAdminAction(
+      editing ? "update_coupon" : "create_coupon",
+      "coupon",
+      saved?.id ?? editing?.id,
+      { title: basePayload.title, status: basePayload.status },
+    );
     toast.success(editing ? "Coupon mis à jour" : "Coupon créé");
     setOpen(false); load();
   };
@@ -213,12 +219,14 @@ function CouponsAdmin() {
     if (!confirm("Supprimer ce coupon ?")) return;
     const { error } = await supabase.from("coupons").delete().eq("id", id);
     if (error) return toast.error(error.message);
+    await logAdminAction("delete_coupon", "coupon", id);
     toast.success("Coupon supprimé"); load();
   };
 
   const setStatus = async (id: string, status: PublishStatus) => {
     const { error } = await supabase.from("coupons").update({ status }).eq("id", id);
     if (error) return toast.error(error.message);
+    await logAdminAction("update_coupon_status", "coupon", id, { status });
     toast.success("Statut mis à jour"); load();
   };
 
@@ -485,12 +493,14 @@ function ReviewsAdmin() {
       status, moderated_at: new Date().toISOString(),
     }).eq("id", id);
     if (error) return toast.error(error.message);
+    await logAdminAction("moderate_review", "review", id, { status });
     toast.success("Avis modéré"); load();
   };
   const remove = async (id: string) => {
     if (!confirm("Supprimer cet avis ?")) return;
     const { error } = await supabase.from("reviews").delete().eq("id", id);
     if (error) return toast.error(error.message);
+    await logAdminAction("delete_review", "review", id);
     toast.success("Supprimé"); load();
   };
 
@@ -589,6 +599,7 @@ function SettingsAdmin() {
     const { error } = await supabase.from("app_settings").upsert(payload, { onConflict: "key" });
     setSaving(false);
     if (error) return toast.error(error.message);
+    await logAdminAction("update_settings", "settings", null, { whatsapp: whatsapp.trim(), site_name: siteName.trim() });
     toast.success("Paramètres enregistrés");
   };
 
@@ -597,6 +608,7 @@ function SettingsAdmin() {
     setTestPay(enabled);
     try {
       await toggleTestPay({ data: { enabled } });
+      await logAdminAction("toggle_test_pay", "settings", null, { enabled });
       toast.success(enabled ? "Mode Test Pay activé" : "Mode Test Pay désactivé");
     } catch (e) {
       setTestPay(prev);
