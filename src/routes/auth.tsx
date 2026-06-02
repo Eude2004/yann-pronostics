@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { useAuth } from "@/hooks/use-auth";
-import { Loader2, Mail, Lock, User as UserIcon } from "lucide-react";
+import { Loader2, Mail, Lock, User as UserIcon, Phone } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -26,6 +26,7 @@ export const Route = createFileRoute("/auth")({
 const emailSchema = z.string().trim().email("Adresse email invalide").max(255);
 const passwordSchema = z.string().min(8, "Au moins 8 caractères").max(72);
 const nameSchema = z.string().trim().min(2, "Nom trop court").max(80);
+const whatsappSchema = z.string().trim().regex(/^[0-9+\s]{8,20}$/, "Numéro WhatsApp invalide");
 
 function AuthPage() {
   const { session, loading } = useAuth();
@@ -134,7 +135,9 @@ function LoginForm() {
 function SignupForm() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
 
   const onSubmit = async (e: FormEvent) => {
@@ -142,17 +145,20 @@ function SignupForm() {
     try {
       nameSchema.parse(fullName);
       emailSchema.parse(email);
+      whatsappSchema.parse(whatsapp);
       passwordSchema.parse(password);
     } catch (err) {
       if (err instanceof z.ZodError) return toast.error(err.issues[0].message);
     }
+    if (password !== confirm) return toast.error("Les mots de passe ne correspondent pas.");
+
     setBusy(true);
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/`,
-        data: { full_name: fullName },
+        data: { full_name: fullName, whatsapp: whatsapp.trim() },
       },
     });
     setBusy(false);
@@ -161,18 +167,20 @@ function SignupForm() {
       else toast.error(error.message);
       return;
     }
-    toast.success("Compte créé ! Vérifiez votre email pour confirmer votre adresse.");
+    toast.success("Compte créé ! Connexion automatique en cours…");
   };
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <Field icon={UserIcon} label="Nom complet" value={fullName} onChange={setFullName} placeholder="Jean Dupont" autoComplete="name" />
       <Field icon={Mail} label="Email" type="email" value={email} onChange={setEmail} placeholder="vous@email.com" autoComplete="email" />
+      <Field icon={Phone} label="Numéro WhatsApp" type="tel" value={whatsapp} onChange={setWhatsapp} placeholder="237 6XX XX XX XX" autoComplete="tel" />
       <Field icon={Lock} label="Mot de passe" type="password" value={password} onChange={setPassword} placeholder="Min. 8 caractères" autoComplete="new-password" />
+      <Field icon={Lock} label="Confirmer le mot de passe" type="password" value={confirm} onChange={setConfirm} placeholder="Retapez votre mot de passe" autoComplete="new-password" />
       <Button type="submit" disabled={busy} className="w-full bg-gold-gradient text-primary-foreground hover:opacity-90 font-bold shadow-gold h-11">
         {busy && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Créer mon compte
       </Button>
-      <p className="text-xs text-muted-foreground text-center">Vous recevrez un email de vérification.</p>
+      <p className="text-xs text-muted-foreground text-center">Inscription instantanée — aucune confirmation email requise.</p>
     </form>
   );
 }

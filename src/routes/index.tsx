@@ -202,10 +202,16 @@ function CouponCard({ coupon }: { coupon: Coupon }) {
   const { settings } = useSettings();
   const meta = coupon.coupon_type ? TYPE_META[coupon.coupon_type] : TYPE_META.cote_10;
   const Icon = meta.icon;
-  const buyHref = whatsappLink(
-    settings.whatsapp_number,
-    `Bonjour, je souhaite acheter le coupon "${coupon.title}" (${coupon.price_xaf.toLocaleString("fr-FR")} XAF).`,
-  );
+  const txRef = `YP-${coupon.coupon_type ?? "coupon"}-${Date.now().toString().slice(-6)}`;
+  const myCouponsUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/dashboard`;
+  const buyMsg = [
+    `Bonjour YANN PRONOSTICS,`,
+    `Je souhaite acheter le coupon : ${coupon.title}.`,
+    `Montant : ${coupon.price_xaf.toLocaleString("fr-FR")} XAF`,
+    `N° de transaction : ${txRef}`,
+    `Accès après paiement : ${myCouponsUrl}`,
+  ].join("\n");
+  const buyHref = whatsappLink(settings.whatsapp_number, buyMsg);
   const dateLabel = coupon.start_date
     ? new Date(coupon.start_date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })
     : new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
