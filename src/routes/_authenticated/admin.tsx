@@ -893,8 +893,10 @@ function SettingsAdmin() {
   const [whatsapp, setWhatsapp] = useState("");
   const [siteName, setSiteName] = useState("");
   const [testPay, setTestPay] = useState(false);
+  const [anonymous, setAnonymous] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingAnon, setSavingAnon] = useState(false);
   const toggleTestPay = useServerFn(setTestPayModeFn);
 
   useEffect(() => {
@@ -904,6 +906,7 @@ function SettingsAdmin() {
       setWhatsapp(map.whatsapp_number ?? "654010951");
       setSiteName(map.site_name ?? "YANN PRONOSTICS");
       setTestPay(map.test_pay_mode === "true");
+      setAnonymous(map.anonymous_mode === "true");
       setLoading(false);
     })();
   }, []);
@@ -933,6 +936,24 @@ function SettingsAdmin() {
       toast.error(e instanceof Error ? e.message : "Échec");
     }
   };
+
+  const onToggleAnonymous = async (enabled: boolean) => {
+    const prev = anonymous;
+    setAnonymous(enabled);
+    setSavingAnon(true);
+    const { error } = await supabase.from("app_settings").upsert(
+      { key: "anonymous_mode", value: enabled ? "true" : "false", updated_at: new Date().toISOString() },
+      { onConflict: "key" },
+    );
+    setSavingAnon(false);
+    if (error) {
+      setAnonymous(prev);
+      return toast.error(error.message);
+    }
+    await logAdminAction("toggle_anonymous_mode", "settings", null, { enabled });
+    toast.success(enabled ? "Mode anonyme activé" : "Mode anonyme désactivé");
+  };
+
 
   if (loading) return <div className="text-muted-foreground">Chargement…</div>;
 
