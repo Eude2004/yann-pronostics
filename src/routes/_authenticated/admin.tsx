@@ -95,9 +95,19 @@ const NAV_ITEMS: { id: AdminView; label: string; icon: any }[] = [
   { id: "settings", label: "Paramètres", icon: SettingsIcon },
 ];
 
+function readSidebarCookie(): boolean {
+  if (typeof document === "undefined") return true;
+  const m = document.cookie.match(/(?:^|; )sidebar_state=([^;]+)/);
+  return m ? m[1] === "true" : true;
+}
+
 function AdminPage() {
   const { isAdmin, loading } = useAuth();
-  const [view, setView] = useState<AdminView>("stats");
+  const { tab } = Route.useSearch();
+  const navigate = useNavigate();
+  const view = tab as AdminView;
+  const setView = (v: AdminView) => navigate({ to: "/admin", search: { tab: v as AdminViewKey }, replace: false });
+  const [sidebarDefault] = useState<boolean>(() => readSidebarCookie());
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Chargement…</div>;
@@ -116,7 +126,7 @@ function AdminPage() {
   const current = NAV_ITEMS.find(n => n.id === view) ?? NAV_ITEMS[0];
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={sidebarDefault}>
       <div className="min-h-screen flex w-full bg-background">
         <AdminSidebar view={view} setView={setView} />
 
