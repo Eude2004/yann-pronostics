@@ -25,6 +25,10 @@ import {
   ArrowLeft, Plus, Pencil, Trash2, Check, X, Star, Shield, LogOut,
   Save, Download, FileText, TrendingUp, FlaskConical, Users, History,
 } from "lucide-react";
+import {
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+} from "recharts";
 import { setTestPayMode } from "@/lib/payments.functions";
 import { listAdminUsers, setUserAdmin, deleteAppUser } from "@/lib/admin-users.functions";
 import { logAdminAction } from "@/lib/audit";
@@ -143,6 +147,7 @@ function CouponsAdmin() {
   const [editing, setEditing] = useState<Coupon | null>(null);
   const [form, setForm] = useState({ ...emptyCouponForm });
   const [uploading, setUploading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const uploadVideo = async (file: File) => {
     if (!file) return;
@@ -162,6 +167,30 @@ function CouponsAdmin() {
       setUploading(false);
     }
   };
+
+  const uploadImage = async (file: File) => {
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `coupons/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage
+        .from("coupon-images")
+        .upload(path, file, { contentType: file.type || "image/*", upsert: false });
+      if (error) throw error;
+      const { data: signed, error: signErr } = await supabase.storage
+        .from("coupon-images")
+        .createSignedUrl(path, 60 * 60 * 24 * 365);
+      if (signErr) throw signErr;
+      setForm((f) => ({ ...f, image_url: signed.signedUrl }));
+      toast.success("Image téléversée");
+    } catch (e: any) {
+      toast.error(e.message ?? "Échec du téléversement");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
 
   const load = async () => {
     const { data, error } = await supabase.from("coupons").select("*")
@@ -307,7 +336,38 @@ function CouponsAdmin() {
               </Select>
             </div>
             <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Texte affiché sur la carte du coupon" /></div>
-            <div><Label>Image (URL)</Label><Input value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="https://…" /></div>
+            <div className="space-y-2">
+              <Label>Image du coupon <span className="text-xs text-muted-foreground font-normal">(optionnel)</span></Label>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" size="sm" disabled={uploadingImage}
+                  onClick={() => document.getElementById("img-pick")?.click()}>
+                  📁 Galerie / Fichier
+                </Button>
+                <Button type="button" variant="outline" size="sm" disabled={uploadingImage}
+                  onClick={() => document.getElementById("img-cam")?.click()}>
+                  📷 Prendre une photo
+                </Button>
+                {form.image_url && (
+                  <Button type="button" variant="ghost" size="sm"
+                    onClick={() => setForm({ ...form, image_url: "" })}>
+                    <X className="w-4 h-4 mr-1" />Retirer
+                  </Button>
+                )}
+              </div>
+              <input id="img-pick" type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.bmp,.heic,.heif,.avif,.tiff,.svg"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && uploadImage(e.target.files[0])} />
+              <input id="img-cam" type="file" accept="image/*" capture="environment"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && uploadImage(e.target.files[0])} />
+              <Input value={form.image_url}
+                onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+                placeholder="ou collez une URL d'image" />
+              {uploadingImage && <p className="text-xs text-muted-foreground">Téléversement en cours…</p>}
+              {form.image_url && !uploadingImage && (
+                <img src={form.image_url} alt="" className="h-24 rounded border border-border/60 object-cover" />
+              )}
+            </div>
             <div className="space-y-2">
               <Label>Vidéo du coupon (débloquée après achat)</Label>
               <div className="flex flex-wrap gap-2">
@@ -728,6 +788,10 @@ function StatsAdmin() {
         <StatCard label="Panier moyen" value={`${completed.length > 0 ? Math.round(revenueTotal / completed.length).toLocaleString() : 0} XAF`} />
       </div>
 
+      <StatsCharts txs={txs} />
+
+
+
       <div>
         <h3 className="font-display text-lg mb-3">Export historique transactions</h3>
         <div className="flex gap-2 flex-wrap">
@@ -743,7 +807,124 @@ function StatsAdmin() {
   );
 }
 
+
+const CHART_COLORS = ["hsl(var(--primary))", "#22c55e", "#ef4444", "#a855f7", "#3b82f6", "#f97316"];
+const STATUS_LABEL: Record<string, string> = {
+  completed: "Validé", pending: "En attente", failed: "Échoué", refunded: "Remboursé",
+};
+
+function StatsCharts({ txs }: { txs: Transaction[] }) {
+  // Revenue per day (last 14 days)
+  const days: { day: string; revenue: number; ventes: number }[] = [];
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(today); d.setDate(today.getDate() - i);
+    const next = new Date(d); next.setDate(d.getDate() + 1);
+    const dayTx = txs.filter(t => t.status === "completed" &&
+      new Date(t.created_at) >= d && new Date(t.created_at) < next);
+    days.push({
+      day: d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" }),
+      revenue: dayTx.reduce((s, t) => s + t.amount_xaf, 0),
+      ventes: dayTx.length,
+    });
+  }
+
+  // Status distribution
+  const byStatus = ["completed", "pending", "failed", "refunded"].map(s => ({
+    name: STATUS_LABEL[s] ?? s,
+    value: txs.filter(t => t.status === s).length,
+  })).filter(s => s.value > 0);
+
+  // Revenue by coupon (need coupon types) — we only have coupon_id in tx, so aggregate by coupon_id
+  const byCoupon = new Map<string, number>();
+  txs.filter(t => t.status === "completed" && t.coupon_id).forEach(t => {
+    byCoupon.set(t.coupon_id!, (byCoupon.get(t.coupon_id!) ?? 0) + t.amount_xaf);
+  });
+  const couponBars = Array.from(byCoupon.entries()).map(([id, v], i) => ({
+    name: `Coupon ${i + 1}`, _id: id, revenue: v,
+  }));
+
+  return (
+    <div className="grid lg:grid-cols-2 gap-4">
+      <div className="rounded-xl border border-border/60 bg-card p-4">
+        <h3 className="font-display text-base mb-3">Revenus — 14 derniers jours</h3>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={days} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="gold-area" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.5} />
+                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis dataKey="day" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+              <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+              <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} formatter={(v: number) => `${v.toLocaleString()} XAF`} />
+              <Area type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" fill="url(#gold-area)" strokeWidth={2} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border/60 bg-card p-4">
+        <h3 className="font-display text-base mb-3">Ventes par jour</h3>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={days} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis dataKey="day" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+              <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+              <Bar dataKey="ventes" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border/60 bg-card p-4">
+        <h3 className="font-display text-base mb-3">Répartition des transactions</h3>
+        <div className="h-64">
+          {byStatus.length === 0 ? (
+            <div className="h-full flex items-center justify-center text-sm text-muted-foreground">Aucune donnée</div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={byStatus} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                  {byStatus.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                </Pie>
+                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border/60 bg-card p-4">
+        <h3 className="font-display text-base mb-3">Revenus par coupon</h3>
+        <div className="h-64">
+          {couponBars.length === 0 ? (
+            <div className="h-full flex items-center justify-center text-sm text-muted-foreground">Aucune donnée</div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={couponBars} layout="vertical" margin={{ top: 5, right: 10, left: 40, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} formatter={(v: number) => `${v.toLocaleString()} XAF`} />
+                <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[0, 6, 6, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StatCard({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+
   return (
     <div className={`rounded-xl border bg-card p-4 ${accent ? "border-primary/40 shadow-glow" : "border-border/60"}`}>
       <div className="text-xs text-muted-foreground">{label}</div>

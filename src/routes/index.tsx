@@ -153,35 +153,32 @@ function Stats() {
   );
 }
 
-const FALLBACK_COUPONS: Coupon[] = [
-  { id: "1", coupon_type: "cote_10", title: "Cote de 10+", description: "Sélection sécurisée — idéale pour démarrer la journée.", price_xaf: 4000, image_url: null, video_url: null, start_date: null, end_date: null, sales_count: 0, status: "published" },
-  { id: "2", coupon_type: "cote_30", title: "Cote de 30+", description: "Équilibre parfait entre risque et rendement.", price_xaf: 5000, image_url: null, video_url: null, start_date: null, end_date: null, sales_count: 0, status: "published" },
-  { id: "3", coupon_type: "cote_50", title: "Cote de 50+", description: "Pour les parieurs avertis. Analyse approfondie.", price_xaf: 7000, image_url: null, video_url: null, start_date: null, end_date: null, sales_count: 0, status: "published" },
-  { id: "4", coupon_type: "pair_corner", title: "Coupon Total Pair Corner", description: "La sélection corner exclusive du jour.", price_xaf: 6000, image_url: null, video_url: null, start_date: null, end_date: null, sales_count: 0, status: "published" },
-];
 
 function CouponsSection() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const load = async () => {
+    const now = new Date().toISOString();
+    const { data } = await supabase
+      .from("coupons")
+      .select("*")
+      .eq("status", "published")
+      .or(`end_date.is.null,end_date.gte.${now}`)
+      .order("coupon_type");
+    setCoupons((data as Coupon[]) ?? []);
+    setLoading(false);
+  };
+
   useEffect(() => {
-    const load = async () => {
-      const now = new Date().toISOString();
-      const { data } = await supabase
-        .from("coupons")
-        .select("*")
-        .eq("status", "published")
-        .or(`end_date.is.null,end_date.gte.${now}`)
-        .order("coupon_type");
-      const dbCoupons = (data as Coupon[]) ?? [];
-      // Merge with fallback so the 4 types always show
-      const byType = new Map(dbCoupons.filter(c => c.coupon_type).map(c => [c.coupon_type, c]));
-      const merged = FALLBACK_COUPONS.map(f => byType.get(f.coupon_type!) ?? f);
-      setCoupons(merged);
-      setLoading(false);
-    };
     load();
+    const channel = supabase
+      .channel("home-coupons")
+      .on("postgres_changes", { event: "*", schema: "public", table: "coupons" }, load)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, []);
+
 
   return (
     <section id="coupons" className="py-20 sm:py-28">
