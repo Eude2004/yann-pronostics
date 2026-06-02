@@ -1,13 +1,16 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import logo from "@/assets/yann-logo.png";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Lock, TrendingUp, Trophy, Zap, ShieldCheck, Star, Flame, ArrowRight, MessageCircle, LayoutDashboard, Calendar, ShoppingCart } from "lucide-react";
+import { Lock, TrendingUp, Trophy, Zap, ShieldCheck, Star, Flame, ArrowRight, MessageCircle, LayoutDashboard, Calendar, ShoppingCart, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { useSettings, whatsappLink } from "@/hooks/use-settings";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { initiatePayment } from "@/lib/payments.functions";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -201,22 +204,46 @@ function CouponsSection() {
 }
 
 function CouponCard({ coupon }: { coupon: Coupon }) {
-  const { settings } = useSettings();
+  const { session } = useAuth();
+  const navigate = useNavigate();
+  const initiate = useServerFn(initiatePayment);
+  const [loadingBuy, setLoadingBuy] = useState(false);
   const meta = coupon.coupon_type ? TYPE_META[coupon.coupon_type] : TYPE_META.cote_10;
   const Icon = meta.icon;
-  const txRef = `YP-${coupon.coupon_type ?? "coupon"}-${Date.now().toString().slice(-6)}`;
-  const myCouponsUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/dashboard`;
-  const buyMsg = [
-    `Bonjour YANN PRONOSTICS,`,
-    `Je souhaite acheter le coupon : ${coupon.title}.`,
-    `Montant : ${coupon.price_xaf.toLocaleString("fr-FR")} XAF`,
-    `N° de transaction : ${txRef}`,
-    `Accès après paiement : ${myCouponsUrl}`,
-  ].join("\n");
-  const buyHref = whatsappLink(settings.whatsapp_number, buyMsg);
+
   const dateLabel = coupon.start_date
     ? new Date(coupon.start_date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })
     : new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
+
+  const handleBuy = async () => {
+    if (!session) {
+      toast.info("Connectez-vous pour acheter ce coupon");
+      navigate({ to: "/auth", search: { redirect: "/" } as never });
+      return;
+    }
+    if (!coupon.id || coupon.id.length < 30) {
+      toast.error("Ce coupon n'est pas encore enregistré côté admin.");
+      return;
+    }
+    setLoadingBuy(true);
+    try {
+      const res = await initiate({
+        data: {
+          kind: "coupon",
+          couponId: coupon.id,
+          returnOrigin: window.location.origin,
+          customer: {
+            name: session.user.user_metadata?.full_name ?? undefined,
+            email: session.user.email ?? undefined,
+          },
+        },
+      });
+      window.location.href = res.paymentUrl;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Impossible d'initier le paiement");
+      setLoadingBuy(false);
+    }
+  };
 
   return (
     <div className="group relative rounded-2xl border border-border/60 bg-card overflow-hidden transition-all hover:border-primary/50 hover:shadow-gold">
@@ -270,11 +297,13 @@ function CouponCard({ coupon }: { coupon: Coupon }) {
             <div className="text-xs text-muted-foreground">Prix</div>
             <div className="font-display text-2xl text-gold">{coupon.price_xaf.toLocaleString("fr-FR")} XAF</div>
           </div>
-          <a href={buyHref} target="_blank" rel="noreferrer">
-            <Button className="bg-gold-gradient text-primary-foreground hover:opacity-90 font-semibold shadow-gold">
-              Acheter
-            </Button>
-          </a>
+          <Button
+            onClick={handleBuy}
+            disabled={loadingBuy}
+            className="bg-gold-gradient text-primary-foreground hover:opacity-90 font-semibold shadow-gold"
+          >
+            {loadingBuy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Acheter"}
+          </Button>
         </div>
       </div>
     </div>
