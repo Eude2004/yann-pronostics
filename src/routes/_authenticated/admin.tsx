@@ -139,6 +139,7 @@ function AdminPage() {
               {current.label}
             </h1>
             <div className="ml-auto flex items-center gap-2">
+              <RealtimeIndicator />
               <Badge className="bg-primary/15 text-primary border border-primary/30 hidden sm:inline-flex">
                 <Shield className="w-3 h-3 mr-1" /> Admin
               </Badge>
