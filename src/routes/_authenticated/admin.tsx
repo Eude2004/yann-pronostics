@@ -25,6 +25,10 @@ import {
   ArrowLeft, Plus, Pencil, Trash2, Check, X, Star, Shield, LogOut,
   Save, Download, FileText, TrendingUp, FlaskConical, Users, History,
 } from "lucide-react";
+import {
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+} from "recharts";
 import { setTestPayMode } from "@/lib/payments.functions";
 import { listAdminUsers, setUserAdmin, deleteAppUser } from "@/lib/admin-users.functions";
 import { logAdminAction } from "@/lib/audit";
