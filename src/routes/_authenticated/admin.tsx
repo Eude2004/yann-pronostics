@@ -40,7 +40,15 @@ import { setTestPayMode as setTestPayModeFn } from "@/lib/payments.functions";
 import { listAdminUsers as listAdminUsersFn, setUserAdmin as setUserAdminFn, deleteAppUser as deleteAppUserFn } from "@/lib/admin-users.functions";
 import { logAdminAction } from "@/lib/audit";
 
+const ADMIN_VIEWS = ["stats", "coupons", "transactions", "reviews", "users", "audit", "settings"] as const;
+type AdminViewKey = (typeof ADMIN_VIEWS)[number];
+
 export const Route = createFileRoute("/_authenticated/admin")({
+  validateSearch: (s: Record<string, unknown>): { tab: AdminViewKey } => {
+    const t = typeof s.tab === "string" && (ADMIN_VIEWS as readonly string[]).includes(s.tab)
+      ? (s.tab as AdminViewKey) : "stats";
+    return { tab: t };
+  },
   head: () => ({ meta: [{ title: "Admin — YANN PRONOSTICS" }] }),
   component: AdminPage,
 });
