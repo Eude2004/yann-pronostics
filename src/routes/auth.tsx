@@ -26,6 +26,7 @@ export const Route = createFileRoute("/auth")({
 const emailSchema = z.string().trim().email("Adresse email invalide").max(255);
 const passwordSchema = z.string().min(8, "Au moins 8 caractères").max(72);
 const nameSchema = z.string().trim().min(2, "Nom trop court").max(80);
+const whatsappSchema = z.string().trim().regex(/^[0-9+\s]{8,20}$/, "Numéro WhatsApp invalide");
 
 function AuthPage() {
   const { session, loading } = useAuth();
