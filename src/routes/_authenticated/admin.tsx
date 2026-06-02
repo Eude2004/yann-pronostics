@@ -733,7 +733,7 @@ function SettingsAdmin() {
   const [testPay, setTestPay] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const toggleTestPay = useServerFn(setTestPayMode);
+  const toggleTestPay = useServerFn(setTestPayModeFn);
 
   useEffect(() => {
     (async () => {
