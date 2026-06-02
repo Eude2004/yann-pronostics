@@ -297,7 +297,7 @@ function CouponCard({ coupon }: { coupon: Coupon }) {
 
         <div className="mt-6 flex items-center justify-between gap-2">
           <div>
-            <div className="text-xs text-muted-foreground">Prix</div>
+            <div className="text-xs text-muted-foreground">{t("coupon.price")}</div>
             <div className="font-display text-2xl text-gold">{coupon.price_xaf.toLocaleString("fr-FR")} XAF</div>
           </div>
           <Button
@@ -305,10 +305,11 @@ function CouponCard({ coupon }: { coupon: Coupon }) {
             disabled={loadingBuy}
             className="bg-gold-gradient text-primary-foreground hover:opacity-90 font-semibold shadow-gold"
           >
-            {loadingBuy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Acheter"}
+            {loadingBuy ? <Loader2 className="w-4 h-4 animate-spin" /> : t("coupon.buy")}
           </Button>
         </div>
       </div>
+      <VisitorSignupPrompt open={promptOpen} onOpenChange={setPromptOpen} couponId={coupon.id} />
     </div>
   );
 }
