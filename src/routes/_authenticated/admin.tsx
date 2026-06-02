@@ -807,7 +807,127 @@ function StatsAdmin() {
   );
 }
 
+
+const CHART_COLORS = ["hsl(var(--primary))", "#22c55e", "#ef4444", "#a855f7", "#3b82f6", "#f97316"];
+const STATUS_LABEL: Record<string, string> = {
+  completed: "Validé", pending: "En attente", failed: "Échoué", refunded: "Remboursé",
+};
+const COUPON_TYPE_LABEL: Record<string, string> = {
+  cote_10: "Cote 10+", cote_30: "Cote 30+", cote_50: "Cote 50+", pair_corner: "Pair Corner",
+};
+
+function StatsCharts({ txs }: { txs: Transaction[] }) {
+  // Revenue per day (last 14 days)
+  const days: { day: string; revenue: number; ventes: number }[] = [];
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(today); d.setDate(today.getDate() - i);
+    const next = new Date(d); next.setDate(d.getDate() + 1);
+    const dayTx = txs.filter(t => t.status === "completed" &&
+      new Date(t.created_at) >= d && new Date(t.created_at) < next);
+    days.push({
+      day: d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" }),
+      revenue: dayTx.reduce((s, t) => s + t.amount_xaf, 0),
+      ventes: dayTx.length,
+    });
+  }
+
+  // Status distribution
+  const byStatus = ["completed", "pending", "failed", "refunded"].map(s => ({
+    name: STATUS_LABEL[s] ?? s,
+    value: txs.filter(t => t.status === s).length,
+  })).filter(s => s.value > 0);
+
+  // Revenue by coupon (need coupon types) — we only have coupon_id in tx, so aggregate by coupon_id
+  const byCoupon = new Map<string, number>();
+  txs.filter(t => t.status === "completed" && t.coupon_id).forEach(t => {
+    byCoupon.set(t.coupon_id!, (byCoupon.get(t.coupon_id!) ?? 0) + t.amount_xaf);
+  });
+  const couponBars = Array.from(byCoupon.entries()).map(([id, v], i) => ({
+    name: `Coupon ${i + 1}`, _id: id, revenue: v,
+  }));
+
+  return (
+    <div className="grid lg:grid-cols-2 gap-4">
+      <div className="rounded-xl border border-border/60 bg-card p-4">
+        <h3 className="font-display text-base mb-3">Revenus — 14 derniers jours</h3>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={days} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="gold-area" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.5} />
+                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis dataKey="day" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+              <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+              <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} formatter={(v: number) => `${v.toLocaleString()} XAF`} />
+              <Area type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" fill="url(#gold-area)" strokeWidth={2} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border/60 bg-card p-4">
+        <h3 className="font-display text-base mb-3">Ventes par jour</h3>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={days} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis dataKey="day" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+              <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+              <Bar dataKey="ventes" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border/60 bg-card p-4">
+        <h3 className="font-display text-base mb-3">Répartition des transactions</h3>
+        <div className="h-64">
+          {byStatus.length === 0 ? (
+            <div className="h-full flex items-center justify-center text-sm text-muted-foreground">Aucune donnée</div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={byStatus} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                  {byStatus.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                </Pie>
+                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border/60 bg-card p-4">
+        <h3 className="font-display text-base mb-3">Revenus par coupon</h3>
+        <div className="h-64">
+          {couponBars.length === 0 ? (
+            <div className="h-full flex items-center justify-center text-sm text-muted-foreground">Aucune donnée</div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={couponBars} layout="vertical" margin={{ top: 5, right: 10, left: 40, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} formatter={(v: number) => `${v.toLocaleString()} XAF`} />
+                <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[0, 6, 6, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StatCard({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+
   return (
     <div className={`rounded-xl border bg-card p-4 ${accent ? "border-primary/40 shadow-glow" : "border-border/60"}`}>
       <div className="text-xs text-muted-foreground">{label}</div>
