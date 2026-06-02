@@ -154,6 +154,7 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          preferences_updated_at: string
           reduce_motion: boolean
           theme_preference: string
           updated_at: string
@@ -165,6 +166,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id: string
+          preferences_updated_at?: string
           reduce_motion?: boolean
           theme_preference?: string
           updated_at?: string
@@ -176,6 +178,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          preferences_updated_at?: string
           reduce_motion?: boolean
           theme_preference?: string
           updated_at?: string
