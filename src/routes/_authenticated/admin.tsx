@@ -136,6 +136,26 @@ function CouponsAdmin() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Coupon | null>(null);
   const [form, setForm] = useState({ ...emptyCouponForm });
+  const [uploading, setUploading] = useState(false);
+
+  const uploadVideo = async (file: File) => {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const ext = (file.name.split(".").pop() || "mp4").toLowerCase();
+      const path = `coupons/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage
+        .from("coupon-videos")
+        .upload(path, file, { contentType: file.type || "video/*", upsert: false });
+      if (error) throw error;
+      setForm((f) => ({ ...f, video_url: path }));
+      toast.success("Vidéo téléversée");
+    } catch (e: any) {
+      toast.error(e.message ?? "Échec du téléversement");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const load = async () => {
     const { data, error } = await supabase.from("coupons").select("*")
