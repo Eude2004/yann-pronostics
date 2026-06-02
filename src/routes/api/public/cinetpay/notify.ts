@@ -71,7 +71,6 @@ export const Route = createFileRoute("/api/public/cinetpay/notify")({
               .eq("id", txId)
               .maybeSingle();
             if (tx?.kind === "coupon" && tx.coupon_id) {
-              await supabaseAdmin.rpc as unknown; // no-op placeholder if rpc unavailable
               const { data: cur } = await supabaseAdmin
                 .from("coupons")
                 .select("sales_count")

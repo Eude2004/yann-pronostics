@@ -16,6 +16,8 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSubscriptionsRouteImport } from './routes/_authenticated/subscriptions'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedPaymentReturnRouteImport } from './routes/_authenticated/payment.return'
+import { Route as ApiPublicCinetpayNotifyRouteImport } from './routes/api/public/cinetpay/notify'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
@@ -52,6 +54,17 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPaymentReturnRoute =
+  AuthenticatedPaymentReturnRouteImport.update({
+    id: '/payment/return',
+    path: '/payment/return',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const ApiPublicCinetpayNotifyRoute = ApiPublicCinetpayNotifyRouteImport.update({
+  id: '/api/public/cinetpay/notify',
+  path: '/api/public/cinetpay/notify',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -60,6 +73,8 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/subscriptions': typeof AuthenticatedSubscriptionsRoute
+  '/payment/return': typeof AuthenticatedPaymentReturnRoute
+  '/api/public/cinetpay/notify': typeof ApiPublicCinetpayNotifyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -68,6 +83,8 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/subscriptions': typeof AuthenticatedSubscriptionsRoute
+  '/payment/return': typeof AuthenticatedPaymentReturnRoute
+  '/api/public/cinetpay/notify': typeof ApiPublicCinetpayNotifyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -78,6 +95,8 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/subscriptions': typeof AuthenticatedSubscriptionsRoute
+  '/_authenticated/payment/return': typeof AuthenticatedPaymentReturnRoute
+  '/api/public/cinetpay/notify': typeof ApiPublicCinetpayNotifyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -88,6 +107,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/subscriptions'
+    | '/payment/return'
+    | '/api/public/cinetpay/notify'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -96,6 +117,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/subscriptions'
+    | '/payment/return'
+    | '/api/public/cinetpay/notify'
   id:
     | '__root__'
     | '/'
@@ -105,6 +128,8 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/dashboard'
     | '/_authenticated/subscriptions'
+    | '/_authenticated/payment/return'
+    | '/api/public/cinetpay/notify'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -112,6 +137,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  ApiPublicCinetpayNotifyRoute: typeof ApiPublicCinetpayNotifyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -165,6 +191,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/payment/return': {
+      id: '/_authenticated/payment/return'
+      path: '/payment/return'
+      fullPath: '/payment/return'
+      preLoaderRoute: typeof AuthenticatedPaymentReturnRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/cinetpay/notify': {
+      id: '/api/public/cinetpay/notify'
+      path: '/api/public/cinetpay/notify'
+      fullPath: '/api/public/cinetpay/notify'
+      preLoaderRoute: typeof ApiPublicCinetpayNotifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -172,12 +212,14 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedSubscriptionsRoute: typeof AuthenticatedSubscriptionsRoute
+  AuthenticatedPaymentReturnRoute: typeof AuthenticatedPaymentReturnRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedSubscriptionsRoute: AuthenticatedSubscriptionsRoute,
+  AuthenticatedPaymentReturnRoute: AuthenticatedPaymentReturnRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -188,6 +230,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  ApiPublicCinetpayNotifyRoute: ApiPublicCinetpayNotifyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
