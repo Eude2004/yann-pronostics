@@ -332,7 +332,38 @@ function CouponsAdmin() {
               </Select>
             </div>
             <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Texte affiché sur la carte du coupon" /></div>
-            <div><Label>Image (URL)</Label><Input value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="https://…" /></div>
+            <div className="space-y-2">
+              <Label>Image du coupon <span className="text-xs text-muted-foreground font-normal">(optionnel)</span></Label>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" size="sm" disabled={uploadingImage}
+                  onClick={() => document.getElementById("img-pick")?.click()}>
+                  📁 Galerie / Fichier
+                </Button>
+                <Button type="button" variant="outline" size="sm" disabled={uploadingImage}
+                  onClick={() => document.getElementById("img-cam")?.click()}>
+                  📷 Prendre une photo
+                </Button>
+                {form.image_url && (
+                  <Button type="button" variant="ghost" size="sm"
+                    onClick={() => setForm({ ...form, image_url: "" })}>
+                    <X className="w-4 h-4 mr-1" />Retirer
+                  </Button>
+                )}
+              </div>
+              <input id="img-pick" type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.bmp,.heic,.heif,.avif,.tiff,.svg"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && uploadImage(e.target.files[0])} />
+              <input id="img-cam" type="file" accept="image/*" capture="environment"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && uploadImage(e.target.files[0])} />
+              <Input value={form.image_url}
+                onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+                placeholder="ou collez une URL d'image" />
+              {uploadingImage && <p className="text-xs text-muted-foreground">Téléversement en cours…</p>}
+              {form.image_url && !uploadingImage && (
+                <img src={form.image_url} alt="" className="h-24 rounded border border-border/60 object-cover" />
+              )}
+            </div>
             <div className="space-y-2">
               <Label>Vidéo du coupon (débloquée après achat)</Label>
               <div className="flex flex-wrap gap-2">
