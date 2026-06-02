@@ -21,7 +21,7 @@ import { toast } from "sonner";
 import logo from "@/assets/yann-logo.png";
 import {
   ArrowLeft, Plus, Pencil, Trash2, Check, X, Star, Shield, LogOut,
-  Crown, Power, Save,
+  Crown, Power, Save, Download, FileText, TrendingUp,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin")({
