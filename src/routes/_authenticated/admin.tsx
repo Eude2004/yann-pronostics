@@ -605,18 +605,30 @@ function StatsAdmin() {
   const [couponsCount, setCouponsCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  const reload = async () => {
+    const [t, u, c] = await Promise.all([
+      supabase.from("transactions").select("*").eq("kind", "coupon").order("created_at", { ascending: false }),
+      supabase.from("profiles").select("id", { count: "exact", head: true }),
+      supabase.from("coupons").select("id", { count: "exact", head: true }).eq("status", "published"),
+    ]);
+    setTxs((t.data as Transaction[]) ?? []);
+    setUsersCount(u.count ?? 0);
+    setCouponsCount(c.count ?? 0);
+    setLoading(false);
+  };
+
   useEffect(() => {
-    (async () => {
-      const [t, u, c] = await Promise.all([
-        supabase.from("transactions").select("*").eq("kind", "coupon").order("created_at", { ascending: false }),
-        supabase.from("profiles").select("id", { count: "exact", head: true }),
-        supabase.from("coupons").select("id", { count: "exact", head: true }).eq("status", "published"),
-      ]);
-      setTxs((t.data as Transaction[]) ?? []);
-      setUsersCount(u.count ?? 0);
-      setCouponsCount(c.count ?? 0);
-      setLoading(false);
-    })();
+    reload();
+    // Realtime: refresh on any transaction/profile/coupon change
+    const channel = supabase
+      .channel("admin-stats")
+      .on("postgres_changes", { event: "*", schema: "public", table: "transactions" }, reload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, reload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "coupons" }, reload)
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   if (loading) return <div className="text-muted-foreground">Chargement…</div>;
