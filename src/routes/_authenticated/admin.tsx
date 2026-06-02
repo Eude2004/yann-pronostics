@@ -25,7 +25,7 @@ import {
   ArrowLeft, Plus, Pencil, Trash2, Check, X, Star, Shield, LogOut,
   Save, Download, FileText, TrendingUp, FlaskConical, Users, History,
   LayoutDashboard, Ticket, Receipt, MessageSquare, Settings as SettingsIcon,
-  DollarSign, ShoppingCart, Package, ArrowUpRight, Menu,
+  DollarSign, ShoppingCart, Package, ArrowUpRight, Menu, Wifi, WifiOff, EyeOff,
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -139,6 +139,7 @@ function AdminPage() {
               {current.label}
             </h1>
             <div className="ml-auto flex items-center gap-2">
+              <RealtimeIndicator />
               <Badge className="bg-primary/15 text-primary border border-primary/30 hidden sm:inline-flex">
                 <Shield className="w-3 h-3 mr-1" /> Admin
               </Badge>
@@ -157,6 +158,57 @@ function AdminPage() {
         </div>
       </div>
     </SidebarProvider>
+  );
+}
+
+function RealtimeIndicator() {
+  const [connected, setConnected] = useState(false);
+  const [lastSync, setLastSync] = useState<Date | null>(null);
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("admin-realtime-indicator")
+      .on("postgres_changes", { event: "*", schema: "public", table: "transactions" }, () => setLastSync(new Date()))
+      .on("postgres_changes", { event: "*", schema: "public", table: "coupons" }, () => setLastSync(new Date()))
+      .on("postgres_changes", { event: "*", schema: "public", table: "reviews" }, () => setLastSync(new Date()))
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => setLastSync(new Date()))
+      .subscribe((status) => {
+        setConnected(status === "SUBSCRIBED");
+        if (status === "SUBSCRIBED") setLastSync(new Date());
+      });
+    const t = setInterval(() => setTick((x) => x + 1), 15000);
+    return () => { supabase.removeChannel(channel); clearInterval(t); };
+  }, []);
+
+  const ago = (() => {
+    if (!lastSync) return "—";
+    const s = Math.floor((Date.now() - lastSync.getTime()) / 1000);
+    if (s < 5) return "à l'instant";
+    if (s < 60) return `il y a ${s}s`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `il y a ${m}min`;
+    return lastSync.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  })();
+
+  return (
+    <div
+      title={connected ? `Temps réel actif — dernière maj ${ago}` : "Hors ligne"}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] ${
+        connected
+          ? "border-green-600/40 bg-green-600/10 text-green-500"
+          : "border-destructive/40 bg-destructive/10 text-destructive"
+      }`}
+    >
+      <span className="relative flex h-2 w-2">
+        {connected && (
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-60" />
+        )}
+        <span className={`relative inline-flex h-2 w-2 rounded-full ${connected ? "bg-green-500" : "bg-destructive"}`} />
+      </span>
+      {connected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+      <span className="hidden sm:inline">{connected ? ago : "hors ligne"}</span>
+    </div>
   );
 }
 
@@ -232,7 +284,7 @@ function AdminSidebar({ view, setView }: { view: AdminView; setView: (v: AdminVi
             <Button asChild variant="outline" size="sm" className="flex-1">
               <Link to="/">
                 <ArrowLeft className="w-4 h-4 mr-1" />
-                {!collapsed && "Boutique"}
+                {!collapsed && "Accueil"}
               </Link>
             </Button>
             <Button variant="ghost" size="sm" onClick={signOut} aria-label="Déconnexion">
@@ -563,7 +615,21 @@ function TransactionsAdmin() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
+  const [anonymous, setAnonymous] = useState(false);
   const PAGE_SIZE = 20;
+
+  useEffect(() => {
+    const loadAnon = async () => {
+      const { data } = await supabase.from("app_settings").select("value").eq("key", "anonymous_mode").maybeSingle();
+      setAnonymous(data?.value === "true");
+    };
+    loadAnon();
+    const channel = supabase
+      .channel("admin-tx-anon-mode")
+      .on("postgres_changes", { event: "*", schema: "public", table: "app_settings", filter: "key=eq.anonymous_mode" }, loadAnon)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const load = async () => {
     let q = supabase.from("transactions").select("*").eq("kind", "coupon")
@@ -619,6 +685,7 @@ function TransactionsAdmin() {
   }[s]);
 
   const userLabel = (t: Transaction) => {
+    if (anonymous) return "Anonyme";
     const p = profiles[t.user_id];
     return p?.full_name || p?.username || `${t.user_id.slice(0, 8)}…`;
   };
@@ -841,8 +908,10 @@ function SettingsAdmin() {
   const [whatsapp, setWhatsapp] = useState("");
   const [siteName, setSiteName] = useState("");
   const [testPay, setTestPay] = useState(false);
+  const [anonymous, setAnonymous] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingAnon, setSavingAnon] = useState(false);
   const toggleTestPay = useServerFn(setTestPayModeFn);
 
   useEffect(() => {
@@ -852,6 +921,7 @@ function SettingsAdmin() {
       setWhatsapp(map.whatsapp_number ?? "654010951");
       setSiteName(map.site_name ?? "YANN PRONOSTICS");
       setTestPay(map.test_pay_mode === "true");
+      setAnonymous(map.anonymous_mode === "true");
       setLoading(false);
     })();
   }, []);
@@ -881,6 +951,24 @@ function SettingsAdmin() {
       toast.error(e instanceof Error ? e.message : "Échec");
     }
   };
+
+  const onToggleAnonymous = async (enabled: boolean) => {
+    const prev = anonymous;
+    setAnonymous(enabled);
+    setSavingAnon(true);
+    const { error } = await supabase.from("app_settings").upsert(
+      { key: "anonymous_mode", value: enabled ? "true" : "false", updated_at: new Date().toISOString() },
+      { onConflict: "key" },
+    );
+    setSavingAnon(false);
+    if (error) {
+      setAnonymous(prev);
+      return toast.error(error.message);
+    }
+    await logAdminAction("toggle_anonymous_mode", "settings", null, { enabled });
+    toast.success(enabled ? "Mode anonyme activé" : "Mode anonyme désactivé");
+  };
+
 
   if (loading) return <div className="text-muted-foreground">Chargement…</div>;
 
@@ -924,6 +1012,29 @@ function SettingsAdmin() {
           {testPay && (
             <Badge className="bg-primary/15 text-primary border border-primary/30">
               <FlaskConical className="w-3 h-3 mr-1" /> Mode Test Pay actif
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-xl font-display mb-4 flex items-center gap-2">
+          <EyeOff className="w-5 h-5 text-primary" /> Confidentialité
+        </h2>
+        <div className="rounded-xl border border-border/60 bg-card p-6 space-y-3">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="font-medium">Mode anonyme</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Masque les noms des clients dans la liste des transactions et l'analytics.
+                L'achat reste possible et les données restent en base.
+              </p>
+            </div>
+            <Switch checked={anonymous} onCheckedChange={onToggleAnonymous} disabled={savingAnon} />
+          </div>
+          {anonymous && (
+            <Badge className="bg-primary/15 text-primary border border-primary/30">
+              <EyeOff className="w-3 h-3 mr-1" /> Mode anonyme actif
             </Badge>
           )}
         </div>

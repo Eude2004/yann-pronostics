@@ -33,6 +33,15 @@
   --color-gold: var(--gold);
   --color-gold-glow: var(--gold-glow);
 
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
   --font-display: "Bebas Neue", system-ui, sans-serif;
   --font-sans: "Inter", system-ui, sans-serif;
 }
@@ -71,6 +80,15 @@
   --gradient-dark: linear-gradient(180deg, oklch(0.13 0.005 60), oklch(0.08 0 0));
   --shadow-gold: 0 10px 40px -10px oklch(0.83 0.16 88 / 0.5);
   --shadow-glow: 0 0 60px oklch(0.83 0.16 88 / 0.3);
+
+  --sidebar: oklch(0.15 0.006 60);
+  --sidebar-foreground: oklch(0.97 0.01 90);
+  --sidebar-primary: oklch(0.83 0.16 88);
+  --sidebar-primary-foreground: oklch(0.12 0 0);
+  --sidebar-accent: oklch(0.22 0.008 60);
+  --sidebar-accent-foreground: oklch(0.97 0.01 90);
+  --sidebar-border: oklch(0.28 0.02 80 / 0.5);
+  --sidebar-ring: oklch(0.83 0.16 88);
 }
 
 .light {
@@ -104,6 +122,15 @@
   --gradient-dark: linear-gradient(180deg, oklch(0.985 0.005 90), oklch(0.95 0.01 80));
   --shadow-gold: 0 10px 40px -10px oklch(0.72 0.16 75 / 0.4);
   --shadow-glow: 0 0 60px oklch(0.72 0.16 75 / 0.25);
+
+  --sidebar: oklch(0.98 0.005 90);
+  --sidebar-foreground: oklch(0.18 0.01 60);
+  --sidebar-primary: oklch(0.72 0.16 75);
+  --sidebar-primary-foreground: oklch(0.15 0 0);
+  --sidebar-accent: oklch(0.95 0.01 80);
+  --sidebar-accent-foreground: oklch(0.2 0.01 60);
+  --sidebar-border: oklch(0.85 0.01 80 / 0.7);
+  --sidebar-ring: oklch(0.72 0.16 75);
 }
 
 @layer base {
