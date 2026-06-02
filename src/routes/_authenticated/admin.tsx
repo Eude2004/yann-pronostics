@@ -615,7 +615,21 @@ function TransactionsAdmin() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
+  const [anonymous, setAnonymous] = useState(false);
   const PAGE_SIZE = 20;
+
+  useEffect(() => {
+    const loadAnon = async () => {
+      const { data } = await supabase.from("app_settings").select("value").eq("key", "anonymous_mode").maybeSingle();
+      setAnonymous(data?.value === "true");
+    };
+    loadAnon();
+    const channel = supabase
+      .channel("admin-tx-anon-mode")
+      .on("postgres_changes", { event: "*", schema: "public", table: "app_settings", filter: "key=eq.anonymous_mode" }, loadAnon)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
 
   const load = async () => {
     let q = supabase.from("transactions").select("*").eq("kind", "coupon")
