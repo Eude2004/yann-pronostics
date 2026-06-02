@@ -23,9 +23,11 @@ import { toast } from "sonner";
 import logo from "@/assets/yann-logo.png";
 import {
   ArrowLeft, Plus, Pencil, Trash2, Check, X, Star, Shield, LogOut,
-  Save, Download, FileText, TrendingUp, FlaskConical,
+  Save, Download, FileText, TrendingUp, FlaskConical, Users, History,
 } from "lucide-react";
 import { setTestPayMode } from "@/lib/payments.functions";
+import { listAdminUsers, setUserAdmin, deleteAppUser } from "@/lib/admin-users.functions";
+import { logAdminAction } from "@/lib/audit";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [{ title: "Admin — YANN PRONOSTICS" }] }),
@@ -109,12 +111,16 @@ function AdminPage() {
             <TabsTrigger value="coupons">Coupons du jour</TabsTrigger>
             <TabsTrigger value="transactions">Transactions</TabsTrigger>
             <TabsTrigger value="reviews">Avis</TabsTrigger>
+            <TabsTrigger value="users"><Users className="w-3.5 h-3.5 mr-1" />Utilisateurs</TabsTrigger>
+            <TabsTrigger value="audit"><History className="w-3.5 h-3.5 mr-1" />Journal</TabsTrigger>
             <TabsTrigger value="settings">Paramètres</TabsTrigger>
           </TabsList>
           <TabsContent value="stats" className="mt-6"><StatsAdmin /></TabsContent>
           <TabsContent value="coupons" className="mt-6"><CouponsAdmin /></TabsContent>
           <TabsContent value="transactions" className="mt-6"><TransactionsAdmin /></TabsContent>
           <TabsContent value="reviews" className="mt-6"><ReviewsAdmin /></TabsContent>
+          <TabsContent value="users" className="mt-6"><UsersAdmin /></TabsContent>
+          <TabsContent value="audit" className="mt-6"><AuditAdmin /></TabsContent>
           <TabsContent value="settings" className="mt-6"><SettingsAdmin /></TabsContent>
         </Tabs>
       </main>
@@ -195,10 +201,16 @@ function CouponsAdmin() {
     };
     const slug = form.coupon_type + "-" + Date.now();
     const insertPayload = { ...basePayload, slug };
-    const { error } = editing
-      ? await supabase.from("coupons").update(basePayload).eq("id", editing.id)
-      : await supabase.from("coupons").insert(insertPayload);
+    const { data: saved, error } = editing
+      ? await supabase.from("coupons").update(basePayload).eq("id", editing.id).select("id").maybeSingle()
+      : await supabase.from("coupons").insert(insertPayload).select("id").maybeSingle();
     if (error) return toast.error(error.message);
+    await logAdminAction(
+      editing ? "update_coupon" : "create_coupon",
+      "coupon",
+      saved?.id ?? editing?.id,
+      { title: basePayload.title, status: basePayload.status },
+    );
     toast.success(editing ? "Coupon mis à jour" : "Coupon créé");
     setOpen(false); load();
   };
@@ -207,12 +219,14 @@ function CouponsAdmin() {
     if (!confirm("Supprimer ce coupon ?")) return;
     const { error } = await supabase.from("coupons").delete().eq("id", id);
     if (error) return toast.error(error.message);
+    await logAdminAction("delete_coupon", "coupon", id);
     toast.success("Coupon supprimé"); load();
   };
 
   const setStatus = async (id: string, status: PublishStatus) => {
     const { error } = await supabase.from("coupons").update({ status }).eq("id", id);
     if (error) return toast.error(error.message);
+    await logAdminAction("update_coupon_status", "coupon", id, { status });
     toast.success("Statut mis à jour"); load();
   };
 
@@ -479,12 +493,14 @@ function ReviewsAdmin() {
       status, moderated_at: new Date().toISOString(),
     }).eq("id", id);
     if (error) return toast.error(error.message);
+    await logAdminAction("moderate_review", "review", id, { status });
     toast.success("Avis modéré"); load();
   };
   const remove = async (id: string) => {
     if (!confirm("Supprimer cet avis ?")) return;
     const { error } = await supabase.from("reviews").delete().eq("id", id);
     if (error) return toast.error(error.message);
+    await logAdminAction("delete_review", "review", id);
     toast.success("Supprimé"); load();
   };
 
@@ -583,6 +599,7 @@ function SettingsAdmin() {
     const { error } = await supabase.from("app_settings").upsert(payload, { onConflict: "key" });
     setSaving(false);
     if (error) return toast.error(error.message);
+    await logAdminAction("update_settings", "settings", null, { whatsapp: whatsapp.trim(), site_name: siteName.trim() });
     toast.success("Paramètres enregistrés");
   };
 
@@ -591,6 +608,7 @@ function SettingsAdmin() {
     setTestPay(enabled);
     try {
       await toggleTestPay({ data: { enabled } });
+      await logAdminAction("toggle_test_pay", "settings", null, { enabled });
       toast.success(enabled ? "Mode Test Pay activé" : "Mode Test Pay désactivé");
     } catch (e) {
       setTestPay(prev);
@@ -790,4 +808,226 @@ function downloadBlob(blob: Blob, filename: string) {
   a.href = url; a.download = filename;
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
+}
+
+/* ---------------- UTILISATEURS ---------------- */
+
+type AdminUser = {
+  id: string;
+  email: string;
+  created_at: string;
+  last_sign_in_at: string | null;
+  roles: string[];
+  profile: { id: string; full_name: string | null; username: string | null; whatsapp: string | null } | null;
+};
+
+function UsersAdmin() {
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [q, setQ] = useState("");
+  const fetchUsers = useServerFn(listAdminUsers);
+  const toggleAdmin = useServerFn(setUserAdmin);
+  const removeUser = useServerFn(deleteAppUser);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await fetchUsers();
+      setUsers(res.users);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Échec du chargement");
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => { load(); }, []);
+
+  const onToggleAdmin = async (u: AdminUser) => {
+    const make = !u.roles.includes("admin");
+    if (!make && !confirm(`Retirer le rôle admin à ${u.email} ?`)) return;
+    try {
+      await toggleAdmin({ data: { user_id: u.id, make_admin: make } });
+      toast.success(make ? "Promu administrateur" : "Rôle admin retiré");
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Échec");
+    }
+  };
+
+  const onDelete = async (u: AdminUser) => {
+    if (!confirm(`Supprimer définitivement ${u.email} ? Cette action est irréversible.`)) return;
+    try {
+      await removeUser({ data: { user_id: u.id } });
+      toast.success("Utilisateur supprimé");
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Échec");
+    }
+  };
+
+  const filtered = users.filter(u =>
+    !q || u.email.toLowerCase().includes(q.toLowerCase()) ||
+    (u.profile?.username ?? "").toLowerCase().includes(q.toLowerCase()) ||
+    (u.profile?.full_name ?? "").toLowerCase().includes(q.toLowerCase())
+  );
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+        <h2 className="text-xl font-display">Utilisateurs ({users.length})</h2>
+        <Input
+          placeholder="Rechercher email, nom…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          className="max-w-xs"
+        />
+      </div>
+      {loading ? (
+        <div className="text-muted-foreground">Chargement…</div>
+      ) : (
+        <div className="rounded-xl border border-border/60 bg-card overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Email</TableHead>
+                <TableHead>Nom</TableHead>
+                <TableHead>WhatsApp</TableHead>
+                <TableHead>Inscrit le</TableHead>
+                <TableHead>Dernière connexion</TableHead>
+                <TableHead>Rôles</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map(u => (
+                <TableRow key={u.id}>
+                  <TableCell className="font-medium text-xs">{u.email}</TableCell>
+                  <TableCell className="text-xs">{u.profile?.full_name ?? u.profile?.username ?? "—"}</TableCell>
+                  <TableCell className="text-xs">{u.profile?.whatsapp ?? "—"}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{new Date(u.created_at).toLocaleDateString("fr-FR")}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleDateString("fr-FR") : "Jamais"}</TableCell>
+                  <TableCell>
+                    {u.roles.includes("admin") ? (
+                      <Badge className="bg-primary/15 text-primary border border-primary/30">
+                        <Shield className="w-3 h-3 mr-1" />Admin
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">Utilisateur</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
+                    <Button size="sm" variant="outline" onClick={() => onToggleAdmin(u)} className="mr-1">
+                      {u.roles.includes("admin") ? "Retirer admin" : "Promouvoir"}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => onDelete(u)}>
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {filtered.length === 0 && (
+                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Aucun utilisateur</TableCell></TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- JOURNAL D'AUDIT ---------------- */
+
+type AuditEntry = {
+  id: string;
+  actor_id: string;
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  details: any;
+  created_at: string;
+};
+
+const ACTION_LABELS: Record<string, string> = {
+  create_coupon: "Création de coupon",
+  update_coupon: "Modification de coupon",
+  delete_coupon: "Suppression de coupon",
+  update_coupon_status: "Changement de statut coupon",
+  moderate_review: "Modération d'avis",
+  delete_review: "Suppression d'avis",
+  update_settings: "Modification des paramètres",
+  toggle_test_pay: "Bascule Mode Test Pay",
+  promote_admin: "Promotion admin",
+  demote_admin: "Rétrogradation admin",
+  delete_user: "Suppression d'utilisateur",
+};
+
+function AuditAdmin() {
+  const [items, setItems] = useState<AuditEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    const { data, error } = await supabase
+      .from("admin_audit_log")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(300);
+    if (error) toast.error(error.message);
+    else setItems((data as AuditEntry[]) ?? []);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    load();
+    const channel = supabase
+      .channel("admin-audit")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "admin_audit_log" }, load)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  if (loading) return <div className="text-muted-foreground">Chargement…</div>;
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+        <div>
+          <h2 className="text-xl font-display flex items-center gap-2"><History className="w-5 h-5 text-gold" /> Journal des actions ({items.length})</h2>
+          <p className="text-xs text-muted-foreground">Toutes les actions administrateur en temps réel.</p>
+        </div>
+      </div>
+      <div className="rounded-xl border border-border/60 bg-card overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Date</TableHead>
+              <TableHead>Action</TableHead>
+              <TableHead>Cible</TableHead>
+              <TableHead>Détails</TableHead>
+              <TableHead>Auteur</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.map((e) => (
+              <TableRow key={e.id}>
+                <TableCell className="text-xs whitespace-nowrap">{new Date(e.created_at).toLocaleString("fr-FR")}</TableCell>
+                <TableCell className="text-xs font-medium">{ACTION_LABELS[e.action] ?? e.action}</TableCell>
+                <TableCell className="text-xs">
+                  <span className="text-muted-foreground">{e.entity_type}</span>
+                  {e.entity_id && <span className="font-mono ml-1">{e.entity_id.slice(0, 8)}…</span>}
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground max-w-xs truncate">
+                  {e.details && Object.keys(e.details).length > 0 ? JSON.stringify(e.details) : "—"}
+                </TableCell>
+                <TableCell className="text-xs font-mono">{e.actor_id.slice(0, 8)}…</TableCell>
+              </TableRow>
+            ))}
+            {items.length === 0 && (
+              <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Aucune action enregistrée</TableCell></TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
 }
