@@ -206,10 +206,11 @@ function CouponsSection() {
 }
 
 function CouponCard({ coupon }: { coupon: Coupon }) {
+  const { t } = useTranslation();
   const { session } = useAuth();
-  const navigate = useNavigate();
   const initiate = useServerFn(initiatePayment);
   const [loadingBuy, setLoadingBuy] = useState(false);
+  const [promptOpen, setPromptOpen] = useState(false);
   const meta = coupon.coupon_type ? TYPE_META[coupon.coupon_type] : TYPE_META.cote_10;
   const Icon = meta.icon;
 
@@ -219,8 +220,8 @@ function CouponCard({ coupon }: { coupon: Coupon }) {
 
   const handleBuy = async () => {
     if (!session) {
-      toast.info("Connectez-vous pour acheter ce coupon");
-      navigate({ to: "/auth", search: { redirect: "/" } as never });
+      // Show signup/login prompt — purchase resumes after auth
+      setPromptOpen(true);
       return;
     }
     if (!coupon.id || coupon.id.length < 30) {
@@ -242,7 +243,7 @@ function CouponCard({ coupon }: { coupon: Coupon }) {
       });
       window.location.href = res.paymentUrl;
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Impossible d'initier le paiement");
+      toast.error(e instanceof Error ? e.message : t("coupon.init_failed"));
       setLoadingBuy(false);
     }
   };
