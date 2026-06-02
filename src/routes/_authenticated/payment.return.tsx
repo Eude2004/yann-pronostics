@@ -79,10 +79,7 @@ function PaymentReturn() {
                 </span>
               </div>
               <div>
-                Type :{" "}
-                <span className="text-foreground">
-                  {query.data.kind === "coupon" ? "Coupon" : "Abonnement VIP"}
-                </span>
+                Type : <span className="text-foreground">Coupon</span>
               </div>
               {isMock && (
                 <Badge variant="outline" className="mt-2 border-primary/40 text-primary">
