@@ -56,7 +56,7 @@ function Home() {
 }
 
 function Header() {
-  const { session, loading } = useAuth();
+  const { session, loading, isAdmin } = useAuth();
   return (
     <header className="sticky top-0 z-40 backdrop-blur-xl bg-background/70 border-b border-border/50">
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
@@ -72,28 +72,24 @@ function Header() {
         <div className="flex items-center gap-2">
           <ThemeToggle />
           {loading ? null : session ? (
-            <Link to="/dashboard">
+            <Link to={isAdmin ? "/admin" : "/dashboard"}>
               <Button size="sm" className="bg-gold-gradient text-primary-foreground hover:opacity-90 font-semibold shadow-gold">
-                <LayoutDashboard className="w-4 h-4 mr-2" /> Mon espace
+                <LayoutDashboard className="w-4 h-4 mr-2" /> {isAdmin ? "Admin" : "Mon espace"}
               </Button>
             </Link>
           ) : (
-            <>
-              <Link to="/auth" className="hidden sm:inline-flex">
-                <Button variant="ghost" size="sm">Connexion</Button>
-              </Link>
-              <Link to="/auth">
-                <Button size="sm" className="bg-gold-gradient text-primary-foreground hover:opacity-90 font-semibold shadow-gold">
-                  S'inscrire
-                </Button>
-              </Link>
-            </>
+            <Link to="/auth">
+              <Button size="sm" className="bg-gold-gradient text-primary-foreground hover:opacity-90 font-semibold shadow-gold">
+                Se connecter
+              </Button>
+            </Link>
           )}
         </div>
       </nav>
     </header>
   );
 }
+
 
 function Hero() {
   return (
@@ -312,10 +308,10 @@ function CouponCard({ coupon }: { coupon: Coupon }) {
 
 function Why() {
   const items = [
-    { icon: ShieldCheck, t: "Paiement sécurisé", d: "MTN, Orange Money, Campay, PayPal, cartes bancaires." },
+    { icon: ShieldCheck, t: "Paiement sécurisé", d: "MTN, Orange Money, Campay, cartes bancaires via CinetPay." },
     { icon: Zap, t: "Déblocage instantané", d: "Accès immédiat après confirmation du paiement." },
     { icon: Trophy, t: "Expertise reconnue", d: "Analyses approfondies par des spécialistes du sport." },
-    { icon: Star, t: "Abonnements VIP", d: "Accès illimité aux 4 coupons quotidiens pendant 7 à 365 jours." },
+    { icon: Star, t: "Vente à l'unité", d: "Aucun abonnement, payez uniquement les coupons qui vous intéressent." },
   ];
   return (
     <section id="why" className="py-20 sm:py-28 bg-card/40 border-y border-border/50">

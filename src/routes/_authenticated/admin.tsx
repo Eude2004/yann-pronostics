@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -21,8 +23,9 @@ import { toast } from "sonner";
 import logo from "@/assets/yann-logo.png";
 import {
   ArrowLeft, Plus, Pencil, Trash2, Check, X, Star, Shield, LogOut,
-  Crown, Power, Save, Download, FileText, TrendingUp,
+  Save, Download, FileText, TrendingUp, FlaskConical,
 } from "lucide-react";
+import { setTestPayMode } from "@/lib/payments.functions";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [{ title: "Admin — YANN PRONOSTICS" }] }),
@@ -32,9 +35,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
 type PublishStatus = "draft" | "published" | "archived";
 type ReviewStatus = "pending" | "approved" | "rejected";
 type CouponType = "cote_10" | "cote_30" | "cote_50" | "pair_corner";
-type SubStatus = "active" | "inactive" | "expired" | "cancelled";
 type TxStatus = "pending" | "completed" | "failed" | "refunded";
-type TxKind = "coupon" | "subscription";
 
 const COUPON_TYPES: { value: CouponType; label: string; price: number }[] = [
   { value: "cote_10", label: "Cote de 10+", price: 4000 },
@@ -49,19 +50,10 @@ type Coupon = {
   video_url: string | null; start_date: string | null; end_date: string | null;
   status: PublishStatus; sales_count: number; is_featured: boolean;
 };
-type Plan = {
-  id: string; name: string; description: string | null; price_xaf: number;
-  duration_days: number; is_active: boolean; sort_order: number;
-};
-type Subscription = {
-  id: string; user_id: string; plan_id: string | null; status: SubStatus;
-  started_at: string | null; expires_at: string | null; notes: string | null;
-  created_at: string;
-};
 type Transaction = {
-  id: string; user_id: string; kind: TxKind; amount_xaf: number;
+  id: string; user_id: string; amount_xaf: number;
   status: TxStatus; reference: string | null; payment_method: string | null;
-  coupon_id: string | null; subscription_id: string | null; created_at: string;
+  coupon_id: string | null; created_at: string; notes: string | null;
 };
 type Review = {
   id: string; user_id: string; coupon_id: string | null;
@@ -80,7 +72,7 @@ function AdminPage() {
         <Shield className="w-12 h-12 text-muted-foreground" />
         <h1 className="text-2xl font-display">Accès refusé</h1>
         <p className="text-muted-foreground text-center">Cette zone est réservée aux administrateurs.</p>
-        <Button asChild><Link to="/dashboard">Retour au tableau de bord</Link></Button>
+        <Button asChild><Link to="/">Retour à l'accueil</Link></Button>
       </div>
     );
   }
@@ -90,7 +82,7 @@ function AdminPage() {
       <header className="border-b border-border/50 bg-background/80 backdrop-blur sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link to="/dashboard" className="text-muted-foreground hover:text-foreground">
+            <Link to="/" className="text-muted-foreground hover:text-foreground">
               <ArrowLeft className="w-5 h-5" />
             </Link>
             <img src={logo} alt="" className="h-9 w-9 object-contain" />
@@ -113,18 +105,14 @@ function AdminPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <Tabs defaultValue="stats" className="w-full">
           <TabsList className="flex-wrap h-auto">
-            <TabsTrigger value="stats">Statistiques VIP</TabsTrigger>
+            <TabsTrigger value="stats">Tableau de bord</TabsTrigger>
             <TabsTrigger value="coupons">Coupons du jour</TabsTrigger>
-            <TabsTrigger value="plans">Plans VIP</TabsTrigger>
-            <TabsTrigger value="subscriptions">Abonnements</TabsTrigger>
             <TabsTrigger value="transactions">Transactions</TabsTrigger>
             <TabsTrigger value="reviews">Avis</TabsTrigger>
             <TabsTrigger value="settings">Paramètres</TabsTrigger>
           </TabsList>
-          <TabsContent value="stats" className="mt-6"><VipStats /></TabsContent>
+          <TabsContent value="stats" className="mt-6"><StatsAdmin /></TabsContent>
           <TabsContent value="coupons" className="mt-6"><CouponsAdmin /></TabsContent>
-          <TabsContent value="plans" className="mt-6"><PlansAdmin /></TabsContent>
-          <TabsContent value="subscriptions" className="mt-6"><SubscriptionsAdmin /></TabsContent>
           <TabsContent value="transactions" className="mt-6"><TransactionsAdmin /></TabsContent>
           <TabsContent value="reviews" className="mt-6"><ReviewsAdmin /></TabsContent>
           <TabsContent value="settings" className="mt-6"><SettingsAdmin /></TabsContent>
@@ -134,7 +122,7 @@ function AdminPage() {
   );
 }
 
-/* ---------------- COUPONS (4 types fixes) ---------------- */
+/* ---------------- COUPONS ---------------- */
 
 const emptyCouponForm = {
   coupon_type: "cote_10" as CouponType,
@@ -173,12 +161,10 @@ function CouponsAdmin() {
 
   const save = async () => {
     const meta = COUPON_TYPES.find(t => t.value === form.coupon_type)!;
-    const payload: any = {
+    const basePayload = {
       coupon_type: form.coupon_type,
-      // title & price_xaf seront imposés par le trigger DB selon coupon_type
       title: meta.label,
       price_xaf: meta.price,
-      slug: `${form.coupon_type}-${Date.now()}`,
       description: form.description || null,
       image_url: form.image_url || null,
       video_url: form.video_url || null,
@@ -187,10 +173,9 @@ function CouponsAdmin() {
       status: form.status,
       is_featured: form.is_featured,
     };
-    if (editing) delete payload.slug;
     const { error } = editing
-      ? await supabase.from("coupons").update(payload).eq("id", editing.id)
-      : await supabase.from("coupons").insert(payload);
+      ? await supabase.from("coupons").update(basePayload).eq("id", editing.id)
+      : await supabase.from("coupons").insert({ ...basePayload, slug: `${form.coupon_type}-${Date.now()}` });
     if (error) return toast.error(error.message);
     toast.success(editing ? "Coupon mis à jour" : "Coupon créé");
     setOpen(false); load();
@@ -320,260 +305,15 @@ function CouponsAdmin() {
   );
 }
 
-/* ---------------- PLANS VIP ---------------- */
-
-function PlansAdmin() {
-  const [items, setItems] = useState<Plan[]>([]);
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<Plan | null>(null);
-  const [form, setForm] = useState({ name: "", description: "", price_xaf: 0, duration_days: 30, is_active: true, sort_order: 0 });
-
-  const load = async () => {
-    const { data, error } = await supabase.from("subscription_plans").select("*").order("sort_order");
-    if (error) toast.error(error.message); else setItems((data as Plan[]) ?? []);
-  };
-  useEffect(() => { load(); }, []);
-
-  const openNew = () => { setEditing(null); setForm({ name: "", description: "", price_xaf: 0, duration_days: 30, is_active: true, sort_order: 0 }); setOpen(true); };
-  const openEdit = (p: Plan) => {
-    setEditing(p);
-    setForm({ name: p.name, description: p.description ?? "", price_xaf: p.price_xaf, duration_days: p.duration_days, is_active: p.is_active, sort_order: p.sort_order });
-    setOpen(true);
-  };
-  const save = async () => {
-    if (!form.name.trim()) return toast.error("Nom requis");
-    const payload = { ...form, description: form.description || null };
-    const { error } = editing
-      ? await supabase.from("subscription_plans").update(payload).eq("id", editing.id)
-      : await supabase.from("subscription_plans").insert(payload);
-    if (error) return toast.error(error.message);
-    toast.success("Plan enregistré"); setOpen(false); load();
-  };
-  const toggle = async (p: Plan) => {
-    const { error } = await supabase.from("subscription_plans").update({ is_active: !p.is_active }).eq("id", p.id);
-    if (error) return toast.error(error.message);
-    load();
-  };
-  const remove = async (id: string) => {
-    if (!confirm("Supprimer ce plan ?")) return;
-    const { error } = await supabase.from("subscription_plans").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("Supprimé"); load();
-  };
-
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-display flex items-center gap-2"><Crown className="w-5 h-5 text-gold" /> Plans VIP ({items.length})</h2>
-        <Button onClick={openNew} className="bg-gold-gradient text-primary-foreground"><Plus className="w-4 h-4 mr-2" />Nouveau plan</Button>
-      </div>
-      <div className="rounded-xl border border-border/60 bg-card overflow-x-auto">
-        <Table>
-          <TableHeader><TableRow>
-            <TableHead>Nom</TableHead><TableHead>Prix</TableHead>
-            <TableHead>Durée</TableHead><TableHead>Actif</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow></TableHeader>
-          <TableBody>
-            {items.map(p => (
-              <TableRow key={p.id}>
-                <TableCell className="font-medium">{p.name}</TableCell>
-                <TableCell>{p.price_xaf.toLocaleString()} XAF</TableCell>
-                <TableCell>{p.duration_days} jours</TableCell>
-                <TableCell>
-                  {p.is_active
-                    ? <Badge className="bg-green-600/20 text-green-500 border border-green-600/30">Actif</Badge>
-                    : <Badge variant="secondary">Inactif</Badge>}
-                </TableCell>
-                <TableCell className="text-right whitespace-nowrap">
-                  <Button size="sm" variant="ghost" onClick={() => toggle(p)}><Power className="w-4 h-4" /></Button>
-                  <Button size="sm" variant="ghost" onClick={() => openEdit(p)}><Pencil className="w-4 h-4" /></Button>
-                  <Button size="sm" variant="ghost" onClick={() => remove(p.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            {items.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Aucun plan</TableCell></TableRow>}
-          </TableBody>
-        </Table>
-      </div>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>{editing ? "Modifier" : "Nouveau"} plan VIP</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div><Label>Nom</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-            <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
-            <div className="grid grid-cols-3 gap-3">
-              <div><Label>Prix (XAF)</Label><Input type="number" value={form.price_xaf} onChange={(e) => setForm({ ...form, price_xaf: Number(e.target.value) })} /></div>
-              <div><Label>Durée (jours)</Label><Input type="number" value={form.duration_days} onChange={(e) => setForm({ ...form, duration_days: Number(e.target.value) })} /></div>
-              <div><Label>Ordre</Label><Input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: Number(e.target.value) })} /></div>
-            </div>
-            <label className="flex items-center gap-2">
-              <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} />
-              <span className="text-sm">Plan actif (visible aux clients)</span>
-            </label>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
-            <Button onClick={save} className="bg-gold-gradient text-primary-foreground">Enregistrer</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
-
-/* ---------------- ABONNEMENTS VIP ---------------- */
-
-function SubscriptionsAdmin() {
-  const [items, setItems] = useState<Subscription[]>([]);
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [filter, setFilter] = useState<SubStatus | "all">("all");
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ user_id: "", plan_id: "", notes: "" });
-
-  const load = async () => {
-    let q = supabase.from("subscriptions").select("*").order("created_at", { ascending: false });
-    if (filter !== "all") q = q.eq("status", filter);
-    const [{ data: subs }, { data: pls }] = await Promise.all([
-      q, supabase.from("subscription_plans").select("*").order("sort_order"),
-    ]);
-    setItems((subs as Subscription[]) ?? []);
-    setPlans((pls as Plan[]) ?? []);
-  };
-  useEffect(() => { load(); }, [filter]);
-
-  const toggle = async (s: Subscription) => {
-    const newStatus: SubStatus = s.status === "active" ? "inactive" : "active";
-    const update: any = { status: newStatus };
-    if (newStatus === "active") {
-      const plan = plans.find(p => p.id === s.plan_id);
-      const days = plan?.duration_days ?? 30;
-      update.started_at = new Date().toISOString();
-      update.expires_at = new Date(Date.now() + days * 86400000).toISOString();
-    }
-    const { error } = await supabase.from("subscriptions").update(update).eq("id", s.id);
-    if (error) return toast.error(error.message);
-    toast.success(newStatus === "active" ? "Abonnement activé" : "Abonnement désactivé"); load();
-  };
-
-  const create = async () => {
-    if (!form.user_id.trim()) return toast.error("ID utilisateur requis");
-    if (!form.plan_id) return toast.error("Plan requis");
-    const plan = plans.find(p => p.id === form.plan_id)!;
-    const { error } = await supabase.from("subscriptions").insert({
-      user_id: form.user_id.trim(), plan_id: form.plan_id, status: "active",
-      started_at: new Date().toISOString(),
-      expires_at: new Date(Date.now() + plan.duration_days * 86400000).toISOString(),
-      notes: form.notes || null,
-    });
-    if (error) return toast.error(error.message);
-    toast.success("Abonnement créé"); setOpen(false); setForm({ user_id: "", plan_id: "", notes: "" }); load();
-  };
-
-  const remove = async (id: string) => {
-    if (!confirm("Supprimer cet abonnement ?")) return;
-    const { error } = await supabase.from("subscriptions").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("Supprimé"); load();
-  };
-
-  const planName = (id: string | null) => plans.find(p => p.id === id)?.name ?? "—";
-
-  const badge = (s: SubStatus) => ({
-    active: <Badge className="bg-green-600/20 text-green-500 border border-green-600/30">Actif</Badge>,
-    inactive: <Badge variant="secondary">Inactif</Badge>,
-    expired: <Badge variant="outline">Expiré</Badge>,
-    cancelled: <Badge variant="destructive">Annulé</Badge>,
-  }[s]);
-
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
-        <h2 className="text-xl font-display">Abonnements VIP ({items.length})</h2>
-        <div className="flex gap-2">
-          <Select value={filter} onValueChange={(v) => setFilter(v as any)}>
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous</SelectItem>
-              <SelectItem value="active">Actifs</SelectItem>
-              <SelectItem value="inactive">Inactifs</SelectItem>
-              <SelectItem value="expired">Expirés</SelectItem>
-              <SelectItem value="cancelled">Annulés</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button onClick={() => setOpen(true)} className="bg-gold-gradient text-primary-foreground"><Plus className="w-4 h-4 mr-2" />Nouveau</Button>
-        </div>
-      </div>
-      <div className="rounded-xl border border-border/60 bg-card overflow-x-auto">
-        <Table>
-          <TableHeader><TableRow>
-            <TableHead>Utilisateur</TableHead><TableHead>Plan</TableHead>
-            <TableHead>Période</TableHead><TableHead>Statut</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow></TableHeader>
-          <TableBody>
-            {items.map(s => (
-              <TableRow key={s.id}>
-                <TableCell className="font-mono text-xs">{s.user_id.slice(0, 12)}…</TableCell>
-                <TableCell>{planName(s.plan_id)}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">
-                  {s.started_at ? new Date(s.started_at).toLocaleDateString("fr-FR") : "—"}
-                  {" → "}
-                  {s.expires_at ? new Date(s.expires_at).toLocaleDateString("fr-FR") : "—"}
-                </TableCell>
-                <TableCell>{badge(s.status)}</TableCell>
-                <TableCell className="text-right whitespace-nowrap">
-                  <Button size="sm" variant={s.status === "active" ? "outline" : "default"} onClick={() => toggle(s)} className={s.status === "active" ? "" : "bg-gold-gradient text-primary-foreground"}>
-                    <Power className="w-4 h-4 mr-1" /> {s.status === "active" ? "Désactiver" : "Activer"}
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => remove(s.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            {items.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Aucun abonnement</TableCell></TableRow>}
-          </TableBody>
-        </Table>
-      </div>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Activer un abonnement VIP</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div><Label>ID utilisateur (UUID)</Label><Input value={form.user_id} onChange={(e) => setForm({ ...form, user_id: e.target.value })} placeholder="00000000-0000-…" /></div>
-            <div>
-              <Label>Plan</Label>
-              <Select value={form.plan_id} onValueChange={(v) => setForm({ ...form, plan_id: v })}>
-                <SelectTrigger><SelectValue placeholder="Choisir un plan" /></SelectTrigger>
-                <SelectContent>
-                  {plans.filter(p => p.is_active).map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.name} — {p.price_xaf.toLocaleString()} XAF / {p.duration_days}j</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Référence paiement, remarques…" /></div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
-            <Button onClick={create} className="bg-gold-gradient text-primary-foreground">Activer</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
-
 /* ---------------- TRANSACTIONS ---------------- */
 
 function TransactionsAdmin() {
   const [items, setItems] = useState<Transaction[]>([]);
   const [filter, setFilter] = useState<TxStatus | "all">("all");
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ user_id: "", kind: "coupon" as TxKind, amount_xaf: 0, status: "completed" as TxStatus, reference: "", payment_method: "MTN Money" });
 
   const load = async () => {
-    let q = supabase.from("transactions").select("*").order("created_at", { ascending: false }).limit(200);
+    let q = supabase.from("transactions").select("*").eq("kind", "coupon")
+      .order("created_at", { ascending: false }).limit(200);
     if (filter !== "all") q = q.eq("status", filter);
     const { data, error } = await q;
     if (error) toast.error(error.message); else setItems((data as Transaction[]) ?? []);
@@ -584,19 +324,6 @@ function TransactionsAdmin() {
     const { error } = await supabase.from("transactions").update({ status }).eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Statut mis à jour"); load();
-  };
-
-  const create = async () => {
-    if (!form.user_id.trim()) return toast.error("ID utilisateur requis");
-    const { error } = await supabase.from("transactions").insert({
-      user_id: form.user_id.trim(), kind: form.kind,
-      amount_xaf: Number(form.amount_xaf), status: form.status,
-      reference: form.reference || null, payment_method: form.payment_method || null,
-    });
-    if (error) return toast.error(error.message);
-    toast.success("Transaction créée"); setOpen(false);
-    setForm({ user_id: "", kind: "coupon", amount_xaf: 0, status: "completed", reference: "", payment_method: "MTN Money" });
-    load();
   };
 
   const remove = async (id: string) => {
@@ -623,7 +350,7 @@ function TransactionsAdmin() {
           <p className="text-xs text-muted-foreground">Total validé : <span className="text-gold font-semibold">{total.toLocaleString()} XAF</span></p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Select value={filter} onValueChange={(v) => setFilter(v as any)}>
+          <Select value={filter} onValueChange={(v) => setFilter(v as TxStatus | "all")}>
             <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tous</SelectItem>
@@ -639,23 +366,21 @@ function TransactionsAdmin() {
           <Button onClick={() => exportTransactionsPDF(items)} variant="outline" size="sm">
             <FileText className="w-4 h-4 mr-2" /> PDF
           </Button>
-          <Button onClick={() => setOpen(true)} className="bg-gold-gradient text-primary-foreground"><Plus className="w-4 h-4 mr-2" />Manuelle</Button>
         </div>
       </div>
       <div className="rounded-xl border border-border/60 bg-card overflow-x-auto">
         <Table>
           <TableHeader><TableRow>
             <TableHead>Date</TableHead><TableHead>Utilisateur</TableHead>
-            <TableHead>Type</TableHead><TableHead>Montant</TableHead>
-            <TableHead>Méthode</TableHead><TableHead>Réf.</TableHead>
-            <TableHead>Statut</TableHead><TableHead className="text-right">Actions</TableHead>
+            <TableHead>Montant</TableHead><TableHead>Méthode</TableHead>
+            <TableHead>Réf.</TableHead><TableHead>Statut</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow></TableHeader>
           <TableBody>
             {items.map(t => (
               <TableRow key={t.id}>
                 <TableCell className="text-xs">{new Date(t.created_at).toLocaleString("fr-FR")}</TableCell>
                 <TableCell className="font-mono text-xs">{t.user_id.slice(0, 8)}…</TableCell>
-                <TableCell>{t.kind === "coupon" ? "Coupon" : "Abonnement"}</TableCell>
                 <TableCell className="font-semibold text-gold">{t.amount_xaf.toLocaleString()} XAF</TableCell>
                 <TableCell className="text-xs">{t.payment_method ?? "—"}</TableCell>
                 <TableCell className="text-xs font-mono">{t.reference ?? "—"}</TableCell>
@@ -674,52 +399,10 @@ function TransactionsAdmin() {
                 </TableCell>
               </TableRow>
             ))}
-            {items.length === 0 && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Aucune transaction</TableCell></TableRow>}
+            {items.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Aucune transaction</TableCell></TableRow>}
           </TableBody>
         </Table>
       </div>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Saisie manuelle d'une transaction</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div><Label>ID utilisateur</Label><Input value={form.user_id} onChange={(e) => setForm({ ...form, user_id: e.target.value })} /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Type</Label>
-                <Select value={form.kind} onValueChange={(v) => setForm({ ...form, kind: v as TxKind })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="coupon">Coupon</SelectItem>
-                    <SelectItem value="subscription">Abonnement VIP</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div><Label>Montant (XAF)</Label><Input type="number" value={form.amount_xaf} onChange={(e) => setForm({ ...form, amount_xaf: Number(e.target.value) })} /></div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Méthode</Label><Input value={form.payment_method} onChange={(e) => setForm({ ...form, payment_method: e.target.value })} placeholder="MTN, Orange, Campay…" /></div>
-              <div><Label>Référence</Label><Input value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })} /></div>
-            </div>
-            <div>
-              <Label>Statut</Label>
-              <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as TxStatus })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pending">En attente</SelectItem>
-                  <SelectItem value="completed">Validée</SelectItem>
-                  <SelectItem value="failed">Échouée</SelectItem>
-                  <SelectItem value="refunded">Remboursée</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
-            <Button onClick={create} className="bg-gold-gradient text-primary-foreground">Enregistrer</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -762,7 +445,7 @@ function ReviewsAdmin() {
     <div>
       <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
         <h2 className="text-xl font-display">Avis ({items.length})</h2>
-        <Select value={filter} onValueChange={(v) => setFilter(v as any)}>
+        <Select value={filter} onValueChange={(v) => setFilter(v as ReviewStatus | "all")}>
           <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tous</SelectItem>
@@ -822,15 +505,18 @@ function ReviewsAdmin() {
 function SettingsAdmin() {
   const [whatsapp, setWhatsapp] = useState("");
   const [siteName, setSiteName] = useState("");
+  const [testPay, setTestPay] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const toggleTestPay = useServerFn(setTestPayMode);
 
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from("app_settings").select("*");
-      const map = Object.fromEntries((data ?? []).map((r: any) => [r.key, r.value]));
+      const map = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]));
       setWhatsapp(map.whatsapp_number ?? "654010951");
       setSiteName(map.site_name ?? "YANN PRONOSTICS");
+      setTestPay(map.test_pay_mode === "true");
       setLoading(false);
     })();
   }, []);
@@ -847,121 +533,116 @@ function SettingsAdmin() {
     toast.success("Paramètres enregistrés");
   };
 
+  const onToggleTestPay = async (enabled: boolean) => {
+    const prev = testPay;
+    setTestPay(enabled);
+    try {
+      await toggleTestPay({ data: { enabled } });
+      toast.success(enabled ? "Mode Test Pay activé" : "Mode Test Pay désactivé");
+    } catch (e) {
+      setTestPay(prev);
+      toast.error(e instanceof Error ? e.message : "Échec");
+    }
+  };
+
   if (loading) return <div className="text-muted-foreground">Chargement…</div>;
 
   return (
-    <div className="max-w-xl">
-      <h2 className="text-xl font-display mb-4">Paramètres de la plateforme</h2>
-      <div className="rounded-xl border border-border/60 bg-card p-6 space-y-4">
-        <div>
-          <Label>Numéro WhatsApp principal</Label>
-          <Input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="654010951" />
-          <p className="text-xs text-muted-foreground mt-1">
-            Utilisé partout : bouton flottant, contact, footer, redirections d'achat.
-          </p>
+    <div className="max-w-xl space-y-6">
+      <div>
+        <h2 className="text-xl font-display mb-4">Paramètres de la plateforme</h2>
+        <div className="rounded-xl border border-border/60 bg-card p-6 space-y-4">
+          <div>
+            <Label>Numéro WhatsApp principal</Label>
+            <Input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="654010951" />
+            <p className="text-xs text-muted-foreground mt-1">
+              Utilisé partout : bouton flottant, contact, footer.
+            </p>
+          </div>
+          <div>
+            <Label>Nom du site</Label>
+            <Input value={siteName} onChange={(e) => setSiteName(e.target.value)} />
+          </div>
+          <Button onClick={save} disabled={saving} className="bg-gold-gradient text-primary-foreground">
+            <Save className="w-4 h-4 mr-2" /> {saving ? "Enregistrement…" : "Enregistrer"}
+          </Button>
         </div>
-        <div>
-          <Label>Nom du site</Label>
-          <Input value={siteName} onChange={(e) => setSiteName(e.target.value)} />
+      </div>
+
+      <div>
+        <h2 className="text-xl font-display mb-4 flex items-center gap-2">
+          <FlaskConical className="w-5 h-5 text-primary" /> Mode Test Pay
+        </h2>
+        <div className="rounded-xl border border-primary/40 bg-card p-6 space-y-3">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="font-medium">Simulation d'achat pour l'administrateur</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Activé, l'admin peut acheter et débloquer un coupon en simulation,
+                sans appel à CinetPay. Désactivez avant la production.
+              </p>
+            </div>
+            <Switch checked={testPay} onCheckedChange={onToggleTestPay} />
+          </div>
+          {testPay && (
+            <Badge className="bg-primary/15 text-primary border border-primary/30">
+              <FlaskConical className="w-3 h-3 mr-1" /> Mode Test Pay actif
+            </Badge>
+          )}
         </div>
-        <Button onClick={save} disabled={saving} className="bg-gold-gradient text-primary-foreground">
-          <Save className="w-4 h-4 mr-2" /> {saving ? "Enregistrement…" : "Enregistrer"}
-        </Button>
       </div>
     </div>
   );
 }
 
-/* ---------------- STATISTIQUES VIP ---------------- */
+/* ---------------- TABLEAU DE BORD ---------------- */
 
-function VipStats() {
+function StatsAdmin() {
   const [txs, setTxs] = useState<Transaction[]>([]);
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [subs, setSubs] = useState<Subscription[]>([]);
   const [usersCount, setUsersCount] = useState(0);
+  const [couponsCount, setCouponsCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
-      const [t, p, s, u] = await Promise.all([
-        supabase.from("transactions").select("*").order("created_at", { ascending: false }),
-        supabase.from("subscription_plans").select("*"),
-        supabase.from("subscriptions").select("*"),
+      const [t, u, c] = await Promise.all([
+        supabase.from("transactions").select("*").eq("kind", "coupon").order("created_at", { ascending: false }),
         supabase.from("profiles").select("id", { count: "exact", head: true }),
+        supabase.from("coupons").select("id", { count: "exact", head: true }).eq("status", "published"),
       ]);
       setTxs((t.data as Transaction[]) ?? []);
-      setPlans((p.data as Plan[]) ?? []);
-      setSubs((s.data as Subscription[]) ?? []);
       setUsersCount(u.count ?? 0);
+      setCouponsCount(c.count ?? 0);
       setLoading(false);
     })();
   }, []);
 
   if (loading) return <div className="text-muted-foreground">Chargement…</div>;
 
-  const completedVip = txs.filter(t => t.status === "completed" && t.kind === "subscription");
-  const completedCoupons = txs.filter(t => t.status === "completed" && t.kind === "coupon");
-  const revenueVip = completedVip.reduce((s, t) => s + t.amount_xaf, 0);
-  const revenueCoupons = completedCoupons.reduce((s, t) => s + t.amount_xaf, 0);
-  const revenueTotal = revenueVip + revenueCoupons;
-  const activeVipUsers = new Set(subs.filter(s => s.status === "active").map(s => s.user_id)).size;
-  const conversionRate = usersCount > 0 ? (activeVipUsers / usersCount) * 100 : 0;
-
-  const salesByPlan = plans.map(p => {
-    const planSubs = subs.filter(s => s.plan_id === p.id);
-    const planTxIds = planSubs.map(s => s.id);
-    const txMatched = completedVip.filter(t => t.subscription_id && planTxIds.includes(t.subscription_id));
-    return {
-      plan: p,
-      activeCount: planSubs.filter(s => s.status === "active").length,
-      totalCount: planSubs.length,
-      revenue: txMatched.reduce((s, t) => s + t.amount_xaf, 0),
-    };
-  });
+  const completed = txs.filter(t => t.status === "completed");
+  const revenueTotal = completed.reduce((s, t) => s + t.amount_xaf, 0);
+  const now = new Date();
+  const startMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const revenueMonth = completed.filter(t => new Date(t.created_at) >= startMonth).reduce((s, t) => s + t.amount_xaf, 0);
+  const revenueDay = completed.filter(t => new Date(t.created_at) >= startDay).reduce((s, t) => s + t.amount_xaf, 0);
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-display flex items-center gap-2"><TrendingUp className="w-5 h-5 text-gold" /> Statistiques VIP</h2>
-        <p className="text-xs text-muted-foreground">Vue d'ensemble revenus, conversion et performance par plan.</p>
+        <h2 className="text-xl font-display flex items-center gap-2"><TrendingUp className="w-5 h-5 text-gold" /> Tableau de bord</h2>
+        <p className="text-xs text-muted-foreground">Vue d'ensemble revenus et activité.</p>
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Revenus totaux" value={`${revenueTotal.toLocaleString()} XAF`} accent />
-        <StatCard label="Revenus VIP" value={`${revenueVip.toLocaleString()} XAF`} />
-        <StatCard label="Revenus coupons" value={`${revenueCoupons.toLocaleString()} XAF`} />
-        <StatCard label="VIP actifs" value={activeVipUsers.toString()} />
+        <StatCard label="Revenus du jour" value={`${revenueDay.toLocaleString()} XAF`} accent />
+        <StatCard label="Revenus du mois" value={`${revenueMonth.toLocaleString()} XAF`} accent />
+        <StatCard label="Revenus totaux" value={`${revenueTotal.toLocaleString()} XAF`} />
+        <StatCard label="Ventes validées" value={completed.length.toString()} />
         <StatCard label="Utilisateurs inscrits" value={usersCount.toString()} />
-        <StatCard label="Taux de conversion VIP" value={`${conversionRate.toFixed(1)} %`} accent />
-        <StatCard label="Transactions VIP validées" value={completedVip.length.toString()} />
-        <StatCard label="Transactions coupons validées" value={completedCoupons.length.toString()} />
-      </div>
-
-      <div>
-        <h3 className="font-display text-lg mb-3">Ventes par plan</h3>
-        <div className="rounded-xl border border-border/60 bg-card overflow-x-auto">
-          <Table>
-            <TableHeader><TableRow>
-              <TableHead>Plan</TableHead><TableHead>Prix</TableHead>
-              <TableHead>Abos actifs</TableHead><TableHead>Abos total</TableHead>
-              <TableHead>Revenus générés</TableHead>
-            </TableRow></TableHeader>
-            <TableBody>
-              {salesByPlan.map(({ plan, activeCount, totalCount, revenue }) => (
-                <TableRow key={plan.id}>
-                  <TableCell className="font-medium">{plan.name}</TableCell>
-                  <TableCell>{plan.price_xaf.toLocaleString()} XAF</TableCell>
-                  <TableCell>{activeCount}</TableCell>
-                  <TableCell>{totalCount}</TableCell>
-                  <TableCell className="font-semibold text-gold">{revenue.toLocaleString()} XAF</TableCell>
-                </TableRow>
-              ))}
-              {salesByPlan.length === 0 && (
-                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Aucun plan</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        <StatCard label="Coupons publiés" value={couponsCount.toString()} />
+        <StatCard label="Transactions totales" value={txs.length.toString()} />
+        <StatCard label="Panier moyen" value={`${completed.length > 0 ? Math.round(revenueTotal / completed.length).toLocaleString() : 0} XAF`} />
       </div>
 
       <div>
@@ -989,16 +670,11 @@ function StatCard({ label, value, accent }: { label: string; value: string; acce
 }
 
 function exportTransactionsCSV(txs: Transaction[]) {
-  const headers = ["Date", "ID", "Utilisateur", "Type", "Montant XAF", "Méthode", "Référence", "Statut"];
+  const headers = ["Date", "ID", "Utilisateur", "Montant XAF", "Méthode", "Référence", "Statut"];
   const rows = txs.map(t => [
     new Date(t.created_at).toLocaleString("fr-FR"),
-    t.id,
-    t.user_id,
-    t.kind,
-    t.amount_xaf.toString(),
-    t.payment_method ?? "",
-    t.reference ?? "",
-    t.status,
+    t.id, t.user_id, t.amount_xaf.toString(),
+    t.payment_method ?? "", t.reference ?? "", t.status,
   ]);
   const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
   const csv = [headers, ...rows].map(r => r.map(escape).join(",")).join("\n");
@@ -1013,7 +689,6 @@ function exportTransactionsPDF(txs: Transaction[]) {
     <tr>
       <td>${new Date(t.created_at).toLocaleString("fr-FR")}</td>
       <td>${t.user_id.slice(0, 8)}…</td>
-      <td>${t.kind === "subscription" ? "VIP" : "Coupon"}</td>
       <td style="text-align:right">${t.amount_xaf.toLocaleString()} XAF</td>
       <td>${t.payment_method ?? "—"}</td>
       <td>${t.reference ?? "—"}</td>
@@ -1032,7 +707,7 @@ function exportTransactionsPDF(txs: Transaction[]) {
     <h1>YANN PRONOSTICS — Historique des transactions</h1>
     <div class="meta">Exporté le ${new Date().toLocaleString("fr-FR")} · ${txs.length} transactions</div>
     <table>
-      <thead><tr><th>Date</th><th>Utilisateur</th><th>Type</th><th>Montant</th><th>Méthode</th><th>Référence</th><th>Statut</th></tr></thead>
+      <thead><tr><th>Date</th><th>Utilisateur</th><th>Montant</th><th>Méthode</th><th>Référence</th><th>Statut</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
     <div class="total">Total validé : ${total.toLocaleString()} XAF</div>

@@ -29,12 +29,15 @@ const nameSchema = z.string().trim().min(2, "Nom trop court").max(80);
 const whatsappSchema = z.string().trim().regex(/^[0-9+\s]{8,20}$/, "Numéro WhatsApp invalide");
 
 function AuthPage() {
-  const { session, loading } = useAuth();
+  const { session, loading, isAdmin } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && session) navigate({ to: "/dashboard", replace: true });
-  }, [session, loading, navigate]);
+    if (!loading && session) {
+      navigate({ to: isAdmin ? "/admin" : "/dashboard", replace: true });
+    }
+  }, [session, loading, isAdmin, navigate]);
+
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden">
