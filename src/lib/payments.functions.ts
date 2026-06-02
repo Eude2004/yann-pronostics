@@ -3,22 +3,21 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /**
- * CinetPay payment orchestration.
+ * CinetPay payment orchestration — coupons uniquement (pas d'abonnement).
  *
- * Test mode (no API key set): creates a `pending` transaction and returns a
- * URL pointing back to /payment/return where the user can simulate completion.
+ * Test mode : si `CINETPAY_API_KEY`/`CINETPAY_SITE_ID` manquent, OU si le
+ * réglage admin `test_pay_mode = 'true'` est actif, on crée une transaction
+ * pending et on renvoie une URL locale vers /payment/return pour simulation.
  *
- * Live mode (CINETPAY_API_KEY + CINETPAY_SITE_ID set): calls CinetPay
- * /v2/payment and returns the hosted payment_url.
+ * Live mode : appel CinetPay v2 et redirection vers le payment_url hébergé.
  */
 export const initiatePayment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
     z
       .object({
-        kind: z.enum(["coupon", "subscription"]),
-        couponId: z.string().uuid().optional(),
-        planId: z.string().uuid().optional(),
+        kind: z.literal("coupon"),
+        couponId: z.string().uuid(),
         returnOrigin: z.string().url(),
         customer: z
           .object({
@@ -28,61 +27,50 @@ export const initiatePayment = createServerFn({ method: "POST" })
           })
           .optional(),
       })
-      .refine((d) => (d.kind === "coupon" ? !!d.couponId : !!d.planId), {
-        message: "couponId required for coupon kind, planId for subscription",
-      })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    // 1. Resolve amount + label from DB
-    let amountXaf = 0;
-    let description = "";
-    let subscriptionId: string | null = null;
+    // Lecture du réglage Mode Test Pay (admin uniquement → permet à l'admin d'acheter en simulation)
+    const { data: testRow } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "test_pay_mode")
+      .maybeSingle();
+    const testPayMode = testRow?.value === "true";
 
-    if (data.kind === "coupon" && data.couponId) {
-      const { data: c, error } = await supabase
-        .from("coupons")
-        .select("id, title, price_xaf, status")
-        .eq("id", data.couponId)
-        .maybeSingle();
-      if (error || !c) throw new Error("Coupon introuvable.");
-      if (c.status !== "published") throw new Error("Coupon non disponible.");
-      amountXaf = c.price_xaf;
-      description = `Coupon: ${c.title}`;
-    } else if (data.kind === "subscription" && data.planId) {
-      const { data: p, error } = await supabase
-        .from("subscription_plans")
-        .select("id, name, price_xaf, is_active")
-        .eq("id", data.planId)
-        .maybeSingle();
-      if (error || !p) throw new Error("Plan introuvable.");
-      if (!p.is_active) throw new Error("Plan non disponible.");
-      amountXaf = p.price_xaf;
-      description = `Abonnement: ${p.name}`;
+    // Détection rôle admin (les admins ne peuvent acheter que si Mode Test Pay est ON)
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
+    const isAdmin = (roles ?? []).some((r) => r.role === "admin");
 
-      // Create an inactive subscription tied to this transaction;
-      // the existing DB trigger will activate it when the tx becomes completed.
-      const { data: sub, error: sErr } = await supabase
-        .from("subscriptions")
-        .insert({ user_id: userId, plan_id: p.id, status: "inactive" })
-        .select("id")
-        .single();
-      if (sErr || !sub) throw new Error(sErr?.message ?? "Création abonnement échouée.");
-      subscriptionId = sub.id;
-    } else {
-      throw new Error("Paramètres invalides.");
+    if (isAdmin && !testPayMode) {
+      throw new Error(
+        "Les comptes administrateurs ne peuvent pas acheter de coupons. Activez le Mode Test Pay dans les paramètres pour simuler un achat.",
+      );
     }
 
-    // 2. Create pending transaction
+    // Résolution du coupon
+    const { data: c, error } = await supabase
+      .from("coupons")
+      .select("id, title, price_xaf, status")
+      .eq("id", data.couponId)
+      .maybeSingle();
+    if (error || !c) throw new Error("Coupon introuvable.");
+    if (c.status !== "published") throw new Error("Coupon non disponible.");
+    const amountXaf = c.price_xaf;
+    const description = `Coupon: ${c.title}`;
+
+    // Création transaction pending
     const { data: tx, error: txErr } = await supabase
       .from("transactions")
       .insert({
         user_id: userId,
-        kind: data.kind,
-        coupon_id: data.kind === "coupon" ? data.couponId : null,
-        subscription_id: subscriptionId,
+        kind: "coupon",
+        coupon_id: data.couponId,
         amount_xaf: amountXaf,
         status: "pending",
         payment_method: "cinetpay",
@@ -91,20 +79,19 @@ export const initiatePayment = createServerFn({ method: "POST" })
       .single();
     if (txErr || !tx) throw new Error(txErr?.message ?? "Création transaction échouée.");
 
-    // 3. Call CinetPay if configured, else fall back to test mode
     const apiKey = process.env.CINETPAY_API_KEY;
     const siteId = process.env.CINETPAY_SITE_ID;
     const origin = data.returnOrigin.replace(/\/$/, "");
     const notifyUrl = `${origin}/api/public/cinetpay/notify`;
     const returnUrl = `${origin}/payment/return?tx=${tx.id}`;
 
-    if (!apiKey || !siteId) {
-      // Test mode — no real provider call
+    // Mode test : pas de clés OU Mode Test Pay activé
+    if (!apiKey || !siteId || testPayMode) {
       await supabase
         .from("transactions")
         .update({
           reference: `MOCK-${tx.id.slice(0, 8)}`,
-          notes: "Mode test (CinetPay non configuré)",
+          notes: testPayMode ? "Mode Test Pay (admin)" : "Mode test (CinetPay non configuré)",
         })
         .eq("id", tx.id);
       return {
@@ -115,7 +102,7 @@ export const initiatePayment = createServerFn({ method: "POST" })
       };
     }
 
-    // Live mode: CinetPay v2 init
+    // Live mode
     const reference = `YP-${tx.id.slice(0, 8).toUpperCase()}-${Date.now().toString().slice(-5)}`;
     const payload = {
       apikey: apiKey,
@@ -177,8 +164,7 @@ export const initiatePayment = createServerFn({ method: "POST" })
   });
 
 /**
- * Read the current status of one of the caller's transactions
- * (used by the return page to poll completion).
+ * Lit le statut d'une transaction (utilisé par la page /payment/return).
  */
 export const getTransactionStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -189,7 +175,7 @@ export const getTransactionStatus = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const { data: tx, error } = await supabase
       .from("transactions")
-      .select("id, status, kind, amount_xaf, reference, coupon_id, subscription_id, notes, created_at")
+      .select("id, status, kind, amount_xaf, reference, coupon_id, notes, created_at")
       .eq("id", data.transactionId)
       .eq("user_id", userId)
       .maybeSingle();
@@ -199,9 +185,8 @@ export const getTransactionStatus = createServerFn({ method: "GET" })
   });
 
 /**
- * Test-mode only: mark a pending transaction as completed so the user can
- * exercise the unlock flow without a real provider. Refuses to work when a
- * real CinetPay key is configured.
+ * Simulation manuelle d'un paiement (mode test).
+ * Autorisée si CinetPay n'est pas configuré, OU si Mode Test Pay est actif.
  */
 export const simulatePaymentCompletion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -214,10 +199,20 @@ export const simulatePaymentCompletion = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    if (process.env.CINETPAY_API_KEY && process.env.CINETPAY_SITE_ID) {
-      throw new Error("Simulation indisponible : CinetPay est configuré.");
-    }
     const { supabase, userId } = context;
+    const cinetpayConfigured = !!(process.env.CINETPAY_API_KEY && process.env.CINETPAY_SITE_ID);
+
+    if (cinetpayConfigured) {
+      const { data: testRow } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "test_pay_mode")
+        .maybeSingle();
+      if (testRow?.value !== "true") {
+        throw new Error("Simulation indisponible : CinetPay est configuré et le Mode Test Pay est désactivé.");
+      }
+    }
+
     const { data: tx, error } = await supabase
       .from("transactions")
       .update({ status: data.outcome, notes: `Simulé (${data.outcome})` })
@@ -229,4 +224,26 @@ export const simulatePaymentCompletion = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     if (!tx) throw new Error("Transaction déjà finalisée ou introuvable.");
     return tx;
+  });
+
+/**
+ * Bascule Mode Test Pay — réservé aux admins.
+ */
+export const setTestPayMode = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ enabled: z.boolean() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
+    const isAdmin = (roles ?? []).some((r) => r.role === "admin");
+    if (!isAdmin) throw new Error("Réservé aux administrateurs.");
+
+    const { error } = await supabase
+      .from("app_settings")
+      .upsert({ key: "test_pay_mode", value: data.enabled ? "true" : "false" }, { onConflict: "key" });
+    if (error) throw new Error(error.message);
+    return { enabled: data.enabled };
   });
