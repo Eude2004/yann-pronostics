@@ -809,3 +809,225 @@ function downloadBlob(blob: Blob, filename: string) {
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
 }
+
+/* ---------------- UTILISATEURS ---------------- */
+
+type AdminUser = {
+  id: string;
+  email: string;
+  created_at: string;
+  last_sign_in_at: string | null;
+  roles: string[];
+  profile: { id: string; full_name: string | null; username: string | null; whatsapp: string | null } | null;
+};
+
+function UsersAdmin() {
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [q, setQ] = useState("");
+  const fetchUsers = useServerFn(listAdminUsers);
+  const toggleAdmin = useServerFn(setUserAdmin);
+  const removeUser = useServerFn(deleteAppUser);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await fetchUsers();
+      setUsers(res.users);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Échec du chargement");
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => { load(); }, []);
+
+  const onToggleAdmin = async (u: AdminUser) => {
+    const make = !u.roles.includes("admin");
+    if (!make && !confirm(`Retirer le rôle admin à ${u.email} ?`)) return;
+    try {
+      await toggleAdmin({ data: { user_id: u.id, make_admin: make } });
+      toast.success(make ? "Promu administrateur" : "Rôle admin retiré");
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Échec");
+    }
+  };
+
+  const onDelete = async (u: AdminUser) => {
+    if (!confirm(`Supprimer définitivement ${u.email} ? Cette action est irréversible.`)) return;
+    try {
+      await removeUser({ data: { user_id: u.id } });
+      toast.success("Utilisateur supprimé");
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Échec");
+    }
+  };
+
+  const filtered = users.filter(u =>
+    !q || u.email.toLowerCase().includes(q.toLowerCase()) ||
+    (u.profile?.username ?? "").toLowerCase().includes(q.toLowerCase()) ||
+    (u.profile?.full_name ?? "").toLowerCase().includes(q.toLowerCase())
+  );
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+        <h2 className="text-xl font-display">Utilisateurs ({users.length})</h2>
+        <Input
+          placeholder="Rechercher email, nom…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          className="max-w-xs"
+        />
+      </div>
+      {loading ? (
+        <div className="text-muted-foreground">Chargement…</div>
+      ) : (
+        <div className="rounded-xl border border-border/60 bg-card overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Email</TableHead>
+                <TableHead>Nom</TableHead>
+                <TableHead>WhatsApp</TableHead>
+                <TableHead>Inscrit le</TableHead>
+                <TableHead>Dernière connexion</TableHead>
+                <TableHead>Rôles</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map(u => (
+                <TableRow key={u.id}>
+                  <TableCell className="font-medium text-xs">{u.email}</TableCell>
+                  <TableCell className="text-xs">{u.profile?.full_name ?? u.profile?.username ?? "—"}</TableCell>
+                  <TableCell className="text-xs">{u.profile?.whatsapp ?? "—"}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{new Date(u.created_at).toLocaleDateString("fr-FR")}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleDateString("fr-FR") : "Jamais"}</TableCell>
+                  <TableCell>
+                    {u.roles.includes("admin") ? (
+                      <Badge className="bg-primary/15 text-primary border border-primary/30">
+                        <Shield className="w-3 h-3 mr-1" />Admin
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">Utilisateur</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
+                    <Button size="sm" variant="outline" onClick={() => onToggleAdmin(u)} className="mr-1">
+                      {u.roles.includes("admin") ? "Retirer admin" : "Promouvoir"}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => onDelete(u)}>
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {filtered.length === 0 && (
+                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Aucun utilisateur</TableCell></TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- JOURNAL D'AUDIT ---------------- */
+
+type AuditEntry = {
+  id: string;
+  actor_id: string;
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  details: any;
+  created_at: string;
+};
+
+const ACTION_LABELS: Record<string, string> = {
+  create_coupon: "Création de coupon",
+  update_coupon: "Modification de coupon",
+  delete_coupon: "Suppression de coupon",
+  update_coupon_status: "Changement de statut coupon",
+  moderate_review: "Modération d'avis",
+  delete_review: "Suppression d'avis",
+  update_settings: "Modification des paramètres",
+  toggle_test_pay: "Bascule Mode Test Pay",
+  promote_admin: "Promotion admin",
+  demote_admin: "Rétrogradation admin",
+  delete_user: "Suppression d'utilisateur",
+};
+
+function AuditAdmin() {
+  const [items, setItems] = useState<AuditEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    const { data, error } = await supabase
+      .from("admin_audit_log")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(300);
+    if (error) toast.error(error.message);
+    else setItems((data as AuditEntry[]) ?? []);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    load();
+    const channel = supabase
+      .channel("admin-audit")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "admin_audit_log" }, load)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  if (loading) return <div className="text-muted-foreground">Chargement…</div>;
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+        <div>
+          <h2 className="text-xl font-display flex items-center gap-2"><History className="w-5 h-5 text-gold" /> Journal des actions ({items.length})</h2>
+          <p className="text-xs text-muted-foreground">Toutes les actions administrateur en temps réel.</p>
+        </div>
+      </div>
+      <div className="rounded-xl border border-border/60 bg-card overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Date</TableHead>
+              <TableHead>Action</TableHead>
+              <TableHead>Cible</TableHead>
+              <TableHead>Détails</TableHead>
+              <TableHead>Auteur</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.map((e) => (
+              <TableRow key={e.id}>
+                <TableCell className="text-xs whitespace-nowrap">{new Date(e.created_at).toLocaleString("fr-FR")}</TableCell>
+                <TableCell className="text-xs font-medium">{ACTION_LABELS[e.action] ?? e.action}</TableCell>
+                <TableCell className="text-xs">
+                  <span className="text-muted-foreground">{e.entity_type}</span>
+                  {e.entity_id && <span className="font-mono ml-1">{e.entity_id.slice(0, 8)}…</span>}
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground max-w-xs truncate">
+                  {e.details && Object.keys(e.details).length > 0 ? JSON.stringify(e.details) : "—"}
+                </TableCell>
+                <TableCell className="text-xs font-mono">{e.actor_id.slice(0, 8)}…</TableCell>
+              </TableRow>
+            ))}
+            {items.length === 0 && (
+              <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Aucune action enregistrée</TableCell></TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
