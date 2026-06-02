@@ -59,6 +59,7 @@ function Home() {
 }
 
 function Header() {
+  const { t } = useTranslation();
   const { session, loading, isAdmin } = useAuth();
   return (
     <header className="sticky top-0 z-40 backdrop-blur-xl bg-background/70 border-b border-border/50">
@@ -68,22 +69,23 @@ function Header() {
           <span className="font-display text-lg tracking-wider text-gold hidden sm:block">YANN PRONOSTICS</span>
         </Link>
         <div className="hidden md:flex items-center gap-8 text-sm">
-          <a href="#coupons" className="hover:text-primary transition-colors">Coupons</a>
-          <a href="#why" className="hover:text-primary transition-colors">Pourquoi nous</a>
-          <a href="#contact" className="hover:text-primary transition-colors">Contact</a>
+          <a href="#coupons" className="hover:text-primary transition-colors">{t("nav.coupons")}</a>
+          <a href="#why" className="hover:text-primary transition-colors">{t("nav.why")}</a>
+          <a href="#contact" className="hover:text-primary transition-colors">{t("nav.contact")}</a>
         </div>
         <div className="flex items-center gap-2">
+          <LanguageToggle />
           <ThemeToggle />
           {loading ? null : session ? (
             <Link to={isAdmin ? "/admin" : "/dashboard"}>
               <Button size="sm" className="bg-gold-gradient text-primary-foreground hover:opacity-90 font-semibold shadow-gold">
-                <LayoutDashboard className="w-4 h-4 mr-2" /> {isAdmin ? "Admin" : "Mon espace"}
+                <LayoutDashboard className="w-4 h-4 mr-2" /> {isAdmin ? t("common.admin") : t("common.myspace")}
               </Button>
             </Link>
           ) : (
             <Link to="/auth">
               <Button size="sm" className="bg-gold-gradient text-primary-foreground hover:opacity-90 font-semibold shadow-gold">
-                Se connecter
+                {t("common.login")}
               </Button>
             </Link>
           )}
@@ -92,6 +94,7 @@ function Header() {
     </header>
   );
 }
+
 
 
 function Hero() {
