@@ -87,11 +87,16 @@ export const initiatePayment = createServerFn({ method: "POST" })
     // Résolution du coupon
     const { data: c, error } = await supabase
       .from("coupons")
-      .select("id, title, price_xaf, status")
+      .select("id, title, price_xaf, status, end_date")
       .eq("id", data.couponId)
       .maybeSingle();
     if (error || !c) throw new Error("Coupon introuvable.");
     if (c.status !== "published") throw new Error("Coupon non disponible.");
+    // Garde-fou serveur : un coupon dont la date de fin est passée ne peut plus
+    // être acheté, même si un appel direct contourne le bouton désactivé du front.
+    if (c.end_date && new Date(c.end_date).getTime() <= Date.now()) {
+      throw new Error("Ce coupon est terminé et n'est plus disponible à l'achat.");
+    }
     const amountXaf = c.price_xaf;
     const description = `Coupon: ${c.title}`;
 
