@@ -161,6 +161,7 @@ function CouponsSection() {
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
+    await supabase.rpc("refresh_coupon_statuses");
     const now = new Date().toISOString();
     const { data } = await supabase
       .from("coupons")
