@@ -6,6 +6,7 @@ import logo from "@/assets/yann-logo.png";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Lock, TrendingUp, Trophy, Zap, ShieldCheck, Star, Flame, ArrowRight, MessageCircle, LayoutDashboard, Calendar, ShoppingCart, Loader2, Play, CheckCircle2, Download } from "lucide-react";
+import { CouponStatusBadge } from "@/components/CouponStatusBadge";
 import { getCouponVideoAccess } from "@/lib/coupon-access.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -357,6 +358,9 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
               <ShoppingCart className="w-3 h-3" /> {coupon.sales_count} ventes
               <span>•</span>
               <Calendar className="w-3 h-3" /> {dateLabel}
+            </div>
+            <div className="mt-2">
+              <CouponStatusBadge startDate={coupon.start_date} endDate={coupon.end_date} />
             </div>
           </div>
         </div>

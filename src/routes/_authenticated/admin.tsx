@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import logo from "@/assets/yann-logo.png";
+import { CouponStatusBadge } from "@/components/CouponStatusBadge";
+import { isoToZonedInput, zonedInputToIso, getBrowserTimezone } from "@/lib/coupon-status";
 import {
   ArrowLeft, Plus, Pencil, Trash2, Check, X, Star, Shield, LogOut,
   Save, Download, FileText, TrendingUp, FlaskConical, Users, History,
@@ -307,6 +309,16 @@ const emptyCouponForm = {
   status: "draft" as PublishStatus, is_featured: false,
 };
 
+const TZ_OPTIONS = [
+  "Africa/Douala",
+  "Africa/Lagos",
+  "Africa/Abidjan",
+  "Africa/Casablanca",
+  "Europe/Paris",
+  "Europe/London",
+  "UTC",
+];
+
 function CouponsAdmin() {
   const [items, setItems] = useState<Coupon[]>([]);
   const [open, setOpen] = useState(false);
@@ -314,6 +326,13 @@ function CouponsAdmin() {
   const [form, setForm] = useState({ ...emptyCouponForm });
   const [uploading, setUploading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [timezone, setTimezone] = useState<string>(() => {
+    if (typeof window === "undefined") return getBrowserTimezone();
+    return localStorage.getItem("coupon_tz") || getBrowserTimezone();
+  });
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("coupon_tz", timezone);
+  }, [timezone]);
 
   const uploadVideo = async (file: File) => {
     if (!file) return;
@@ -381,8 +400,8 @@ function CouponsAdmin() {
       description: c.description ?? "",
       image_url: c.image_url ?? "",
       video_url: c.video_url ?? "",
-      start_date: c.start_date ? c.start_date.slice(0, 16) : "",
-      end_date: c.end_date ? c.end_date.slice(0, 16) : "",
+      start_date: isoToZonedInput(c.start_date, timezone),
+      end_date: isoToZonedInput(c.end_date, timezone),
       status: c.status, is_featured: c.is_featured,
     });
     setOpen(true);
@@ -397,8 +416,8 @@ function CouponsAdmin() {
       description: form.description || null,
       image_url: form.image_url || null,
       video_url: form.video_url || null,
-      start_date: form.start_date ? new Date(form.start_date).toISOString() : null,
-      end_date: form.end_date ? new Date(form.end_date).toISOString() : null,
+      start_date: zonedInputToIso(form.start_date, timezone),
+      end_date: zonedInputToIso(form.end_date, timezone),
       status: form.status,
       is_featured: form.is_featured,
     };
@@ -469,7 +488,7 @@ function CouponsAdmin() {
                   {" → "}
                   {c.end_date ? new Date(c.end_date).toLocaleDateString("fr-FR") : "—"}
                 </TableCell>
-                <TableCell>{badge(c.status)}</TableCell>
+                <TableCell><CouponStatusBadge startDate={c.start_date} endDate={c.end_date} /></TableCell>
                 <TableCell>{c.sales_count}</TableCell>
                 <TableCell className="text-right whitespace-nowrap">
                   <Select value={c.status} onValueChange={(v) => setStatus(c.id, v as PublishStatus)}>
@@ -574,9 +593,37 @@ function CouponsAdmin() {
                 <p className="text-xs text-green-500 truncate">✓ {form.video_url}</p>
               )}
             </div>
+            <div>
+              <Label>Fuseau horaire</Label>
+              <Select value={timezone} onValueChange={setTimezone}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {TZ_OPTIONS.map((tz) => (
+                    <SelectItem key={tz} value={tz}>{tz}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Les dates ci-dessous sont interprétées dans ce fuseau.
+              </p>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Date de début</Label><Input type="datetime-local" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} /></div>
               <div><Label>Date de fin</Label><Input type="datetime-local" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} /></div>
+            </div>
+            <div className="rounded-md border border-border/60 bg-muted/30 p-3 flex items-center justify-between gap-3">
+              <div>
+                <div className="text-xs text-muted-foreground">Statut calculé automatiquement</div>
+                <div className="mt-1">
+                  <CouponStatusBadge
+                    startDate={zonedInputToIso(form.start_date, timezone)}
+                    endDate={zonedInputToIso(form.end_date, timezone)}
+                  />
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground max-w-[55%] text-right">
+                Avant la date de début : <b>Brouillon</b>. Entre les deux : <b>Publié</b> et mis en avant. Après la date de fin : <b>Archivé</b>.
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
