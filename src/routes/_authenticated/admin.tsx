@@ -378,7 +378,7 @@ function CouponsAdmin() {
 
 
   const load = async () => {
-    await supabase.rpc("refresh_coupon_statuses");
+    // Coupon statuses are refreshed automatically by a pg_cron job every minute.
     const { data, error } = await supabase.from("coupons").select("*")
       .order("created_at", { ascending: false });
     if (error) toast.error(error.message); else setItems((data as Coupon[]) ?? []);
