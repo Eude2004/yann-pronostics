@@ -375,7 +375,19 @@ function UserCouponCard({
   const [url, setUrl] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
+  const [justUnlocked, setJustUnlocked] = useState(false);
+  const prevPaidRef = useRef(paid);
   const th = THEMES[themeKey];
+
+  // Detect a transition from locked → unlocked to play a one-shot animation
+  useEffect(() => {
+    if (!prevPaidRef.current && paid) {
+      setJustUnlocked(true);
+      const id = setTimeout(() => setJustUnlocked(false), 1100);
+      return () => clearTimeout(id);
+    }
+    prevPaidRef.current = paid;
+  }, [paid]);
 
   useEffect(() => {
     if (!paid || url) return;
