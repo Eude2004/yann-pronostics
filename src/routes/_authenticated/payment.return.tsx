@@ -249,12 +249,19 @@ function PaymentReturn() {
               <video src={videoUrl} controls className="w-full h-full" />
             </div>
           )}
-          {status === "completed" && !videoUrl && couponId && (
+          {status === "completed" && !videoUrl && couponId && videoLoading && (
+            <div className="mt-4 rounded-xl border border-border bg-background/40 p-4 text-xs text-muted-foreground inline-flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin text-primary" />
+              Déverrouillage de la vidéo en cours…
+            </div>
+          )}
+          {status === "completed" && !videoUrl && couponId && videoMissing && (
             <div className="mt-4 rounded-xl border border-border bg-background/40 p-4 text-xs text-muted-foreground inline-flex items-center gap-2">
               <Play className="w-4 h-4 opacity-60" />
               La vidéo de ce coupon sera disponible dès qu'elle sera publiée.
             </div>
           )}
+
 
           <div className="mt-8 flex flex-col sm:flex-row gap-2 justify-center">
             {status === "completed" ? (
