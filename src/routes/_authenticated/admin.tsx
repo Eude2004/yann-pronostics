@@ -324,6 +324,13 @@ function CouponsAdmin() {
   const [form, setForm] = useState({ ...emptyCouponForm });
   const [uploading, setUploading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [timezone, setTimezone] = useState<string>(() => {
+    if (typeof window === "undefined") return getBrowserTimezone();
+    return localStorage.getItem("coupon_tz") || getBrowserTimezone();
+  });
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("coupon_tz", timezone);
+  }, [timezone]);
 
   const uploadVideo = async (file: File) => {
     if (!file) return;
