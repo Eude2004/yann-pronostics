@@ -552,7 +552,10 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
             {coupon.title}
           </h3>
           <p className="mt-1 text-xs text-muted-foreground line-clamp-2 min-h-[2rem]">
-            {coupon.description || "Pronostic premium analysé par nos experts."}
+            {coupon.description
+              || (coupon.coupon_type
+                ? t(`coupon.fallback_desc_${coupon.coupon_type}`, { defaultValue: t("coupon.fallback_desc") })
+                : t("coupon.fallback_desc"))}
           </p>
         </div>
 
