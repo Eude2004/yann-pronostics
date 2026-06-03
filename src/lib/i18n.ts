@@ -13,11 +13,13 @@ if (!i18n.isInitialized) {
         fr: { translation: fr },
         en: { translation: en },
       },
+      lng: "fr",
       fallbackLng: "fr",
       supportedLngs: ["fr", "en"],
       interpolation: { escapeValue: false },
       detection: {
-        order: ["localStorage", "navigator"],
+        // localStorage only: avoid SSR/CSR mismatch from navigator auto-detection
+        order: ["localStorage"],
         lookupLocalStorage: "yp_lang",
         caches: ["localStorage"],
       },

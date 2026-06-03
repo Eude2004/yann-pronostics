@@ -109,13 +109,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent,
 });
 
+const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem('yann-theme')||'system';var f=localStorage.getItem('yann-theme-fallback')||'dark';var r;if(t==='light'||t==='dark'){r=t;}else{var m=window.matchMedia('(prefers-color-scheme: light)');var d=window.matchMedia('(prefers-color-scheme: dark)');r=m.matches?'light':d.matches?'dark':f;}var e=document.documentElement;e.classList.remove('light','dark');e.classList.add(r);e.style.colorScheme=r;if(localStorage.getItem('yann-reduce-motion')==='1')e.classList.add('reduce-motion');}catch(e){}})();`;
+
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="fr" suppressHydrationWarning>
       <head>
         <HeadContent />
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         {children}
         <Scripts />
       </body>
