@@ -307,6 +307,16 @@ const emptyCouponForm = {
   status: "draft" as PublishStatus, is_featured: false,
 };
 
+const TZ_OPTIONS = [
+  "Africa/Douala",
+  "Africa/Lagos",
+  "Africa/Abidjan",
+  "Africa/Casablanca",
+  "Europe/Paris",
+  "Europe/London",
+  "UTC",
+];
+
 function CouponsAdmin() {
   const [items, setItems] = useState<Coupon[]>([]);
   const [open, setOpen] = useState(false);
