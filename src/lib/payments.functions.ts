@@ -249,6 +249,74 @@ export const getTransactionStatus = createServerFn({ method: "GET" })
   });
 
 /**
+ * Re-vérifie auprès de CinetPay le statut d'une transaction restée en pending,
+ * et met à jour la base si le paiement a été accepté ou refusé entre-temps.
+ * Utilisé par la page /payment/return (cas où le webhook notify n'est pas
+ * arrivé) et par le cron d'expiration.
+ */
+export const recheckCinetPayStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({ transactionId: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const apiKey = process.env.CINETPAY_API_KEY;
+    const siteId = process.env.CINETPAY_SITE_ID;
+
+    const { data: tx } = await supabase
+      .from("transactions")
+      .select("id, status, reference, coupon_id, kind")
+      .eq("id", data.transactionId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!tx) throw new Error("Transaction introuvable.");
+    if (tx.status !== "pending") return { status: tx.status, changed: false };
+    if (!apiKey || !siteId || !tx.reference || tx.reference.startsWith("MOCK-")) {
+      return { status: tx.status, changed: false };
+    }
+
+    try {
+      const res = await fetch("https://api-checkout.cinetpay.com/v2/payment/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apikey: apiKey, site_id: siteId, transaction_id: tx.reference }),
+      });
+      const json = (await res.json()) as { data?: { status?: string } };
+      const cpStatus = json.data?.status;
+      if (cpStatus === "ACCEPTED") {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        await supabaseAdmin
+          .from("transactions")
+          .update({ status: "completed", notes: "Recheck CinetPay: ACCEPTED" })
+          .eq("id", tx.id)
+          .eq("status", "pending");
+        if (tx.kind === "coupon" && tx.coupon_id) {
+          const { data: cur } = await supabaseAdmin
+            .from("coupons").select("sales_count").eq("id", tx.coupon_id).maybeSingle();
+          await supabaseAdmin
+            .from("coupons")
+            .update({ sales_count: (cur?.sales_count ?? 0) + 1 })
+            .eq("id", tx.coupon_id);
+        }
+        return { status: "completed" as const, changed: true };
+      }
+      if (cpStatus && cpStatus !== "PENDING" && cpStatus !== "WAITING_CUSTOMER_PAYMENT") {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        await supabaseAdmin
+          .from("transactions")
+          .update({ status: "failed", notes: `Recheck CinetPay: ${cpStatus}` })
+          .eq("id", tx.id)
+          .eq("status", "pending");
+        return { status: "failed" as const, changed: true };
+      }
+      return { status: "pending" as const, changed: false };
+    } catch (e) {
+      return { status: "pending" as const, changed: false, error: e instanceof Error ? e.message : "network" };
+    }
+  });
+
+/**
  * Simulation manuelle d'un paiement (mode test).
  * Autorisée si CinetPay n'est pas configuré, OU si Mode Test Pay est actif.
  */
