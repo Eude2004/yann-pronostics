@@ -433,7 +433,21 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      profiles_self: {
+        Row: {
+          id: string | null
+          whatsapp: string | null
+        }
+        Insert: {
+          id?: string | null
+          whatsapp?: string | null
+        }
+        Update: {
+          id?: string | null
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_active_vip: { Args: { _user_id: string }; Returns: boolean }
