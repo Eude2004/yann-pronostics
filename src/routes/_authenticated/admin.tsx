@@ -26,7 +26,7 @@ import { isoToZonedInput, zonedInputToIso, getBrowserTimezone } from "@/lib/coup
 import {
   ArrowLeft, Plus, Pencil, Trash2, Check, X, Star, Shield, LogOut,
   Save, Download, FileText, TrendingUp, FlaskConical, Users, History,
-  LayoutDashboard, Ticket, Receipt, MessageSquare, Settings as SettingsIcon,
+  LayoutDashboard, Ticket, Receipt, Settings as SettingsIcon,
   DollarSign, ShoppingCart, Package, ArrowUpRight, Menu, Wifi, WifiOff, EyeOff,
 } from "lucide-react";
 import {
@@ -1586,8 +1586,6 @@ const ACTION_LABELS: Record<string, string> = {
   update_coupon: "Modification de coupon",
   delete_coupon: "Suppression de coupon",
   update_coupon_status: "Changement de statut coupon",
-  moderate_review: "Modération d'avis",
-  delete_review: "Suppression d'avis",
   update_settings: "Modification des paramètres",
   toggle_test_pay: "Bascule Mode Test Pay",
   promote_admin: "Promotion admin",
