@@ -162,13 +162,13 @@ function CouponsSection() {
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
-    // Coupon statuses are refreshed automatically by a pg_cron job every minute.
-    const now = new Date().toISOString();
+    // Règle des 4 coupons : on garde tous les coupons "published" (un seul actif par
+    // catégorie, garanti par le trigger DB). Un coupon dont la date de fin est passée
+    // reste affiché tant qu'aucun nouveau coupon de sa catégorie ne le remplace.
     const { data } = await supabase
       .from("coupons")
       .select("id, title, slug, description, sport, category_id, price_xaf, odds, image_url, preview_content, status, is_featured, created_by, created_at, updated_at, coupon_type, video_url, start_date, end_date, sales_count, event_date")
       .eq("status", "published")
-      .or(`end_date.is.null,end_date.gte.${now}`)
       .order("coupon_type");
     setCoupons((data as Coupon[]) ?? []);
     setLoading(false);
@@ -276,8 +276,17 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
   const [url, setUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [now, setNow] = useState(() => new Date());
   const meta = coupon.coupon_type ? TYPE_META[coupon.coupon_type] : TYPE_META.cote_10;
   const Icon = meta.icon;
+
+  // Re-check expiry every 30s so the card flips to "TERMINÉ" without a reload.
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const ended = !!coupon.end_date && new Date(coupon.end_date).getTime() <= now.getTime();
 
   const dateLabel = coupon.start_date
     ? new Date(coupon.start_date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })
@@ -294,6 +303,10 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
   }, [paid, url, getAccess, coupon.id]);
 
   const handleBuy = () => {
+    if (ended) {
+      toast.info("Ce coupon est terminé et n'est plus disponible à l'achat.");
+      return;
+    }
     if (!session) {
       toast.info("Connectez-vous pour acheter un coupon.");
       navigate({ to: "/auth", search: { redirect: "/" } as any });
@@ -354,7 +367,7 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
 
   return (
     <div
-      className={`group relative rounded-2xl overflow-hidden glass-card transition-all duration-300 hover:-translate-y-0.5 ${paid ? "unlocked-border" : "locked-glow"}`}
+      className={`group relative rounded-2xl overflow-hidden glass-card transition-all duration-300 hover:-translate-y-0.5 ${paid ? "unlocked-border" : "locked-glow"} ${ended && !paid ? "opacity-95" : ""}`}
     >
       {/* Top header strip */}
       <div className="flex items-start justify-between px-3 pt-3">
@@ -362,7 +375,11 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
           <Icon className="w-3 h-3" />
           {coupon.title}
         </span>
-        {paid ? (
+        {ended && !paid ? (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-extrabold bg-zinc-500/15 border border-zinc-400/50 text-zinc-200 tracking-wider">
+            TERMINÉ
+          </span>
+        ) : paid ? (
           <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold badge-unlocked">
             DÉBLOQUÉ
           </span>
@@ -418,13 +435,42 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
             </span>
           </div>
         )}
+
+        {/* Overlay TERMINÉ — filigrane opaque qui masque la carte expirée */}
+        {ended && !paid && (
+          <div
+            aria-hidden
+            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(15,15,20,0.72) 0%, rgba(40,40,50,0.62) 100%)",
+              backdropFilter: "blur(2px)",
+            }}
+          >
+            <span
+              className="font-serif font-extrabold tracking-[0.25em] text-3xl sm:text-4xl text-white/85 select-none rotate-[-12deg]"
+              style={{
+                textShadow:
+                  "0 2px 12px rgba(0,0,0,0.65), 0 0 1px rgba(255,255,255,0.5)",
+                WebkitTextStroke: "1px rgba(255,255,255,0.25)",
+              }}
+            >
+              TERMINÉ
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Body */}
       <div className="px-4 pt-3 pb-4 space-y-2.5">
         <div>
-          <h3 className="font-serif text-xl tracking-wide text-foreground truncate">{coupon.title}</h3>
-          <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2 min-h-[2rem]">
+          <h3
+            className="font-serif not-italic font-bold text-2xl sm:text-[1.7rem] leading-tight tracking-normal text-foreground truncate"
+            style={{ fontStyle: "normal" }}
+          >
+            {coupon.title}
+          </h3>
+          <p className="mt-1 text-xs text-muted-foreground line-clamp-2 min-h-[2rem]">
             {coupon.description || "Pronostic premium analysé par nos experts."}
           </p>
         </div>
@@ -469,6 +515,15 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Play className="w-4 h-4 mr-1 fill-current" /> Voir</>}
               </Button>
             </div>
+          ) : ended ? (
+            <Button
+              size="sm"
+              disabled
+              aria-disabled="true"
+              className="rounded-full px-5 h-9 font-semibold bg-zinc-600/30 text-zinc-200 border border-zinc-400/30 cursor-not-allowed"
+            >
+              Terminé
+            </Button>
           ) : (
             <Button
               size="sm"
@@ -480,6 +535,7 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
           )}
         </div>
       </div>
+
 
       {session && (
         <PaymentModal
