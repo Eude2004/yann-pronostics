@@ -75,13 +75,18 @@ function PaymentReturn() {
     })();
   }, [isMock, status, simulating, simulate, tx, query, t]);
 
-  // Auto-redirect to dashboard once completed in test mode
+  // Auto-redirect to dashboard once completed (test OR live)
   useEffect(() => {
-    if (status === "completed" && isMock) {
+    if (status === "completed") {
+      try { sessionStorage.removeItem("yp:pending-payment"); } catch {}
+      toast.success(t("payment.validated"));
       const id = setTimeout(() => navigate({ to: "/dashboard" }), 1500);
       return () => clearTimeout(id);
     }
-  }, [status, isMock, navigate]);
+    if (status === "failed" || status === "refunded") {
+      try { sessionStorage.removeItem("yp:pending-payment"); } catch {}
+    }
+  }, [status, navigate, t]);
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12">
