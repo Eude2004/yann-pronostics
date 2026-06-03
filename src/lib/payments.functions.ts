@@ -2,6 +2,34 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+// Allowlist of trusted origins for building CinetPay notify_url / return_url.
+// Prevents client-controlled returnOrigin from redirecting payments to an
+// attacker-controlled domain (open redirect / webhook hijacking).
+const ALLOWED_ORIGIN_HOSTS = [
+  "yann-pronostics.lovable.app",
+  "project--0731879a-c6b1-42f6-af7b-fbaa2d39bce9.lovable.app",
+  "project--0731879a-c6b1-42f6-af7b-fbaa2d39bce9-dev.lovable.app",
+];
+const ALLOWED_ORIGIN_SUFFIXES = [".lovable.app", ".lovableproject.com"];
+
+function safeOrigin(candidate: string | undefined): string {
+  const fallback = "https://yann-pronostics.lovable.app";
+  if (!candidate) return process.env.APP_ORIGIN || fallback;
+  try {
+    const u = new URL(candidate);
+    if (u.protocol !== "https:" && u.protocol !== "http:") return fallback;
+    const host = u.hostname;
+    const ok =
+      ALLOWED_ORIGIN_HOSTS.includes(host) ||
+      ALLOWED_ORIGIN_SUFFIXES.some((s) => host.endsWith(s));
+    if (!ok) return process.env.APP_ORIGIN || fallback;
+    return `${u.protocol}//${u.host}`;
+  } catch {
+    return process.env.APP_ORIGIN || fallback;
+  }
+}
+
+
 /**
  * CinetPay payment orchestration — coupons uniquement (pas d'abonnement).
  *
@@ -117,7 +145,7 @@ export const initiatePayment = createServerFn({ method: "POST" })
 
     const apiKey = process.env.CINETPAY_API_KEY;
     const siteId = process.env.CINETPAY_SITE_ID;
-    const origin = data.returnOrigin.replace(/\/$/, "");
+    const origin = safeOrigin(data.returnOrigin);
     const notifyUrl = `${origin}/api/public/cinetpay/notify`;
     const returnUrl = `${origin}/payment/return?tx=${tx.id}`;
 
