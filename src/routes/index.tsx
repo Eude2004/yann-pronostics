@@ -280,14 +280,24 @@ function CouponCard({ coupon }: { coupon: Coupon }) {
           </div>
           <Button
             onClick={handleBuy}
-            disabled={loadingBuy}
             className="bg-gold-gradient text-primary-foreground hover:opacity-90 font-semibold shadow-gold"
           >
-            {loadingBuy ? <Loader2 className="w-4 h-4 animate-spin" /> : t("coupon.buy")}
+            {t("coupon.buy")}
           </Button>
         </div>
       </div>
       <VisitorSignupPrompt open={promptOpen} onOpenChange={setPromptOpen} couponId={coupon.id} />
+      {session && (
+        <PaymentModal
+          open={payOpen}
+          onOpenChange={setPayOpen}
+          coupon={{ id: coupon.id, title: coupon.title, price_xaf: coupon.price_xaf }}
+          customer={{
+            name: session.user.user_metadata?.full_name ?? undefined,
+            email: session.user.email ?? undefined,
+          }}
+        />
+      )}
     </div>
   );
 }
