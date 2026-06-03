@@ -451,6 +451,14 @@ function UserCouponCard({
     <div
       className={`group relative rounded-2xl border ${th.ring} bg-card overflow-hidden transition-all duration-300 hover:-translate-y-0.5 ${th.glow} hover:shadow-[0_0_60px_-8px_currentColor]`}
     >
+      {/* Unlock flash overlay */}
+      {justUnlocked && (
+        <div
+          aria-hidden
+          className="absolute inset-0 z-20 unlock-flash pointer-events-none"
+        />
+      )}
+
       {/* Top header strip with badges */}
       <div className="flex items-start justify-between px-4 pt-4">
         <span
@@ -459,7 +467,9 @@ function UserCouponCard({
           {typeLabel(coupon)}
         </span>
         {paid && (
-          <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold border border-emerald-500/50 bg-emerald-500/10 text-emerald-400">
+          <span
+            className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold border border-emerald-500/50 bg-emerald-500/10 text-emerald-400 ${justUnlocked ? "unlock-burst" : ""}`}
+          >
             {t("dashboard.unlocked")}
           </span>
         )}
