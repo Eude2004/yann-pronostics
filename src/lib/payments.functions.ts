@@ -248,7 +248,8 @@ export const simulatePaymentCompletion = createServerFn({ method: "POST" })
     console.log("[payments]", JSON.stringify({ ...logCtx, event: "start" }));
 
     if (cinetpayConfigured) {
-      const { data: testRow } = await supabase
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: testRow } = await supabaseAdmin
         .from("app_settings")
         .select("value")
         .eq("key", "test_pay_mode")
