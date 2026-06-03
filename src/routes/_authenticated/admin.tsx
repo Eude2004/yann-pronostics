@@ -400,8 +400,8 @@ function CouponsAdmin() {
       description: c.description ?? "",
       image_url: c.image_url ?? "",
       video_url: c.video_url ?? "",
-      start_date: c.start_date ? c.start_date.slice(0, 16) : "",
-      end_date: c.end_date ? c.end_date.slice(0, 16) : "",
+      start_date: isoToZonedInput(c.start_date, timezone),
+      end_date: isoToZonedInput(c.end_date, timezone),
       status: c.status, is_featured: c.is_featured,
     });
     setOpen(true);
