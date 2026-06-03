@@ -656,3 +656,29 @@ function UserCouponCard({
     </div>
   );
 }
+
+function CouponSkeleton({ themeKey }: { themeKey: ThemeKey }) {
+  const th = THEMES[themeKey];
+  return (
+    <div
+      className={`relative rounded-2xl border ${th.ring} bg-card overflow-hidden`}
+    >
+      <div className="flex items-start justify-between px-4 pt-4">
+        <div className={`h-6 w-20 rounded-md ${th.badgeBg} skeleton-shimmer`} />
+        <div className="h-6 w-12 rounded-md bg-muted/40 skeleton-shimmer" />
+      </div>
+      <div
+        className={`mt-3 mx-3 sm:mx-4 rounded-xl border ${th.badgeBorder} aspect-square skeleton-shimmer`}
+      />
+      <div className="px-4 pt-4 pb-4 space-y-3">
+        <div className="h-5 w-3/4 rounded skeleton-shimmer" />
+        <div className="h-3 w-full rounded skeleton-shimmer" />
+        <div className="h-3 w-2/3 rounded skeleton-shimmer" />
+        <div className="flex items-end justify-between gap-3 pt-2">
+          <div className="h-8 w-20 rounded skeleton-shimmer" />
+          <div className="h-9 w-24 rounded-md skeleton-shimmer" />
+        </div>
+      </div>
+    </div>
+  );
+}
