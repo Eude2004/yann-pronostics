@@ -671,10 +671,12 @@ function TransactionsAdmin() {
   };
 
   const remove = async (id: string) => {
-    if (!confirm("Supprimer cette transaction ?")) return;
+    if (!confirm("Supprimer cette transaction ? Cette action est irréversible.")) return;
     const { error } = await supabase.from("transactions").delete().eq("id", id);
     if (error) return toast.error(error.message);
-    toast.success("Supprimée");
+    await logAdminAction("delete_transaction", "transaction", id);
+    setItems((prev) => prev.filter((t) => t.id !== id));
+    toast.success("Transaction supprimée");
   };
 
   const badge = (s: TxStatus) => ({
