@@ -205,9 +205,8 @@ function CouponsSection() {
 function CouponCard({ coupon }: { coupon: Coupon }) {
   const { t } = useTranslation();
   const { session } = useAuth();
-  const initiate = useServerFn(initiatePayment);
-  const [loadingBuy, setLoadingBuy] = useState(false);
   const [promptOpen, setPromptOpen] = useState(false);
+  const [payOpen, setPayOpen] = useState(false);
   const meta = coupon.coupon_type ? TYPE_META[coupon.coupon_type] : TYPE_META.cote_10;
   const Icon = meta.icon;
 
@@ -215,9 +214,8 @@ function CouponCard({ coupon }: { coupon: Coupon }) {
     ? new Date(coupon.start_date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })
     : new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
 
-  const handleBuy = async () => {
+  const handleBuy = () => {
     if (!session) {
-      // Show signup/login prompt — purchase resumes after auth
       setPromptOpen(true);
       return;
     }
@@ -225,24 +223,7 @@ function CouponCard({ coupon }: { coupon: Coupon }) {
       toast.error("Ce coupon n'est pas encore enregistré côté admin.");
       return;
     }
-    setLoadingBuy(true);
-    try {
-      const res = await initiate({
-        data: {
-          kind: "coupon",
-          couponId: coupon.id,
-          returnOrigin: window.location.origin,
-          customer: {
-            name: session.user.user_metadata?.full_name ?? undefined,
-            email: session.user.email ?? undefined,
-          },
-        },
-      });
-      window.location.href = res.paymentUrl;
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("coupon.init_failed"));
-      setLoadingBuy(false);
-    }
+    setPayOpen(true);
   };
 
   return (
