@@ -157,7 +157,9 @@ function Stats() {
 
 
 function CouponsSection() {
+  const { session } = useAuth();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [paidIds, setPaidIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
@@ -172,6 +174,17 @@ function CouponsSection() {
     setLoading(false);
   };
 
+  const loadPaid = async () => {
+    if (!session?.user) { setPaidIds(new Set()); return; }
+    const { data } = await supabase
+      .from("transactions")
+      .select("coupon_id")
+      .eq("user_id", session.user.id)
+      .eq("status", "completed")
+      .eq("kind", "coupon");
+    setPaidIds(new Set((data ?? []).map((t: any) => t.coupon_id).filter(Boolean)));
+  };
+
   useEffect(() => {
     load();
     const channel = supabase
@@ -181,6 +194,22 @@ function CouponsSection() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
+  useEffect(() => {
+    loadPaid();
+    if (!session?.user) return;
+    const ch = supabase
+      .channel(`home-tx-${session.user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "transactions", filter: `user_id=eq.${session.user.id}` },
+        loadPaid,
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.id]);
+
+  const purchasedCount = paidIds.size;
 
   return (
     <section id="coupons" className="py-20 sm:py-28">
@@ -191,15 +220,29 @@ function CouponsSection() {
           </Badge>
           <h2 className="mt-4 font-display text-4xl sm:text-5xl">Choisissez votre <span className="text-gold">coupon premium</span></h2>
           <p className="mt-3 text-muted-foreground max-w-xl mx-auto">4 coupons exclusifs chaque jour. Vidéo verrouillée jusqu'au paiement, déblocage instantané.</p>
+          {session && (
+            <div className="mt-4 inline-flex items-center gap-2 text-xs text-muted-foreground">
+              <span>{coupons.length} coupons disponibles</span>
+              {purchasedCount > 0 && (
+                <>
+                  <span>·</span>
+                  <span className="text-emerald-500 font-medium inline-flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" /> {purchasedCount} acheté{purchasedCount > 1 ? "s" : ""}
+                  </span>
+                </>
+              )}
+            </div>
+          )}
         </div>
         {loading ? (
           <div className="text-center text-muted-foreground py-12">Chargement…</div>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {coupons.map((c) => <CouponCard key={c.id} coupon={c} />)}
+            {coupons.map((c) => <CouponCard key={c.id} coupon={c} paid={paidIds.has(c.id)} />)}
           </div>
         )}
       </div>
+
     </section>
   );
 }
