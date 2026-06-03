@@ -42,7 +42,7 @@ import { setTestPayMode as setTestPayModeFn } from "@/lib/payments.functions";
 import { listAdminUsers as listAdminUsersFn, setUserAdmin as setUserAdminFn, deleteAppUser as deleteAppUserFn, setUserDisabled as setUserDisabledFn } from "@/lib/admin-users.functions";
 import { logAdminAction } from "@/lib/audit";
 
-const ADMIN_VIEWS = ["stats", "coupons", "transactions", "reviews", "users", "audit", "settings"] as const;
+const ADMIN_VIEWS = ["stats", "coupons", "transactions", "users", "audit", "settings"] as const;
 type AdminViewKey = (typeof ADMIN_VIEWS)[number];
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -56,7 +56,6 @@ export const Route = createFileRoute("/_authenticated/admin")({
 });
 
 type PublishStatus = "draft" | "published" | "archived";
-type ReviewStatus = "pending" | "approved" | "rejected";
 type CouponType = "cote_10" | "cote_30" | "cote_50" | "pair_corner";
 type TxStatus = "pending" | "completed" | "failed" | "refunded";
 
@@ -78,20 +77,15 @@ type Transaction = {
   status: TxStatus; reference: string | null; payment_method: string | null;
   coupon_id: string | null; created_at: string; notes: string | null;
 };
-type Review = {
-  id: string; user_id: string; coupon_id: string | null;
-  rating: number; comment: string; status: ReviewStatus; created_at: string;
-};
 
 type AdminView =
-  | "stats" | "coupons" | "transactions" | "reviews"
+  | "stats" | "coupons" | "transactions"
   | "users" | "audit" | "settings";
 
 const NAV_ITEMS: { id: AdminView; label: string; icon: any }[] = [
   { id: "stats", label: "Tableau de bord", icon: LayoutDashboard },
   { id: "coupons", label: "Coupons", icon: Ticket },
   { id: "transactions", label: "Transactions", icon: Receipt },
-  { id: "reviews", label: "Avis", icon: MessageSquare },
   { id: "users", label: "Utilisateurs", icon: Users },
   { id: "audit", label: "Journal", icon: History },
   { id: "settings", label: "Paramètres", icon: SettingsIcon },
@@ -152,7 +146,7 @@ function AdminPage() {
             {view === "stats" && <StatsAdmin />}
             {view === "coupons" && <CouponsAdmin />}
             {view === "transactions" && <TransactionsAdmin />}
-            {view === "reviews" && <ReviewsAdmin />}
+            
             {view === "users" && <UsersAdmin />}
             {view === "audit" && <AuditAdmin />}
             {view === "settings" && <SettingsAdmin />}
@@ -173,7 +167,7 @@ function RealtimeIndicator() {
       .channel("admin-realtime-indicator")
       .on("postgres_changes", { event: "*", schema: "public", table: "transactions" }, () => setLastSync(new Date()))
       .on("postgres_changes", { event: "*", schema: "public", table: "coupons" }, () => setLastSync(new Date()))
-      .on("postgres_changes", { event: "*", schema: "public", table: "reviews" }, () => setLastSync(new Date()))
+      
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => setLastSync(new Date()))
       .subscribe((status) => {
         setConnected(status === "SUBSCRIBED");
@@ -869,107 +863,6 @@ function TransactionsAdmin() {
   );
 }
 
-/* ---------------- REVIEWS ---------------- */
-
-function ReviewsAdmin() {
-  const [items, setItems] = useState<Review[]>([]);
-  const [filter, setFilter] = useState<ReviewStatus | "all">("pending");
-
-  const load = async () => {
-    let q = supabase.from("reviews").select("*").order("created_at", { ascending: false });
-    if (filter !== "all") q = q.eq("status", filter);
-    const { data, error } = await q;
-    if (error) toast.error(error.message); else setItems((data as Review[]) ?? []);
-  };
-  useEffect(() => {
-    load();
-    const channel = supabase
-      .channel(`admin-reviews-${filter}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "reviews" }, load)
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [filter]);
-
-  const moderate = async (id: string, status: ReviewStatus) => {
-    const { error } = await supabase.from("reviews").update({
-      status, moderated_at: new Date().toISOString(),
-    }).eq("id", id);
-    if (error) return toast.error(error.message);
-    await logAdminAction("moderate_review", "review", id, { status });
-    toast.success("Avis modéré"); load();
-  };
-  const remove = async (id: string) => {
-    if (!confirm("Supprimer cet avis ?")) return;
-    const { error } = await supabase.from("reviews").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    await logAdminAction("delete_review", "review", id);
-    toast.success("Supprimé"); load();
-  };
-
-  const badge = (s: ReviewStatus) => ({
-    pending: <Badge variant="secondary">En attente</Badge>,
-    approved: <Badge className="bg-green-600/20 text-green-500 border border-green-600/30">Approuvé</Badge>,
-    rejected: <Badge variant="destructive">Rejeté</Badge>,
-  }[s]);
-
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
-        <h2 className="text-xl font-display">Avis ({items.length})</h2>
-        <Select value={filter} onValueChange={(v) => setFilter(v as ReviewStatus | "all")}>
-          <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous</SelectItem>
-            <SelectItem value="pending">En attente</SelectItem>
-            <SelectItem value="approved">Approuvés</SelectItem>
-            <SelectItem value="rejected">Rejetés</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="grid gap-3">
-        {items.map((r) => (
-          <div key={r.id} className="rounded-xl border border-border/60 bg-card p-5">
-            <div className="flex justify-between items-start gap-3 flex-wrap">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2 flex-wrap">
-                  <div className="flex">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} className={`w-4 h-4 ${i < r.rating ? "fill-gold text-gold" : "text-muted-foreground"}`} />
-                    ))}
-                  </div>
-                  {badge(r.status)}
-                  <span className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString("fr-FR")}</span>
-                </div>
-                <p className="text-sm">{r.comment}</p>
-                <p className="text-xs text-muted-foreground mt-2">Auteur : {r.user_id.slice(0, 8)}…</p>
-              </div>
-              <div className="flex gap-1 flex-wrap">
-                {r.status !== "approved" && (
-                  <Button size="sm" variant="outline" onClick={() => moderate(r.id, "approved")}>
-                    <Check className="w-4 h-4 mr-1 text-green-500" />Approuver
-                  </Button>
-                )}
-                {r.status !== "rejected" && (
-                  <Button size="sm" variant="outline" onClick={() => moderate(r.id, "rejected")}>
-                    <X className="w-4 h-4 mr-1 text-destructive" />Rejeter
-                  </Button>
-                )}
-                <Button size="sm" variant="ghost" onClick={() => remove(r.id)}>
-                  <Trash2 className="w-4 h-4 text-destructive" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        ))}
-        {items.length === 0 && (
-          <div className="text-center text-muted-foreground py-12 border border-dashed border-border/60 rounded-xl">
-            Aucun avis
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 /* ---------------- PARAMÈTRES ---------------- */
 
