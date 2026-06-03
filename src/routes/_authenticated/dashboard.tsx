@@ -14,6 +14,7 @@ import {
   Info,
   Download,
   ShoppingCart,
+  Crown,
 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useTranslation } from "react-i18next";
