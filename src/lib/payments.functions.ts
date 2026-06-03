@@ -32,8 +32,11 @@ export const initiatePayment = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    // Lecture du réglage Mode Test Pay (admin uniquement → permet à l'admin d'acheter en simulation)
-    const { data: testRow } = await supabase
+    // Lecture du réglage Mode Test Pay via le client admin :
+    // la policy RLS app_settings restreint la lecture aux admins, mais le mode test
+    // doit aussi s'appliquer aux utilisateurs réguliers lorsqu'il est activé.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: testRow } = await supabaseAdmin
       .from("app_settings")
       .select("value")
       .eq("key", "test_pay_mode")
