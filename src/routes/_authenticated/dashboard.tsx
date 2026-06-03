@@ -164,6 +164,7 @@ function Dashboard() {
     setPaidIds(
       new Set((txs ?? []).map((t: any) => t.coupon_id).filter(Boolean)),
     );
+    setLoaded(true);
   };
 
   useEffect(() => {
