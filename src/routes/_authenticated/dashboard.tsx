@@ -45,7 +45,7 @@ function Dashboard() {
   // Load coupons + paid transactions
   const loadAll = async () => {
     if (!user) return;
-    await supabase.rpc("refresh_coupon_statuses");
+    // Coupon statuses are refreshed automatically by a pg_cron job every minute.
     const now = new Date().toISOString();
     const [{ data: cps }, { data: txs }] = await Promise.all([
       supabase
