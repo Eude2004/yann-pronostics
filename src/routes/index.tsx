@@ -205,7 +205,22 @@ function CouponsSection() {
         loadPaid,
       )
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    const onFocus = () => loadPaid();
+    const onVisibility = () => { if (document.visibilityState === "visible") loadPaid(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    // Filet de sécurité : tant qu'un paiement est en cours, on rafraîchit toutes les 3s
+    const poll = setInterval(() => {
+      try {
+        if (sessionStorage.getItem("yp:pending-payment")) loadPaid();
+      } catch {}
+    }, 3000);
+    return () => {
+      supabase.removeChannel(ch);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+      clearInterval(poll);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id]);
 
