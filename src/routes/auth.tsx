@@ -35,6 +35,10 @@ function AuthPage() {
   const { session, loading, isAdmin } = useAuth();
   const navigate = useNavigate();
   const search = Route.useSearch();
+  const [tab, setTab] = useState<"login" | "signup">(search.tab);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [justSignedUp, setJustSignedUp] = useState(false);
 
   useEffect(() => {
     if (!loading && session) {
@@ -42,6 +46,15 @@ function AuthPage() {
     }
   }, [session, loading, isAdmin, navigate]);
 
+  const handleSignedUp = async (email: string, password: string) => {
+    // Auto-confirm activé : Supabase crée une session automatiquement.
+    // On la révoque pour forcer l'utilisateur à valider en cliquant "Se connecter".
+    try { await supabase.auth.signOut(); } catch {}
+    setLoginEmail(email);
+    setLoginPassword(password);
+    setJustSignedUp(true);
+    setTab("login");
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden">
@@ -55,13 +68,25 @@ function AuthPage() {
         </Link>
 
         <div className="rounded-2xl border border-border/60 bg-card p-6 sm:p-8 shadow-glow">
-          <Tabs defaultValue={search.tab}>
+          <Tabs value={tab} onValueChange={(v) => setTab(v as "login" | "signup")}>
             <TabsList className="w-full grid grid-cols-2 mb-6">
               <TabsTrigger value="login">Connexion</TabsTrigger>
               <TabsTrigger value="signup">Inscription</TabsTrigger>
             </TabsList>
-            <TabsContent value="login"><LoginForm /></TabsContent>
-            <TabsContent value="signup"><SignupForm /></TabsContent>
+            <TabsContent value="login">
+              {justSignedUp && (
+                <div className="mb-4 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-xs text-primary">
+                  Compte créé avec succès. Vos identifiants sont pré-remplis — cliquez sur « Se connecter ».
+                </div>
+              )}
+              <LoginForm
+                email={loginEmail}
+                password={loginPassword}
+                setEmail={setLoginEmail}
+                setPassword={setLoginPassword}
+              />
+            </TabsContent>
+            <TabsContent value="signup"><SignupForm onSignedUp={handleSignedUp} /></TabsContent>
           </Tabs>
 
           <div className="relative my-6">
@@ -82,9 +107,10 @@ function AuthPage() {
   );
 }
 
-function LoginForm() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+function LoginForm({ email, password, setEmail, setPassword }: {
+  email: string; password: string;
+  setEmail: (v: string) => void; setPassword: (v: string) => void;
+}) {
   const [remember, setRemember] = useState(true);
   const [busy, setBusy] = useState(false);
 
@@ -139,7 +165,7 @@ function LoginForm() {
   );
 }
 
-function SignupForm() {
+function SignupForm({ onSignedUp }: { onSignedUp: (email: string, password: string) => void | Promise<void> }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
@@ -168,13 +194,15 @@ function SignupForm() {
         data: { full_name: fullName, whatsapp: whatsapp.trim() },
       },
     });
-    setBusy(false);
     if (error) {
+      setBusy(false);
       if (error.message.toLowerCase().includes("already")) toast.error("Un compte existe déjà avec cet email.");
       else toast.error(error.message);
       return;
     }
-    toast.success("Compte créé ! Connexion automatique en cours…");
+    await onSignedUp(email, password);
+    setBusy(false);
+    toast.success("Compte créé ! Cliquez sur « Se connecter ».");
   };
 
   return (
