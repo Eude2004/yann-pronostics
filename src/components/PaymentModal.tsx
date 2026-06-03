@@ -128,6 +128,34 @@ export function PaymentModal({
               Fermer
             </Button>
           </div>
+        ) : step === "error" ? (
+          <div className="p-6">
+            <DialogHeader>
+              <div className="mx-auto w-14 h-14 rounded-full bg-destructive/15 flex items-center justify-center mb-2">
+                <AlertTriangle className="w-8 h-8 text-destructive" />
+              </div>
+              <DialogTitle className="text-center font-display text-2xl">Paiement échoué</DialogTitle>
+              <DialogDescription className="text-center">
+                {errorMsg ?? "Une erreur est survenue pendant l'initialisation du paiement."}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="mt-4 rounded-lg border border-border bg-background/40 p-3 text-xs text-muted-foreground space-y-1">
+              <p>• Vérifiez votre connexion internet.</p>
+              <p>• Confirmez que votre numéro mobile money est correct et a un solde suffisant.</p>
+              <p>• Vos informations sont conservées : un seul clic suffit pour réessayer.</p>
+            </div>
+            <div className="mt-4 flex gap-2">
+              <Button
+                onClick={onRetry}
+                className="flex-1 bg-gold-gradient text-primary-foreground font-semibold shadow-gold"
+              >
+                <RotateCw className="w-4 h-4 mr-2" /> Réessayer
+              </Button>
+              <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
+                Annuler
+              </Button>
+            </div>
+          </div>
         ) : (
           <>
             <DialogHeader className="px-6 pt-6">
