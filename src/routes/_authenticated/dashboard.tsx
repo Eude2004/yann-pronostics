@@ -13,6 +13,7 @@ import { initiatePayment } from "@/lib/payments.functions";
 import { toast } from "sonner";
 import { consumePendingPurchase } from "@/components/VisitorSignupPrompt";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { PaymentModal } from "@/components/PaymentModal";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Mon espace — YANN PRONOSTICS" }] }),
