@@ -1633,6 +1633,9 @@ const ACTION_LABELS: Record<string, string> = {
   promote_admin: "Promotion admin",
   demote_admin: "Rétrogradation admin",
   delete_user: "Suppression d'utilisateur",
+  disable_user: "Désactivation d'utilisateur",
+  enable_user: "Réactivation d'utilisateur",
+  delete_transaction: "Suppression de transaction",
 };
 
 function AuditAdmin() {
