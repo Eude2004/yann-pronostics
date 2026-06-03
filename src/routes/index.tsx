@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Lock, TrendingUp, Trophy, Zap, ShieldCheck, Star, Flame, ArrowRight, MessageCircle, LayoutDashboard, Calendar, ShoppingCart, Loader2, Play, CheckCircle2, Download } from "lucide-react";
 import { CouponStatusBadge } from "@/components/CouponStatusBadge";
 import { getCouponVideoAccess } from "@/lib/coupon-access.functions";
+import { refreshAndGetNextTransition } from "@/lib/coupon-schedule.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { useSettings, whatsappLink } from "@/hooks/use-settings";
