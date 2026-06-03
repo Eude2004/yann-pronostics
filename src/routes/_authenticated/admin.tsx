@@ -1513,6 +1513,18 @@ function UsersAdmin() {
     }
   };
 
+  const onToggleDisabled = async (u: AdminUser) => {
+    const disable = !u.disabled;
+    if (disable && !confirm(`Désactiver ${u.email} ? Il/elle ne pourra plus se connecter.`)) return;
+    try {
+      await toggleDisabled({ data: { user_id: u.id, disabled: disable } });
+      toast.success(disable ? "Utilisateur désactivé" : "Utilisateur réactivé");
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Échec");
+    }
+  };
+
   const filtered = users.filter(u =>
     !q || u.email.toLowerCase().includes(q.toLowerCase()) ||
     (u.profile?.username ?? "").toLowerCase().includes(q.toLowerCase()) ||
