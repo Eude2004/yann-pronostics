@@ -248,11 +248,12 @@ function CouponsSection() {
 function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
   const { t } = useTranslation();
   const { session } = useAuth();
+  const navigate = useNavigate();
   const getAccess = useServerFn(getCouponVideoAccess);
-  const [promptOpen, setPromptOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
   const [url, setUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const meta = coupon.coupon_type ? TYPE_META[coupon.coupon_type] : TYPE_META.cote_10;
   const Icon = meta.icon;
 
@@ -272,7 +273,8 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
 
   const handleBuy = () => {
     if (!session) {
-      setPromptOpen(true);
+      toast.info("Connectez-vous pour acheter un coupon.");
+      navigate({ to: "/auth", search: { redirect: "/" } as any });
       return;
     }
     if (!coupon.id || coupon.id.length < 30) {
@@ -294,6 +296,37 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
       toast.error(e instanceof Error ? e.message : "Erreur d'accès.");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      let downloadUrl = url;
+      if (!downloadUrl) {
+        const res = await getAccess({ data: { couponId: coupon.id } });
+        if (!res.url) {
+          toast.error("Vidéo non disponible.");
+          return;
+        }
+        downloadUrl = res.url;
+        setUrl(downloadUrl);
+      }
+      const resp = await fetch(downloadUrl);
+      const blob = await resp.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = `${coupon.title.replace(/[^a-z0-9-_]+/gi, "_")}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(blobUrl);
+      toast.success("Téléchargement démarré.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Téléchargement impossible.");
+    } finally {
+      setDownloading(false);
     }
   };
 
