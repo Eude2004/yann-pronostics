@@ -351,11 +351,21 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
   const meta = coupon.coupon_type ? TYPE_META[coupon.coupon_type] : TYPE_META.cote_10;
   const Icon = meta.icon;
 
-  // Re-check expiry every 30s so the card flips to "TERMINÉ" without a reload.
+  // Bascule automatique vers « TERMINÉ » sans reload : on planifie un timeout précis
+  // à l'instant exact de end_date, plus un filet de sécurité toutes les 30 s.
   useEffect(() => {
-    const id = window.setInterval(() => setNow(new Date()), 30_000);
-    return () => window.clearInterval(id);
-  }, []);
+    const tick = () => setNow(new Date());
+    const interval = window.setInterval(tick, 30_000);
+    let timeout: number | undefined;
+    if (coupon.end_date) {
+      const ms = new Date(coupon.end_date).getTime() - Date.now();
+      if (ms > 0 && ms < 2_147_483_647) timeout = window.setTimeout(tick, ms + 250);
+    }
+    return () => {
+      window.clearInterval(interval);
+      if (timeout !== undefined) window.clearTimeout(timeout);
+    };
+  }, [coupon.end_date]);
 
   const ended = !!coupon.end_date && new Date(coupon.end_date).getTime() <= now.getTime();
 
@@ -375,7 +385,7 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
 
   const handleBuy = () => {
     if (ended) {
-      toast.info("Ce coupon est terminé et n'est plus disponible à l'achat.");
+      toast.info(t("coupon.expired_blocked", { defaultValue: "Ce coupon est terminé et n'est plus disponible à l'achat." }));
       return;
     }
     if (!session) {
