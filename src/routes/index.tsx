@@ -359,6 +359,9 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
               <span>•</span>
               <Calendar className="w-3 h-3" /> {dateLabel}
             </div>
+            <div className="mt-2">
+              <CouponStatusBadge startDate={coupon.start_date} endDate={coupon.end_date} />
+            </div>
           </div>
         </div>
 
