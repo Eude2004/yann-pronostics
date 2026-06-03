@@ -333,7 +333,13 @@ function Dashboard() {
             <div className="my-6 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
           </div>
 
-          {coupons.length === 0 ? (
+          {!loaded ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <CouponSkeleton key={i} themeKey={THEME_ORDER[i % 4]} />
+              ))}
+            </div>
+          ) : coupons.length === 0 ? (
             <p className="text-muted-foreground">{t("coupon.none")}</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
