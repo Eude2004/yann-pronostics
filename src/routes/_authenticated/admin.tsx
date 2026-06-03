@@ -416,8 +416,8 @@ function CouponsAdmin() {
       description: form.description || null,
       image_url: form.image_url || null,
       video_url: form.video_url || null,
-      start_date: form.start_date ? new Date(form.start_date).toISOString() : null,
-      end_date: form.end_date ? new Date(form.end_date).toISOString() : null,
+      start_date: zonedInputToIso(form.start_date, timezone),
+      end_date: zonedInputToIso(form.end_date, timezone),
       status: form.status,
       is_featured: form.is_featured,
     };
