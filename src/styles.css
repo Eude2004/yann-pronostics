@@ -43,7 +43,8 @@
   --color-sidebar-ring: var(--sidebar-ring);
 
   --font-display: "Bebas Neue", system-ui, sans-serif;
-  --font-sans: "Inter", system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
+  --font-serif: "Playfair Display", Georgia, serif;
 }
 
 :root {
@@ -255,3 +256,171 @@
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+
+/* ============== Luxury redesign utilities ============== */
+
+:root {
+  --bg-luxury-dark: radial-gradient(1200px 600px at 80% -10%, rgba(212,175,55,0.06), transparent 60%),
+                    radial-gradient(900px 500px at 0% 100%, rgba(212,175,55,0.04), transparent 60%),
+                    linear-gradient(180deg, #0c0f17 0%, #141923 100%);
+  --bg-luxury-light: radial-gradient(1200px 600px at 80% -10%, rgba(212,175,55,0.10), transparent 60%),
+                     radial-gradient(900px 500px at 0% 100%, rgba(212,175,55,0.05), transparent 60%),
+                     linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+  --royal-gold: #d4af37;
+  --royal-gold-light: #f4d77a;
+  --royal-gold-dark: #8a6b1f;
+}
+
+.bg-luxury { background: var(--bg-luxury-dark); }
+.light .bg-luxury { background: var(--bg-luxury-light); }
+
+/* Filigree chart-line pattern overlay (svg, very subtle) */
+.bg-filigree::before {
+  content: "";
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 600'><g fill='none' stroke='%23d4af37' stroke-width='0.8' opacity='0.18'><path d='M0 480 C 120 460, 200 380, 320 360 S 540 300, 660 220 S 780 120, 800 80'/><path d='M0 520 C 140 510, 220 470, 340 430 S 560 360, 700 300'/><path d='M0 560 C 160 540, 260 520, 380 500 S 600 460, 800 420'/><circle cx='120' cy='460' r='2'/><circle cx='320' cy='360' r='2'/><circle cx='540' cy='300' r='2'/><circle cx='700' cy='220' r='2'/></g></svg>");
+  background-size: 1100px auto;
+  background-position: right top;
+  background-repeat: no-repeat;
+  opacity: 0.55;
+}
+.light .bg-filigree::before { opacity: 0.4; filter: invert(0); }
+
+/* Brushed gold metallic — for locked-card upper media */
+.brushed-gold {
+  background:
+    radial-gradient(ellipse at center, #f6d97a 0%, #d4af37 45%, #8a6b1f 100%),
+    repeating-linear-gradient(115deg, rgba(255,255,255,0.05) 0 2px, transparent 2px 5px);
+  background-blend-mode: overlay, normal;
+  position: relative;
+  overflow: hidden;
+}
+.brushed-gold::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(115deg, rgba(255,255,255,0.10) 0 1px, transparent 1px 4px);
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+
+.text-bronze { color: #5a3f12; text-shadow: 0 1px 0 rgba(255,255,255,0.35); letter-spacing: 0.22em; }
+
+.font-serif { font-family: var(--font-serif); }
+
+/* Glass card — translucent + blur, adapts to theme */
+.glass-card {
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.light .glass-card {
+  background: rgba(255,255,255,0.78);
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+.glass-pill {
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(10px) saturate(140%);
+  border: 1px solid rgba(255,255,255,0.10);
+}
+.light .glass-pill {
+  background: rgba(255,255,255,0.7);
+  border: 1px solid rgba(0,0,0,0.08);
+}
+
+/* Locked card outer gold glow */
+.locked-glow {
+  box-shadow:
+    0 0 0 1px rgba(212,175,55,0.45),
+    0 0 30px rgba(212,175,55,0.35),
+    0 10px 40px -12px rgba(212,175,55,0.4);
+}
+.locked-glow:hover {
+  box-shadow:
+    0 0 0 1px rgba(212,175,55,0.6),
+    0 0 45px rgba(212,175,55,0.5),
+    0 14px 50px -10px rgba(212,175,55,0.55);
+}
+
+/* Unlocked card subtle cool border */
+.unlocked-border {
+  border: 1px solid rgba(100,180,255,0.25);
+  box-shadow: 0 8px 30px -12px rgba(14,165,233,0.25);
+}
+.light .unlocked-border { border-color: rgba(14,165,233,0.35); }
+
+/* Unlocked media chart backdrop */
+.bg-chart-dark {
+  background:
+    radial-gradient(120% 80% at 50% 50%, rgba(14,165,233,0.10), transparent 70%),
+    linear-gradient(160deg, #0f1827 0%, #1a2940 100%);
+  position: relative; overflow: hidden;
+}
+.light .bg-chart-dark {
+  background:
+    radial-gradient(120% 80% at 50% 50%, rgba(14,165,233,0.18), transparent 70%),
+    linear-gradient(160deg, #eaf2fb 0%, #d3e2f5 100%);
+}
+.bg-chart-dark::after {
+  content: "";
+  position: absolute; inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 120'><path d='M0 100 L 30 80 L 55 90 L 85 55 L 115 70 L 145 35 L 175 50 L 200 20' fill='none' stroke='%2334d399' stroke-width='1.6' opacity='0.65'/><path d='M0 100 L 30 80 L 55 90 L 85 55 L 115 70 L 145 35 L 175 50 L 200 20 L 200 120 L 0 120 Z' fill='%2334d399' opacity='0.10'/></svg>");
+  background-size: cover; background-position: center;
+  pointer-events: none;
+}
+
+/* Glass blue 3D play button */
+.glass-play {
+  width: 64px; height: 64px; border-radius: 9999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,0.55), rgba(255,255,255,0) 45%),
+    radial-gradient(circle at 50% 60%, rgba(56,189,248,0.55), rgba(14,116,144,0.85) 80%);
+  border: 1.5px solid rgba(186,230,253,0.7);
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,0.6),
+    inset 0 -8px 20px rgba(2,132,199,0.6),
+    0 6px 20px rgba(14,165,233,0.45),
+    0 0 30px rgba(56,189,248,0.35);
+  color: #e0f2fe;
+  transition: transform 240ms ease, box-shadow 240ms ease;
+}
+.glass-play:hover {
+  transform: scale(1.06);
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,0.7),
+    inset 0 -8px 20px rgba(2,132,199,0.7),
+    0 8px 30px rgba(14,165,233,0.6),
+    0 0 45px rgba(56,189,248,0.55);
+}
+
+/* Gold buy button (luxury outlined) */
+.btn-gold {
+  background: linear-gradient(180deg, rgba(212,175,55,0.18), rgba(212,175,55,0.06));
+  border: 1px solid rgba(212,175,55,0.7);
+  color: #f4d77a;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.4);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 0 14px rgba(212,175,55,0.2);
+  transition: all 240ms ease;
+}
+.btn-gold:hover {
+  background: linear-gradient(180deg, rgba(212,175,55,0.32), rgba(212,175,55,0.12));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 0 26px rgba(212,175,55,0.45);
+  border-color: rgba(244,215,122,0.95);
+}
+.light .btn-gold { color: #6b4f12; text-shadow: 0 1px 0 rgba(255,255,255,0.5); }
+
+/* Neon "DÉBLOQUÉ" badge */
+.badge-unlocked {
+  background: linear-gradient(180deg, rgba(16,185,129,0.18), rgba(16,185,129,0.06));
+  border: 1px solid rgba(52,211,153,0.65);
+  color: #6ee7b7;
+  text-shadow: 0 0 8px rgba(52,211,153,0.5);
+  box-shadow: 0 0 14px rgba(16,185,129,0.35);
+  letter-spacing: 0.14em;
+}
+.light .badge-unlocked { color: #047857; }
+
+/* Theme-fade for premium switch */
+.theme-fade, .theme-fade * { transition: background-color 400ms ease, color 400ms ease, border-color 400ms ease, box-shadow 400ms ease; }
