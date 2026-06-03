@@ -212,37 +212,42 @@ function CouponsSection() {
   const purchasedCount = paidIds.size;
 
   return (
-    <section id="coupons" className="py-20 sm:py-28">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+    <section id="coupons" className="relative py-20 sm:py-28 bg-luxury theme-fade overflow-hidden">
+      <div aria-hidden className="absolute inset-0 bg-filigree pointer-events-none" />
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
         <div className="text-center mb-12">
           <Badge className="bg-primary/10 text-primary border border-primary/30">
             <Calendar className="w-3.5 h-3.5 mr-1" /> Coupons du jour
           </Badge>
-          <h2 className="mt-4 font-display text-4xl sm:text-5xl">Choisissez votre <span className="text-gold">coupon premium</span></h2>
-          <p className="mt-3 text-muted-foreground max-w-xl mx-auto">4 coupons exclusifs chaque jour. Vidéo verrouillée jusqu'au paiement, déblocage instantané.</p>
-          {session && (
-            <div className="mt-4 inline-flex items-center gap-2 text-xs text-muted-foreground">
-              <span>{coupons.length} coupons disponibles</span>
-              {purchasedCount > 0 && (
-                <>
-                  <span>·</span>
-                  <span className="text-emerald-500 font-medium inline-flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" /> {purchasedCount} acheté{purchasedCount > 1 ? "s" : ""}
-                  </span>
-                </>
-              )}
-            </div>
-          )}
+          <h2 className="mt-4 font-serif text-4xl sm:text-5xl tracking-wide">
+            Coupons <span className="text-gold">VIP du Jour</span>
+          </h2>
+          <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
+            4 coupons exclusifs chaque jour. Vidéo verrouillée jusqu'au paiement, déblocage instantané.
+          </p>
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border border-amber-400/60 bg-amber-500/5 text-amber-300 shadow-[inset_0_0_10px_rgba(212,175,55,0.15)]">
+              {coupons.length} coupons disponibles
+            </span>
+            {session && purchasedCount > 0 && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border border-sky-400/60 bg-sky-500/5 text-sky-300 shadow-[inset_0_0_10px_rgba(56,189,248,0.18)]">
+                <CheckCircle2 className="w-3 h-3 mr-1" /> {purchasedCount} acheté{purchasedCount > 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
         </div>
         {loading ? (
-          <div className="text-center text-muted-foreground py-12">Chargement…</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="rounded-2xl glass-card aspect-[3/4] skeleton-shimmer" />
+            ))}
+          </div>
         ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
             {coupons.map((c) => <CouponCard key={c.id} coupon={c} paid={paidIds.has(c.id)} />)}
           </div>
         )}
       </div>
-
     </section>
   );
 }
@@ -333,107 +338,133 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
   };
 
   return (
-    <div className={`group relative rounded-2xl border bg-card overflow-hidden transition-all hover:shadow-gold ${paid ? "border-emerald-500/50" : "border-border/60 hover:border-primary/50"}`}>
-      <Badge className="absolute top-4 right-4 z-10 bg-gold-gradient text-primary-foreground border-0 shadow-gold">
-        <Star className="w-3 h-3 mr-1 fill-current" /> Premium
-      </Badge>
-      {paid ? (
-        <Badge className="absolute top-4 left-4 z-10 bg-emerald-500 text-white border-0">
-          <CheckCircle2 className="w-3 h-3 mr-1" /> Débloqué
-        </Badge>
-      ) : meta.hot && (
-        <Badge className="absolute top-4 left-4 z-10 bg-destructive text-destructive-foreground">
-          <Flame className="w-3 h-3 mr-1" /> HOT
-        </Badge>
-      )}
-      <div className={`h-2 bg-gradient-to-r ${meta.gradient}`} />
-      <div className="p-6">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-gold-gradient flex items-center justify-center shadow-gold shrink-0">
-            <Icon className="w-6 h-6 text-primary-foreground" />
-          </div>
-          <div className="min-w-0">
-            <div className="font-display text-xl truncate">{coupon.title}</div>
-            <div className="text-xs text-muted-foreground flex items-center gap-2">
-              <ShoppingCart className="w-3 h-3" /> {coupon.sales_count} ventes
-              <span>•</span>
-              <Calendar className="w-3 h-3" /> {dateLabel}
+    <div
+      className={`group relative rounded-2xl overflow-hidden glass-card transition-all duration-300 hover:-translate-y-0.5 ${paid ? "unlocked-border" : "locked-glow"}`}
+    >
+      {/* Top header strip */}
+      <div className="flex items-start justify-between px-3 pt-3">
+        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold glass-pill text-amber-300">
+          <Icon className="w-3 h-3" />
+          {coupon.title}
+        </span>
+        {paid ? (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold badge-unlocked">
+            DÉBLOQUÉ
+          </span>
+        ) : meta.hot ? (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold bg-destructive/15 border border-destructive/40 text-destructive">
+            <Flame className="w-3 h-3" /> HOT
+          </span>
+        ) : null}
+      </div>
+
+      {/* Media — square */}
+      <div
+        className={`mt-3 mx-3 rounded-xl aspect-square flex items-center justify-center overflow-hidden relative isolate ${paid ? "bg-chart-dark" : "brushed-gold"}`}
+      >
+        {paid && url ? (
+          <video src={url} controls className="absolute inset-0 w-full h-full bg-black object-cover" />
+        ) : paid ? (
+          <button
+            type="button"
+            onClick={handlePlay}
+            disabled={busy}
+            className="relative flex items-center justify-center w-full h-full focus:outline-none"
+            aria-label="Lire la vidéo"
+          >
+            <span className="glass-play">
+              {busy ? (
+                <Loader2 className="w-7 h-7 animate-spin" />
+              ) : (
+                <Play className="w-7 h-7 fill-current ml-0.5" style={{ filter: "drop-shadow(0 0 6px rgba(56,189,248,0.9))" }} />
+              )}
+            </span>
+          </button>
+        ) : (
+          <div className="relative flex flex-col items-center gap-3 px-4">
+            <div className="relative flex items-center justify-center">
+              <span
+                aria-hidden
+                className="absolute w-24 h-24 rounded-full lock-ring-pulse"
+                style={{ boxShadow: "0 0 0 1px rgba(255,255,255,0.25) inset" }}
+              />
+              <span
+                className="relative w-16 h-16 rounded-2xl flex items-center justify-center lock-float"
+                style={{
+                  background: "radial-gradient(circle at 30% 25%, #fff1b8, #d4af37 60%, #6b4f12)",
+                  boxShadow: "inset 0 2px 2px rgba(255,255,255,0.6), inset 0 -6px 12px rgba(0,0,0,0.35), 0 6px 14px rgba(0,0,0,0.45)",
+                }}
+              >
+                <Lock className="w-7 h-7 text-amber-950" strokeWidth={2.5} />
+              </span>
             </div>
-            <div className="mt-2">
-              <CouponStatusBadge startDate={coupon.start_date} endDate={coupon.end_date} />
-            </div>
+            <span className="font-serif text-[13px] sm:text-sm font-bold text-bronze text-center">
+              ACCÈS RESTREINT
+            </span>
           </div>
+        )}
+      </div>
+
+      {/* Body */}
+      <div className="px-4 pt-3 pb-4 space-y-2.5">
+        <div>
+          <h3 className="font-serif text-xl tracking-wide text-foreground truncate">{coupon.title}</h3>
+          <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2 min-h-[2rem]">
+            {coupon.description || "Pronostic premium analysé par nos experts."}
+          </p>
         </div>
 
-        <p className="mt-4 text-sm text-muted-foreground line-clamp-2 min-h-10">
-          {coupon.description || "Pronostic premium analysé par nos experts."}
-        </p>
-
-        <div className="mt-4 relative rounded-xl border border-dashed border-primary/30 bg-background/40 overflow-hidden aspect-video flex items-center justify-center">
-          {paid && url ? (
-            <video src={url} controls className="w-full h-full bg-black" />
-          ) : paid ? (
-            <button
-              type="button"
-              onClick={handlePlay}
-              disabled={busy}
-              className="w-full h-full flex flex-col items-center justify-center bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors"
-            >
-              {busy ? <Loader2 className="w-8 h-8 animate-spin text-emerald-500" /> : <Play className="w-10 h-10 text-emerald-500 fill-emerald-500" />}
-              <p className="mt-2 text-xs text-emerald-500 font-medium">Lire la vidéo</p>
-            </button>
-          ) : coupon.image_url ? (
-            <div className="relative w-full h-full">
-              <img src={coupon.image_url} alt="" className="w-full h-full object-cover blur-md" />
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/60">
-                <Lock className="w-7 h-7 text-primary" />
-                <p className="mt-1 text-xs text-muted-foreground">Vidéo verrouillée</p>
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center">
-              <Lock className="w-7 h-7 text-primary/70" />
-              <p className="mt-2 text-xs text-muted-foreground">Vidéo verrouillée</p>
-            </div>
-          )}
+        <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5" />
+            {dateLabel}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <ShoppingCart className="w-3 h-3" /> {coupon.sales_count}
+          </span>
         </div>
 
-        <div className="mt-6 flex items-center justify-between gap-2">
-          <div>
-            <div className="text-xs text-muted-foreground">{t("coupon.price")}</div>
-            <div className="font-display text-2xl text-gold">{coupon.price_xaf.toLocaleString("fr-FR")} FCFA</div>
+        <div className="flex items-end justify-between gap-3 pt-1">
+          <div className="font-sans text-2xl font-bold text-gold leading-none">
+            {coupon.price_xaf.toLocaleString("fr-FR")}
+            <span className="block text-[10px] font-semibold text-muted-foreground mt-1 tracking-wider">
+              FCFA
+            </span>
           </div>
+
           {paid ? (
             <div className="flex items-center gap-2">
               <Button
-                onClick={handlePlay}
-                disabled={busy || !!url}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold"
-              >
-                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Play className="w-4 h-4 mr-1 fill-current" /> Voir</>}
-              </Button>
-              <Button
+                size="sm"
+                variant="ghost"
                 onClick={handleDownload}
                 disabled={downloading}
-                variant="outline"
-                size="icon"
-                title="Télécharger la vidéo"
+                className="glass-pill rounded-full px-3 h-9 text-foreground"
                 aria-label="Télécharger la vidéo"
               >
-                {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                {downloading ? <Loader2 className="w-4 h-4" /> : <><Download className="w-4 h-4 mr-1" /> DL</>}
+              </Button>
+              <Button
+                size="sm"
+                onClick={handlePlay}
+                disabled={busy || !!url}
+                className="glass-pill rounded-full px-3 h-9 text-emerald-300 hover:text-emerald-200"
+                style={{ boxShadow: "0 0 18px rgba(52,211,153,0.35)" }}
+              >
+                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Play className="w-4 h-4 mr-1 fill-current" /> Voir</>}
               </Button>
             </div>
           ) : (
             <Button
+              size="sm"
               onClick={handleBuy}
-              className="bg-gold-gradient text-primary-foreground hover:opacity-90 font-semibold shadow-gold"
+              className="btn-gold rounded-full px-5 h-9 font-semibold"
             >
-              {t("coupon.buy")}
+              {t("coupon.buy", { defaultValue: "Acheter" })}
             </Button>
           )}
         </div>
       </div>
-
 
       {session && (
         <PaymentModal
