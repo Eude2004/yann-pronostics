@@ -231,6 +231,17 @@ function UserCouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
           )}
         </div>
       </div>
+      {user && (
+        <PaymentModal
+          open={payOpen}
+          onOpenChange={setPayOpen}
+          coupon={{ id: coupon.id, title: coupon.title, price_xaf: coupon.price_xaf }}
+          customer={{
+            name: user.user_metadata?.full_name ?? undefined,
+            email: user.email ?? undefined,
+          }}
+        />
+      )}
     </div>
   );
 }
