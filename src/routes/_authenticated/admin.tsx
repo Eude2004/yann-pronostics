@@ -544,7 +544,10 @@ function CouponsAdmin() {
                 </SelectContent>
               </Select>
             </div>
-            <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Texte affiché sur la carte du coupon" /></div>
+            <div>
+              <Label>Description <span className="text-xs text-muted-foreground font-normal">(optionnel — générée automatiquement si vide selon le type)</span></Label>
+              <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Laissez vide pour utiliser la description par défaut du type de coupon" />
+            </div>
             <div className="space-y-2">
               <Label>Image du coupon <span className="text-xs text-muted-foreground font-normal">(optionnel)</span></Label>
               <div className="flex flex-wrap gap-2">
