@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Lock, TrendingUp, Trophy, Zap, ShieldCheck, Star, Flame, ArrowRight, MessageCircle, LayoutDashboard, Calendar, ShoppingCart, Loader2, Play, CheckCircle2, Download } from "lucide-react";
 import { CouponStatusBadge } from "@/components/CouponStatusBadge";
 import { getCouponVideoAccess } from "@/lib/coupon-access.functions";
+import { refreshAndGetNextTransition } from "@/lib/coupon-schedule.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { useSettings, whatsappLink } from "@/hooks/use-settings";
@@ -191,7 +192,33 @@ function CouponsSection() {
       .channel("home-coupons")
       .on("postgres_changes", { event: "*", schema: "public", table: "coupons" }, load)
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+
+    // Latence zéro à l'heure de début : on demande au serveur la prochaine
+    // transition planifiée et on programme un setTimeout précis pour relancer
+    // refresh_coupon_statuses() exactement à ce moment-là. Realtime se charge
+    // ensuite de pousser le nouveau coupon publié à l'écran.
+    let timeoutId: number | undefined;
+    let cancelled = false;
+    const scheduleNext = async () => {
+      try {
+        const { nextTransitionAt } = await refreshAndGetNextTransition();
+        if (cancelled || !nextTransitionAt) return;
+        const delay = Math.max(0, new Date(nextTransitionAt).getTime() - Date.now()) + 250;
+        // setTimeout est plafonné à ~24 jours ; au-delà on re-planifie plus tard.
+        const safeDelay = Math.min(delay, 6 * 60 * 60 * 1000); // re-check au plus tard dans 6h
+        timeoutId = window.setTimeout(scheduleNext, safeDelay);
+      } catch {
+        // En cas d'échec réseau, on retentera dans 60s — le cron sert de filet.
+        timeoutId = window.setTimeout(scheduleNext, 60_000);
+      }
+    };
+    scheduleNext();
+
+    return () => {
+      cancelled = true;
+      if (timeoutId) window.clearTimeout(timeoutId);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   useEffect(() => {
