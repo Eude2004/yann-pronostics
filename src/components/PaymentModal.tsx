@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, ShieldCheck, Smartphone, CheckCircle2, Play } from "lucide-react";
+import { Loader2, ShieldCheck, Smartphone, CheckCircle2, Play, AlertTriangle, RotateCw } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { initiatePayment, simulatePaymentCompletion } from "@/lib/payments.functions";
 import { getCouponVideoAccess } from "@/lib/coupon-access.functions";
