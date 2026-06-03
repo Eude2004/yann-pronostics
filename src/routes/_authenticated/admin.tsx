@@ -488,7 +488,7 @@ function CouponsAdmin() {
                   {" → "}
                   {c.end_date ? new Date(c.end_date).toLocaleDateString("fr-FR") : "—"}
                 </TableCell>
-                <TableCell>{badge(c.status)}</TableCell>
+                <TableCell><CouponStatusBadge startDate={c.start_date} endDate={c.end_date} /></TableCell>
                 <TableCell>{c.sales_count}</TableCell>
                 <TableCell className="text-right whitespace-nowrap">
                   <Select value={c.status} onValueChange={(v) => setStatus(c.id, v as PublishStatus)}>
