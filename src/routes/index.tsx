@@ -226,6 +226,22 @@ function CouponsSection() {
 
   const purchasedCount = paidIds.size;
 
+  // Règle stricte des 4 coupons : 1 carte par catégorie, dans un ordre fixe.
+  // Si aucune carte publiée pour la catégorie, on rend un emplacement « bientôt disponible »
+  // afin que la grille affiche TOUJOURS 4 cartes, ni plus ni moins, même
+  // pendant les bascules publication/expiration.
+  const CATEGORY_ORDER: CouponType[] = ["cote_10", "cote_30", "cote_50", "pair_corner"];
+  const byType = new Map<CouponType, Coupon>();
+  for (const c of coupons) {
+    if (!c.coupon_type) continue;
+    if (!byType.has(c.coupon_type)) byType.set(c.coupon_type, c);
+  }
+  const slots: Array<{ type: CouponType; coupon: Coupon | null }> = CATEGORY_ORDER.map((type) => ({
+    type,
+    coupon: byType.get(type) ?? null,
+  }));
+  const activeCount = slots.filter((s) => s.coupon).length;
+
   return (
     <section id="coupons" className="relative py-20 sm:py-28 bg-luxury theme-fade overflow-hidden">
       <div aria-hidden className="absolute inset-0 bg-filigree pointer-events-none" />
@@ -242,7 +258,7 @@ function CouponsSection() {
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-2">
             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border border-amber-400/60 bg-amber-500/5 text-amber-300 shadow-[inset_0_0_10px_rgba(212,175,55,0.15)]">
-              {coupons.length} coupons disponibles
+              {activeCount} / 4 coupons disponibles
             </span>
             {session && purchasedCount > 0 && (
               <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border border-sky-400/60 bg-sky-500/5 text-sky-300 shadow-[inset_0_0_10px_rgba(56,189,248,0.18)]">
@@ -259,13 +275,68 @@ function CouponsSection() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
-            {coupons.map((c) => <CouponCard key={c.id} coupon={c} paid={paidIds.has(c.id)} />)}
+            {slots.map((slot) =>
+              slot.coupon ? (
+                <CouponCard key={slot.coupon.id} coupon={slot.coupon} paid={paidIds.has(slot.coupon.id)} />
+              ) : (
+                <ComingSoonCard key={`slot-${slot.type}`} type={slot.type} />
+              ),
+            )}
           </div>
         )}
       </div>
     </section>
   );
 }
+
+function ComingSoonCard({ type }: { type: CouponType }) {
+  const { t } = useTranslation();
+  const meta = TYPE_META[type];
+  const Icon = meta.icon;
+  const title = COUPON_TYPE_LABEL[type];
+  return (
+    <div className="group relative rounded-2xl overflow-hidden glass-card opacity-80">
+      <div className="flex items-start justify-between px-3 pt-3">
+        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold glass-pill text-amber-300">
+          <Icon className="w-3 h-3" />
+          {title}
+        </span>
+        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold bg-zinc-500/15 border border-zinc-400/40 text-zinc-300 tracking-wider">
+          {t("coupon.coming_soon", { defaultValue: "Bientôt disponible" }).toUpperCase()}
+        </span>
+      </div>
+      <div className="mt-3 mx-3 rounded-xl aspect-square flex items-center justify-center brushed-gold relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-zinc-900/55 to-zinc-700/45 backdrop-blur-[2px]" />
+        <span className="relative font-serif font-extrabold tracking-[0.2em] text-xl sm:text-2xl text-white/85 select-none rotate-[-8deg]"
+              style={{ textShadow: "0 2px 12px rgba(0,0,0,0.6)" }}>
+          {t("coupon.coming_soon", { defaultValue: "Bientôt disponible" })}
+        </span>
+      </div>
+      <div className="px-4 pt-3 pb-4 space-y-2.5">
+        <h3 className="font-serif not-italic font-bold text-2xl sm:text-[1.7rem] leading-tight text-foreground truncate"
+            style={{ fontStyle: "normal" }}>
+          {title}
+        </h3>
+        <p className="text-xs text-muted-foreground line-clamp-2 min-h-[2rem]">
+          {t("coupon.coming_soon", { defaultValue: "Bientôt disponible" })}…
+        </p>
+        <div className="flex items-end justify-between gap-3 pt-1">
+          <div className="font-sans text-2xl font-bold text-muted-foreground/60 leading-none">—</div>
+          <Button size="sm" disabled className="rounded-full px-5 h-9 font-semibold bg-zinc-600/30 text-zinc-200 border border-zinc-400/30 cursor-not-allowed">
+            {t("coupon.coming_soon", { defaultValue: "Bientôt" })}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const COUPON_TYPE_LABEL: Record<CouponType, string> = {
+  cote_10: "Cote de 10+",
+  cote_30: "Cote de 30+",
+  cote_50: "Cote de 50+",
+  pair_corner: "Coupon Total Pair Corner",
+};
 
 function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
   const { t } = useTranslation();
