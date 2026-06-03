@@ -212,37 +212,42 @@ function CouponsSection() {
   const purchasedCount = paidIds.size;
 
   return (
-    <section id="coupons" className="py-20 sm:py-28">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+    <section id="coupons" className="relative py-20 sm:py-28 bg-luxury theme-fade overflow-hidden">
+      <div aria-hidden className="absolute inset-0 bg-filigree pointer-events-none" />
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
         <div className="text-center mb-12">
           <Badge className="bg-primary/10 text-primary border border-primary/30">
             <Calendar className="w-3.5 h-3.5 mr-1" /> Coupons du jour
           </Badge>
-          <h2 className="mt-4 font-display text-4xl sm:text-5xl">Choisissez votre <span className="text-gold">coupon premium</span></h2>
-          <p className="mt-3 text-muted-foreground max-w-xl mx-auto">4 coupons exclusifs chaque jour. Vidéo verrouillée jusqu'au paiement, déblocage instantané.</p>
-          {session && (
-            <div className="mt-4 inline-flex items-center gap-2 text-xs text-muted-foreground">
-              <span>{coupons.length} coupons disponibles</span>
-              {purchasedCount > 0 && (
-                <>
-                  <span>·</span>
-                  <span className="text-emerald-500 font-medium inline-flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" /> {purchasedCount} acheté{purchasedCount > 1 ? "s" : ""}
-                  </span>
-                </>
-              )}
-            </div>
-          )}
+          <h2 className="mt-4 font-serif text-4xl sm:text-5xl tracking-wide">
+            Coupons <span className="text-gold">VIP du Jour</span>
+          </h2>
+          <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
+            4 coupons exclusifs chaque jour. Vidéo verrouillée jusqu'au paiement, déblocage instantané.
+          </p>
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border border-amber-400/60 bg-amber-500/5 text-amber-300 shadow-[inset_0_0_10px_rgba(212,175,55,0.15)]">
+              {coupons.length} coupons disponibles
+            </span>
+            {session && purchasedCount > 0 && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border border-sky-400/60 bg-sky-500/5 text-sky-300 shadow-[inset_0_0_10px_rgba(56,189,248,0.18)]">
+                <CheckCircle2 className="w-3 h-3 mr-1" /> {purchasedCount} acheté{purchasedCount > 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
         </div>
         {loading ? (
-          <div className="text-center text-muted-foreground py-12">Chargement…</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="rounded-2xl glass-card aspect-[3/4] skeleton-shimmer" />
+            ))}
+          </div>
         ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
             {coupons.map((c) => <CouponCard key={c.id} coupon={c} paid={paidIds.has(c.id)} />)}
           </div>
         )}
       </div>
-
     </section>
   );
 }
