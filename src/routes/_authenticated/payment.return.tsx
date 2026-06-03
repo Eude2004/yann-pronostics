@@ -118,15 +118,38 @@ function PaymentReturn() {
     })();
   }, [couponId]);
 
+  const [videoLoading, setVideoLoading] = useState(false);
+  const [videoMissing, setVideoMissing] = useState(false);
+
   useEffect(() => {
     if (status !== "completed" || !couponId || videoUrl) return;
-    (async () => {
+    let cancelled = false;
+    let attempts = 0;
+    setVideoLoading(true);
+    setVideoMissing(false);
+    const tryFetch = async () => {
+      attempts++;
       try {
         const v = await getVideo({ data: { couponId } });
-        if (v.url) setVideoUrl(v.url);
+        if (cancelled) return;
+        if (v.url) {
+          setVideoUrl(v.url);
+          setVideoLoading(false);
+          return;
+        }
       } catch {}
-    })();
+      if (cancelled) return;
+      if (attempts >= 6) {
+        setVideoLoading(false);
+        setVideoMissing(true);
+        return;
+      }
+      setTimeout(tryFetch, 2500);
+    };
+    tryFetch();
+    return () => { cancelled = true; };
   }, [status, couponId, getVideo, videoUrl]);
+
 
   // Nettoyage du flag de paiement en cours
   useEffect(() => {
