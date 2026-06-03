@@ -258,81 +258,76 @@ function Dashboard() {
     );
   }
 
+  const initial = (name?.[0] ?? "U").toUpperCase();
+
   return (
-    <div className="min-h-screen">
-      <header className="border-b border-border/50 bg-background/80 backdrop-blur sticky top-0 z-40">
+    <div className="min-h-screen bg-luxury theme-fade relative">
+      {/* Filigree chart pattern */}
+      <div aria-hidden className="absolute inset-0 bg-filigree pointer-events-none" />
+
+      <header className="relative border-b border-border/40 backdrop-blur-md sticky top-0 z-40 bg-background/40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <img src={logo} alt="" className="h-9 w-9 object-contain" />
-            <span className="font-display tracking-wider text-gold hidden sm:block">
-              YANN PRONOSTICS
+          <Link to="/" className="flex items-center gap-2.5">
+            <span className="relative inline-flex items-center justify-center h-10 w-10 rounded-full overflow-hidden border border-amber-400/60 shadow-[0_0_20px_-4px_rgba(212,175,55,0.6)]">
+              <img src={logo} alt="" className="h-9 w-9 object-contain" />
+            </span>
+            <span className="font-serif text-lg sm:text-xl tracking-wide text-gold hidden sm:block">
+              Yann Prono
             </span>
           </Link>
-          <div className="flex items-center gap-2">
+
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* VIP Gold Member badge */}
+            <div className="hidden sm:flex items-center gap-2 glass-pill rounded-full pl-1.5 pr-3 py-1">
+              <span className="relative inline-flex items-center justify-center h-8 w-8 rounded-full text-[13px] font-semibold text-black"
+                style={{ background: "radial-gradient(circle at 30% 25%, #fff6c2, #d4af37 70%, #8a6b1f)" }}>
+                {initial}
+              </span>
+              <div className="flex flex-col leading-tight">
+                <span className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-amber-300/90">
+                  <Crown className="w-3 h-3 text-amber-300" /> VIP Gold Member
+                </span>
+              </div>
+            </div>
             <LanguageToggle />
-            <Button variant="ghost" size="sm" onClick={signOut}>
+            <Button variant="outline" size="sm" onClick={signOut} className="glass-pill border-border/50">
               <LogOut className="w-4 h-4 mr-2" /> {t("common.logout")}
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
-        <div className="flex items-start justify-between flex-wrap gap-4">
-          <div>
-            <p className="text-sm text-muted-foreground">
-              {t("dashboard.welcome")}
-            </p>
-            <h1 className="font-display text-4xl sm:text-5xl mt-1">
-              {t("dashboard.hello")}{" "}
-              <span className="text-gold">{name}</span>
-            </h1>
-            <p className="mt-2 text-muted-foreground">{user?.email}</p>
-          </div>
-        </div>
-
+      <main className="relative max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
         {/* Coupons VIP du Jour — section */}
-        <section className="mt-12 relative">
-          {/* subtle gold glow band behind the header */}
-          <div
-            aria-hidden
-            className="absolute inset-x-0 -top-4 h-32 rounded-3xl pointer-events-none"
-            style={{
-              background:
-                "radial-gradient(60% 100% at 20% 50%, oklch(0.83 0.16 88 / 0.10), transparent 70%)",
-            }}
-          />
-
-          <div className="relative">
-            <div className="flex items-center gap-3">
-              <Trophy className="w-8 h-8 text-gold" />
-              <h2 className="font-display text-3xl sm:text-4xl tracking-wide text-gold">
-                {t("dashboard.today_coupons")}
-              </h2>
-            </div>
-
-            <div className="mt-3 flex items-center gap-2 text-muted-foreground text-sm">
-              <Calendar className="w-4 h-4" />
-              <span>{todayLabel}</span>
-            </div>
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border border-amber-500/40 bg-amber-500/10 text-amber-400">
-                {t("dashboard.coupons_available", {
-                  count: coupons.length,
-                  defaultValue: `${coupons.length} coupons disponibles`,
-                })}
-              </span>
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border border-emerald-500/40 bg-emerald-500/10 text-emerald-400">
-                {t("dashboard.coupons_purchased", {
-                  count: purchasedCount,
-                  defaultValue: `${purchasedCount} achetés`,
-                })}
-              </span>
-            </div>
-
-            <div className="my-6 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+        <section className="relative">
+          <div className="flex items-center gap-3">
+            <Trophy className="w-8 h-8 text-amber-400" style={{ filter: "drop-shadow(0 0 10px rgba(212,175,55,0.5))" }} />
+            <h1 className="font-serif text-3xl sm:text-5xl tracking-wide text-gold leading-none">
+              {t("dashboard.today_coupons")}
+            </h1>
           </div>
+
+          <div className="mt-3 flex items-center gap-2 text-muted-foreground text-sm">
+            <Calendar className="w-4 h-4" />
+            <span>{todayLabel}</span>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border border-amber-400/60 bg-amber-500/5 text-amber-300 shadow-[inset_0_0_10px_rgba(212,175,55,0.15)]">
+              {t("dashboard.coupons_available", {
+                count: coupons.length,
+                defaultValue: `${coupons.length} coupons disponibles`,
+              })}
+            </span>
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border border-sky-400/60 bg-sky-500/5 text-sky-300 shadow-[inset_0_0_10px_rgba(56,189,248,0.18)]">
+              {t("dashboard.coupons_purchased", {
+                count: purchasedCount,
+                defaultValue: `${purchasedCount} achetés`,
+              })}
+            </span>
+          </div>
+
+          <div className="my-6 h-px bg-gradient-to-r from-transparent via-amber-500/30 to-transparent" />
 
           {!loaded ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
