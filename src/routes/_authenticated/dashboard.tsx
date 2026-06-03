@@ -334,13 +334,13 @@ function Dashboard() {
           {coupons.length === 0 ? (
             <p className="text-muted-foreground">{t("coupon.none")}</p>
           ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {coupons.map((c, i) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
+              {sortedCoupons.map(({ c, theme }) => (
                 <UserCouponCard
                   key={c.id}
                   coupon={c}
                   paid={paidIds.has(c.id)}
-                  themeKey={themeForCoupon(c, i)}
+                  themeKey={theme}
                 />
               ))}
             </div>
