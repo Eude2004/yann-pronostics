@@ -1,18 +1,17 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import logo from "@/assets/yann-logo.png";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Lock, TrendingUp, Trophy, Zap, ShieldCheck, Star, Flame, ArrowRight, MessageCircle, LayoutDashboard, Calendar, ShoppingCart, Loader2, Play, CheckCircle2 } from "lucide-react";
+import { Lock, TrendingUp, Trophy, Zap, ShieldCheck, Star, Flame, ArrowRight, MessageCircle, LayoutDashboard, Calendar, ShoppingCart, Loader2, Play, CheckCircle2, Download } from "lucide-react";
 import { getCouponVideoAccess } from "@/lib/coupon-access.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { useSettings, whatsappLink } from "@/hooks/use-settings";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageToggle } from "@/components/LanguageToggle";
-import { VisitorSignupPrompt } from "@/components/VisitorSignupPrompt";
 import { PaymentModal } from "@/components/PaymentModal";
 import { toast } from "sonner";
 
@@ -249,11 +248,12 @@ function CouponsSection() {
 function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
   const { t } = useTranslation();
   const { session } = useAuth();
+  const navigate = useNavigate();
   const getAccess = useServerFn(getCouponVideoAccess);
-  const [promptOpen, setPromptOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
   const [url, setUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const meta = coupon.coupon_type ? TYPE_META[coupon.coupon_type] : TYPE_META.cote_10;
   const Icon = meta.icon;
 
@@ -273,7 +273,8 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
 
   const handleBuy = () => {
     if (!session) {
-      setPromptOpen(true);
+      toast.info("Connectez-vous pour acheter un coupon.");
+      navigate({ to: "/auth", search: { redirect: "/" } as any });
       return;
     }
     if (!coupon.id || coupon.id.length < 30) {
@@ -295,6 +296,37 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
       toast.error(e instanceof Error ? e.message : "Erreur d'accès.");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      let downloadUrl = url;
+      if (!downloadUrl) {
+        const res = await getAccess({ data: { couponId: coupon.id } });
+        if (!res.url) {
+          toast.error("Vidéo non disponible.");
+          return;
+        }
+        downloadUrl = res.url;
+        setUrl(downloadUrl);
+      }
+      const resp = await fetch(downloadUrl);
+      const blob = await resp.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = `${coupon.title.replace(/[^a-z0-9-_]+/gi, "_")}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(blobUrl);
+      toast.success("Téléchargement démarré.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Téléchargement impossible.");
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -367,13 +399,25 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
             <div className="font-display text-2xl text-gold">{coupon.price_xaf.toLocaleString("fr-FR")} FCFA</div>
           </div>
           {paid ? (
-            <Button
-              onClick={handlePlay}
-              disabled={busy || !!url}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold"
-            >
-              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Play className="w-4 h-4 mr-1 fill-current" /> Voir</>}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handlePlay}
+                disabled={busy || !!url}
+                className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold"
+              >
+                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Play className="w-4 h-4 mr-1 fill-current" /> Voir</>}
+              </Button>
+              <Button
+                onClick={handleDownload}
+                disabled={downloading}
+                variant="outline"
+                size="icon"
+                title="Télécharger la vidéo"
+                aria-label="Télécharger la vidéo"
+              >
+                {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              </Button>
+            </div>
           ) : (
             <Button
               onClick={handleBuy}
@@ -385,7 +429,7 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
         </div>
       </div>
 
-      <VisitorSignupPrompt open={promptOpen} onOpenChange={setPromptOpen} couponId={coupon.id} />
+
       {session && (
         <PaymentModal
           open={payOpen}
