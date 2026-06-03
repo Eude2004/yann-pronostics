@@ -71,6 +71,9 @@ export const en = {
     login_required: "Sign in to buy this coupon",
     initiating: "Starting payment…",
     init_failed: "Could not start payment",
+    expired: "EXPIRED",
+    expired_blocked: "This coupon has ended and is no longer available for purchase.",
+    coming_soon: "Coming soon",
   },
   dashboard: {
     welcome: "Welcome",
