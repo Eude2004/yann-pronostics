@@ -40,14 +40,19 @@ export const listAdminUsers = createServerFn({ method: "GET" })
     );
 
     return {
-      users: authList.users.map((u) => ({
-        id: u.id,
-        email: u.email ?? "",
-        created_at: u.created_at,
-        last_sign_in_at: u.last_sign_in_at ?? null,
-        roles: rolesByUser.get(u.id) ?? [],
-        profile: profileMap.get(u.id) ?? null,
-      })),
+      users: authList.users.map((u) => {
+        const banned = (u as { banned_until?: string | null }).banned_until ?? null;
+        const isBanned = !!(banned && new Date(banned).getTime() > Date.now());
+        return {
+          id: u.id,
+          email: u.email ?? "",
+          created_at: u.created_at,
+          last_sign_in_at: u.last_sign_in_at ?? null,
+          roles: rolesByUser.get(u.id) ?? [],
+          profile: profileMap.get(u.id) ?? null,
+          disabled: isBanned,
+        };
+      }),
     };
   });
 
