@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -133,6 +133,7 @@ function Dashboard() {
 
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [paidIds, setPaidIds] = useState<Set<string>>(new Set());
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     if (!loading && isAdmin) {
@@ -163,6 +164,7 @@ function Dashboard() {
     setPaidIds(
       new Set((txs ?? []).map((t: any) => t.coupon_id).filter(Boolean)),
     );
+    setLoaded(true);
   };
 
   useEffect(() => {
@@ -331,7 +333,13 @@ function Dashboard() {
             <div className="my-6 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
           </div>
 
-          {coupons.length === 0 ? (
+          {!loaded ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <CouponSkeleton key={i} themeKey={THEME_ORDER[i % 4]} />
+              ))}
+            </div>
+          ) : coupons.length === 0 ? (
             <p className="text-muted-foreground">{t("coupon.none")}</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
@@ -367,7 +375,19 @@ function UserCouponCard({
   const [url, setUrl] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
+  const [justUnlocked, setJustUnlocked] = useState(false);
+  const prevPaidRef = useRef(paid);
   const th = THEMES[themeKey];
+
+  // Detect a transition from locked → unlocked to play a one-shot animation
+  useEffect(() => {
+    if (!prevPaidRef.current && paid) {
+      setJustUnlocked(true);
+      const id = setTimeout(() => setJustUnlocked(false), 1100);
+      return () => clearTimeout(id);
+    }
+    prevPaidRef.current = paid;
+  }, [paid]);
 
   useEffect(() => {
     if (!paid || url) return;
@@ -431,6 +451,14 @@ function UserCouponCard({
     <div
       className={`group relative rounded-2xl border ${th.ring} bg-card overflow-hidden transition-all duration-300 hover:-translate-y-0.5 ${th.glow} hover:shadow-[0_0_60px_-8px_currentColor]`}
     >
+      {/* Unlock flash overlay */}
+      {justUnlocked && (
+        <div
+          aria-hidden
+          className="absolute inset-0 z-20 unlock-flash pointer-events-none"
+        />
+      )}
+
       {/* Top header strip with badges */}
       <div className="flex items-start justify-between px-4 pt-4">
         <span
@@ -439,7 +467,9 @@ function UserCouponCard({
           {typeLabel(coupon)}
         </span>
         {paid && (
-          <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold border border-emerald-500/50 bg-emerald-500/10 text-emerald-400">
+          <span
+            className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold border border-emerald-500/50 bg-emerald-500/10 text-emerald-400 ${justUnlocked ? "unlock-burst" : ""}`}
+          >
             {t("dashboard.unlocked")}
           </span>
         )}
@@ -623,6 +653,32 @@ function UserCouponCard({
           }}
         />
       )}
+    </div>
+  );
+}
+
+function CouponSkeleton({ themeKey }: { themeKey: ThemeKey }) {
+  const th = THEMES[themeKey];
+  return (
+    <div
+      className={`relative rounded-2xl border ${th.ring} bg-card overflow-hidden`}
+    >
+      <div className="flex items-start justify-between px-4 pt-4">
+        <div className={`h-6 w-20 rounded-md ${th.badgeBg} skeleton-shimmer`} />
+        <div className="h-6 w-12 rounded-md bg-muted/40 skeleton-shimmer" />
+      </div>
+      <div
+        className={`mt-3 mx-3 sm:mx-4 rounded-xl border ${th.badgeBorder} aspect-square skeleton-shimmer`}
+      />
+      <div className="px-4 pt-4 pb-4 space-y-3">
+        <div className="h-5 w-3/4 rounded skeleton-shimmer" />
+        <div className="h-3 w-full rounded skeleton-shimmer" />
+        <div className="h-3 w-2/3 rounded skeleton-shimmer" />
+        <div className="flex items-end justify-between gap-3 pt-2">
+          <div className="h-8 w-20 rounded skeleton-shimmer" />
+          <div className="h-9 w-24 rounded-md skeleton-shimmer" />
+        </div>
+      </div>
     </div>
   );
 }
