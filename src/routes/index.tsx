@@ -247,17 +247,30 @@ function CouponsSection() {
   );
 }
 
-function CouponCard({ coupon }: { coupon: Coupon }) {
+function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
   const { t } = useTranslation();
   const { session } = useAuth();
+  const getAccess = _useServerFn(getCouponVideoAccess);
   const [promptOpen, setPromptOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
+  const [url, setUrl] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const meta = coupon.coupon_type ? TYPE_META[coupon.coupon_type] : TYPE_META.cote_10;
   const Icon = meta.icon;
 
   const dateLabel = coupon.start_date
     ? new Date(coupon.start_date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })
     : new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
+
+  useEffect(() => {
+    if (!paid || url) return;
+    (async () => {
+      try {
+        const res = await getAccess({ data: { couponId: coupon.id } });
+        if (res.url) setUrl(res.url);
+      } catch {}
+    })();
+  }, [paid, url, getAccess, coupon.id]);
 
   const handleBuy = () => {
     if (!session) {
@@ -271,12 +284,31 @@ function CouponCard({ coupon }: { coupon: Coupon }) {
     setPayOpen(true);
   };
 
+  const handlePlay = async () => {
+    if (url) return;
+    setBusy(true);
+    try {
+      const res = await getAccess({ data: { couponId: coupon.id } });
+      if (res.url) setUrl(res.url);
+      else if (res.reason === "no_video") toast.info("Vidéo bientôt disponible.");
+      else toast.error("Accès refusé.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur d'accès.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
-    <div className="group relative rounded-2xl border border-border/60 bg-card overflow-hidden transition-all hover:border-primary/50 hover:shadow-gold">
+    <div className={`group relative rounded-2xl border bg-card overflow-hidden transition-all hover:shadow-gold ${paid ? "border-emerald-500/50" : "border-border/60 hover:border-primary/50"}`}>
       <Badge className="absolute top-4 right-4 z-10 bg-gold-gradient text-primary-foreground border-0 shadow-gold">
         <Star className="w-3 h-3 mr-1 fill-current" /> Premium
       </Badge>
-      {meta.hot && (
+      {paid ? (
+        <Badge className="absolute top-4 left-4 z-10 bg-emerald-500 text-white border-0">
+          <CheckCircle2 className="w-3 h-3 mr-1" /> Débloqué
+        </Badge>
+      ) : meta.hot && (
         <Badge className="absolute top-4 left-4 z-10 bg-destructive text-destructive-foreground">
           <Flame className="w-3 h-3 mr-1" /> HOT
         </Badge>
@@ -301,9 +333,21 @@ function CouponCard({ coupon }: { coupon: Coupon }) {
           {coupon.description || "Pronostic premium analysé par nos experts."}
         </p>
 
-        <div className="mt-4 relative rounded-xl border border-dashed border-primary/30 bg-background/40 p-6 flex flex-col items-center justify-center min-h-32">
-          {coupon.image_url ? (
-            <div className="relative w-full h-32 rounded-lg overflow-hidden">
+        <div className="mt-4 relative rounded-xl border border-dashed border-primary/30 bg-background/40 overflow-hidden aspect-video flex items-center justify-center">
+          {paid && url ? (
+            <video src={url} controls className="w-full h-full bg-black" />
+          ) : paid ? (
+            <button
+              type="button"
+              onClick={handlePlay}
+              disabled={busy}
+              className="w-full h-full flex flex-col items-center justify-center bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors"
+            >
+              {busy ? <Loader2 className="w-8 h-8 animate-spin text-emerald-500" /> : <Play className="w-10 h-10 text-emerald-500 fill-emerald-500" />}
+              <p className="mt-2 text-xs text-emerald-500 font-medium">Lire la vidéo</p>
+            </button>
+          ) : coupon.image_url ? (
+            <div className="relative w-full h-full">
               <img src={coupon.image_url} alt="" className="w-full h-full object-cover blur-md" />
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/60">
                 <Lock className="w-7 h-7 text-primary" />
@@ -311,26 +355,37 @@ function CouponCard({ coupon }: { coupon: Coupon }) {
               </div>
             </div>
           ) : (
-            <>
+            <div className="flex flex-col items-center">
               <Lock className="w-7 h-7 text-primary/70" />
               <p className="mt-2 text-xs text-muted-foreground">Vidéo verrouillée</p>
-            </>
+            </div>
           )}
         </div>
 
         <div className="mt-6 flex items-center justify-between gap-2">
           <div>
             <div className="text-xs text-muted-foreground">{t("coupon.price")}</div>
-            <div className="font-display text-2xl text-gold">{coupon.price_xaf.toLocaleString("fr-FR")} XAF</div>
+            <div className="font-display text-2xl text-gold">{coupon.price_xaf.toLocaleString("fr-FR")} FCFA</div>
           </div>
-          <Button
-            onClick={handleBuy}
-            className="bg-gold-gradient text-primary-foreground hover:opacity-90 font-semibold shadow-gold"
-          >
-            {t("coupon.buy")}
-          </Button>
+          {paid ? (
+            <Button
+              onClick={handlePlay}
+              disabled={busy || !!url}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold"
+            >
+              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Play className="w-4 h-4 mr-1 fill-current" /> Voir</>}
+            </Button>
+          ) : (
+            <Button
+              onClick={handleBuy}
+              className="bg-gold-gradient text-primary-foreground hover:opacity-90 font-semibold shadow-gold"
+            >
+              {t("coupon.buy")}
+            </Button>
+          )}
         </div>
       </div>
+
       <VisitorSignupPrompt open={promptOpen} onOpenChange={setPromptOpen} couponId={coupon.id} />
       {session && (
         <PaymentModal
