@@ -448,6 +448,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      refresh_coupon_statuses: { Args: never; Returns: number }
     }
     Enums: {
       app_role: "admin" | "user"

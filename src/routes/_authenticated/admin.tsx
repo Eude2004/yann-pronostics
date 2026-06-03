@@ -359,6 +359,7 @@ function CouponsAdmin() {
 
 
   const load = async () => {
+    await supabase.rpc("refresh_coupon_statuses");
     const { data, error } = await supabase.from("coupons").select("*")
       .order("created_at", { ascending: false });
     if (error) toast.error(error.message); else setItems((data as Coupon[]) ?? []);
