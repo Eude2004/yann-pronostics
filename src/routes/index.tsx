@@ -162,7 +162,7 @@ function CouponsSection() {
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
-    await supabase.rpc("refresh_coupon_statuses");
+    // Coupon statuses are refreshed automatically by a pg_cron job every minute.
     const now = new Date().toISOString();
     const { data } = await supabase
       .from("coupons")
