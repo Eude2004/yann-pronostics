@@ -99,6 +99,12 @@ const THEMES: Record<
 };
 
 const THEME_ORDER: ThemeKey[] = ["emerald", "sky", "amber", "orange"];
+const THEME_RANK: Record<ThemeKey, number> = {
+  emerald: 0,
+  sky: 1,
+  amber: 2,
+  orange: 3,
+};
 
 function themeForCoupon(c: Coupon, index: number): ThemeKey {
   const t = (c.coupon_type ?? "").toLowerCase();
