@@ -237,6 +237,16 @@ function Dashboard() {
     [coupons, paidIds],
   );
 
+  // Sort: by theme rank (emerald → sky → amber → orange) then by price asc
+  const sortedCoupons = useMemo(() => {
+    const arr = coupons.map((c, i) => ({ c, theme: themeForCoupon(c, i) }));
+    arr.sort((a, b) => {
+      const r = THEME_RANK[a.theme] - THEME_RANK[b.theme];
+      return r !== 0 ? r : a.c.price_xaf - b.c.price_xaf;
+    });
+    return arr;
+  }, [coupons]);
+
   if (loading || isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center text-muted-foreground">
