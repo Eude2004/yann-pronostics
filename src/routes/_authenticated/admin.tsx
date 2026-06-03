@@ -593,9 +593,37 @@ function CouponsAdmin() {
                 <p className="text-xs text-green-500 truncate">✓ {form.video_url}</p>
               )}
             </div>
+            <div>
+              <Label>Fuseau horaire</Label>
+              <Select value={timezone} onValueChange={setTimezone}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {TZ_OPTIONS.map((tz) => (
+                    <SelectItem key={tz} value={tz}>{tz}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Les dates ci-dessous sont interprétées dans ce fuseau.
+              </p>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Date de début</Label><Input type="datetime-local" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} /></div>
               <div><Label>Date de fin</Label><Input type="datetime-local" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} /></div>
+            </div>
+            <div className="rounded-md border border-border/60 bg-muted/30 p-3 flex items-center justify-between gap-3">
+              <div>
+                <div className="text-xs text-muted-foreground">Statut calculé automatiquement</div>
+                <div className="mt-1">
+                  <CouponStatusBadge
+                    startDate={zonedInputToIso(form.start_date, timezone)}
+                    endDate={zonedInputToIso(form.end_date, timezone)}
+                  />
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground max-w-[55%] text-right">
+                Avant la date de début : <b>Brouillon</b>. Entre les deux : <b>Publié</b> et mis en avant. Après la date de fin : <b>Archivé</b>.
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
