@@ -201,6 +201,15 @@ export const simulatePaymentCompletion = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const cinetpayConfigured = !!(process.env.CINETPAY_API_KEY && process.env.CINETPAY_SITE_ID);
+    const mode = cinetpayConfigured ? "live" : "test";
+    const logCtx = {
+      step: "simulatePaymentCompletion",
+      transaction_id: data.transactionId,
+      user_id: userId,
+      mode,
+      outcome: data.outcome,
+    };
+    console.log("[payments]", JSON.stringify({ ...logCtx, event: "start" }));
 
     if (cinetpayConfigured) {
       const { data: testRow } = await supabase
@@ -209,8 +218,26 @@ export const simulatePaymentCompletion = createServerFn({ method: "POST" })
         .eq("key", "test_pay_mode")
         .maybeSingle();
       if (testRow?.value !== "true") {
+        console.warn("[payments]", JSON.stringify({ ...logCtx, event: "blocked_live_mode" }));
         throw new Error("Simulation indisponible : CinetPay est configuré et le Mode Test Pay est désactivé.");
       }
+    }
+
+    // Idempotent: vérifier d'abord l'état actuel
+    const { data: pre } = await supabase
+      .from("transactions")
+      .select("id, status")
+      .eq("id", data.transactionId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (!pre) {
+      console.warn("[payments]", JSON.stringify({ ...logCtx, event: "not_found" }));
+      throw new Error("Transaction introuvable.");
+    }
+    if (pre.status !== "pending") {
+      console.log("[payments]", JSON.stringify({ ...logCtx, event: "already_finalized", current_status: pre.status }));
+      return pre;
     }
 
     const { data: tx, error } = await supabase
@@ -221,18 +248,26 @@ export const simulatePaymentCompletion = createServerFn({ method: "POST" })
       .eq("status", "pending")
       .select("id, status")
       .maybeSingle();
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error("[payments]", JSON.stringify({ ...logCtx, event: "update_error", error_message: error.message }));
+      throw new Error(error.message);
+    }
     if (!tx) {
-      // Idempotent: si la transaction a déjà été finalisée, renvoyer son état actuel
+      // Race: a été finalisée entre les deux requêtes — renvoyer l'état courant
       const { data: existing } = await supabase
         .from("transactions")
         .select("id, status")
         .eq("id", data.transactionId)
         .eq("user_id", userId)
         .maybeSingle();
-      if (existing) return existing;
+      if (existing) {
+        console.log("[payments]", JSON.stringify({ ...logCtx, event: "race_resolved", current_status: existing.status }));
+        return existing;
+      }
+      console.warn("[payments]", JSON.stringify({ ...logCtx, event: "vanished" }));
       throw new Error("Transaction introuvable.");
     }
+    console.log("[payments]", JSON.stringify({ ...logCtx, event: "finalized", status: tx.status }));
     return tx;
   });
 
