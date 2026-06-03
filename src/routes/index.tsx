@@ -458,7 +458,7 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
         </span>
         {ended && !paid ? (
           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-extrabold bg-zinc-500/15 border border-zinc-400/50 text-zinc-200 tracking-wider">
-            TERMINÉ
+            {t("coupon.expired", { defaultValue: "TERMINÉ" })}
           </span>
         ) : paid ? (
           <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold badge-unlocked">
@@ -536,7 +536,7 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
                 WebkitTextStroke: "1px rgba(255,255,255,0.25)",
               }}
             >
-              TERMINÉ
+              {t("coupon.expired", { defaultValue: "TERMINÉ" })}
             </span>
           </div>
         )}
@@ -603,7 +603,7 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
               aria-disabled="true"
               className="rounded-full px-5 h-9 font-semibold bg-zinc-600/30 text-zinc-200 border border-zinc-400/30 cursor-not-allowed"
             >
-              Terminé
+              {t("coupon.expired", { defaultValue: "TERMINÉ" })}
             </Button>
           ) : (
             <Button
