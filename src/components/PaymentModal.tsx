@@ -74,8 +74,8 @@ export function PaymentModal({
           setVideoUrl(v.url);
         } catch {}
         setStep("success");
-        toast.success("Paiement confirmé ! Coupon débloqué.");
-        setTimeout(() => onOpenChange(false), 1400);
+        toast.success("Paiement confirmé ! Coupon débloqué.", { duration: Infinity });
+        // Le modal reste ouvert : l'utilisateur le ferme manuellement.
       } else {
         // Live mode → mémoriser la transaction pour réouvrir l'état au retour
         try {

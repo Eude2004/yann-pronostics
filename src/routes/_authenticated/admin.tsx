@@ -408,13 +408,28 @@ function CouponsAdmin() {
     setOpen(true);
   };
 
+  const defaultDescriptionFor = (type: CouponType): string => {
+    switch (type) {
+      case "cote_10":
+        return "Un combiné stratégique à forte valeur ajoutée avec une côte globale de 10. Idéal pour multiplier vos gains grâce à l'analyse croisée de plusieurs rencontres à fort potentiel.";
+      case "cote_30":
+      case "cote_50":
+        return "Le grand coup du jour ! Une côte exceptionnelle de 20+ pour tenter de décrocher un gain majeur. Un ticket audacieux entièrement analysé par nos experts pour les parieurs à la recherche de grosses performances.";
+      case "pair_corner":
+        return "Découvrez notre pronostic sécurisé du jour avec une côte de 2. Une sélection rigoureuse basée sur des analyses statistiques approfondies pour optimiser vos gains avec un niveau de confiance maximal.";
+      default:
+        return "Profitez de notre analyse d'expert pour ce coupon exclusif du jour. Optimisez vos chances de validation grâce à nos pronostics sportifs de pointe.";
+    }
+  };
+
   const save = async () => {
     const meta = COUPON_TYPES.find(t => t.value === form.coupon_type)!;
+    const description = form.description.trim() || defaultDescriptionFor(form.coupon_type);
     const basePayload = {
       coupon_type: form.coupon_type,
       title: meta.label,
       price_xaf: meta.price,
-      description: form.description || null,
+      description,
       image_url: form.image_url || null,
       video_url: form.video_url || null,
       start_date: zonedInputToIso(form.start_date, timezone),
@@ -529,7 +544,10 @@ function CouponsAdmin() {
                 </SelectContent>
               </Select>
             </div>
-            <div><Label>Description</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Texte affiché sur la carte du coupon" /></div>
+            <div>
+              <Label>Description <span className="text-xs text-muted-foreground font-normal">(optionnel — générée automatiquement si vide selon le type)</span></Label>
+              <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Laissez vide pour utiliser la description par défaut du type de coupon" />
+            </div>
             <div className="space-y-2">
               <Label>Image du coupon <span className="text-xs text-muted-foreground font-normal">(optionnel)</span></Label>
               <div className="flex flex-wrap gap-2">
