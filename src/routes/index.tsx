@@ -162,13 +162,13 @@ function CouponsSection() {
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
-    // Coupon statuses are refreshed automatically by a pg_cron job every minute.
-    const now = new Date().toISOString();
+    // Règle des 4 coupons : on garde tous les coupons "published" (un seul actif par
+    // catégorie, garanti par le trigger DB). Un coupon dont la date de fin est passée
+    // reste affiché tant qu'aucun nouveau coupon de sa catégorie ne le remplace.
     const { data } = await supabase
       .from("coupons")
       .select("id, title, slug, description, sport, category_id, price_xaf, odds, image_url, preview_content, status, is_featured, created_by, created_at, updated_at, coupon_type, video_url, start_date, end_date, sales_count, event_date")
       .eq("status", "published")
-      .or(`end_date.is.null,end_date.gte.${now}`)
       .order("coupon_type");
     setCoupons((data as Coupon[]) ?? []);
     setLoading(false);
