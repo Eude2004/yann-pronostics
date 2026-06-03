@@ -32,9 +32,10 @@ export const getCouponVideoAccess = createServerFn({ method: "POST" })
     }
 
     // 2. Check access: active VIP OR paid for this coupon (OR admin)
+    const { supabaseAdmin: sa } = await import("@/integrations/supabase/client.server");
     const [{ data: vip }, { data: paid }, { data: rolesRow }] = await Promise.all([
-      supabase.rpc("has_active_vip", { _user_id: userId }),
-      supabase.rpc("has_paid_coupon", { _user_id: userId, _coupon_id: coupon.id }),
+      sa.rpc("has_active_vip", { _user_id: userId }),
+      sa.rpc("has_paid_coupon", { _user_id: userId, _coupon_id: coupon.id }),
       supabase.from("user_roles").select("role").eq("user_id", userId),
     ]);
 
