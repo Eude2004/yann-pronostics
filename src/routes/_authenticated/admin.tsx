@@ -379,7 +379,8 @@ function CouponsAdmin() {
 
   const load = async () => {
     // Coupon statuses are refreshed automatically by a pg_cron job every minute.
-    const { data, error } = await supabase.from("coupons").select("*")
+    const { data, error } = await supabase.from("coupons")
+      .select("id, title, slug, description, sport, category_id, price_xaf, odds, image_url, preview_content, status, is_featured, created_by, created_at, updated_at, coupon_type, video_url, start_date, end_date, sales_count, event_date")
       .order("created_at", { ascending: false });
     if (error) toast.error(error.message); else setItems((data as Coupon[]) ?? []);
   };
@@ -1107,7 +1108,7 @@ function StatsAdmin() {
       supabase.from("transactions").select("*").eq("kind", "coupon").order("created_at", { ascending: false }),
       supabase.from("profiles").select("id", { count: "exact", head: true }),
       supabase.from("coupons").select("id", { count: "exact", head: true }).eq("status", "published"),
-      supabase.from("coupons").select("*"),
+      supabase.from("coupons").select("id, title, slug, description, sport, category_id, price_xaf, odds, image_url, preview_content, status, is_featured, created_by, created_at, updated_at, coupon_type, video_url, start_date, end_date, sales_count, event_date"),
     ]);
     setTxs((t.data as Transaction[]) ?? []);
     setCoupons((cAll.data as Coupon[]) ?? []);
