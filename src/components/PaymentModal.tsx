@@ -34,15 +34,16 @@ export function PaymentModal({
 
   const [method, setMethod] = useState<Method>("mtn");
   const [phone, setPhone] = useState("");
-  const [step, setStep] = useState<"form" | "processing" | "success">("form");
+  const [step, setStep] = useState<"form" | "processing" | "success" | "error">("form");
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) {
       setStep("form");
       setVideoUrl(null);
-      setPhone("");
-      setMethod("mtn");
+      setErrorMsg(null);
+      // Conserver phone/method si l'utilisateur réessaye après échec
     }
   }, [open]);
 
@@ -54,6 +55,7 @@ export function PaymentModal({
       return;
     }
     setStep("processing");
+    setErrorMsg(null);
     try {
       const res = await initiate({
         data: {
@@ -73,17 +75,30 @@ export function PaymentModal({
         } catch {}
         setStep("success");
         toast.success("Paiement confirmé ! Coupon débloqué.");
-        // Auto-close so the card on the page reflects the unlocked state
         setTimeout(() => onOpenChange(false), 1400);
       } else {
-        // Live mode → redirect to provider
+        // Live mode → mémoriser la transaction pour réouvrir l'état au retour
+        try {
+          sessionStorage.setItem(
+            "yp:pending-payment",
+            JSON.stringify({ txId: res.transactionId, couponId: coupon.id, ts: Date.now() }),
+          );
+        } catch {}
         window.location.href = res.paymentUrl;
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Échec du paiement.");
-      setStep("form");
+      const msg = e instanceof Error ? e.message : "Échec du paiement.";
+      setErrorMsg(msg);
+      setStep("error");
+      toast.error(msg);
     }
   };
+
+  const onRetry = () => {
+    setErrorMsg(null);
+    setStep("form");
+  };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
