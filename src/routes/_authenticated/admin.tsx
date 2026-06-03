@@ -37,7 +37,7 @@ import {
   SidebarProvider, SidebarTrigger, useSidebar,
 } from "@/components/ui/sidebar";
 import { setTestPayMode as setTestPayModeFn } from "@/lib/payments.functions";
-import { listAdminUsers as listAdminUsersFn, setUserAdmin as setUserAdminFn, deleteAppUser as deleteAppUserFn } from "@/lib/admin-users.functions";
+import { listAdminUsers as listAdminUsersFn, setUserAdmin as setUserAdminFn, deleteAppUser as deleteAppUserFn, setUserDisabled as setUserDisabledFn } from "@/lib/admin-users.functions";
 import { logAdminAction } from "@/lib/audit";
 
 const ADMIN_VIEWS = ["stats", "coupons", "transactions", "reviews", "users", "audit", "settings"] as const;
@@ -671,10 +671,12 @@ function TransactionsAdmin() {
   };
 
   const remove = async (id: string) => {
-    if (!confirm("Supprimer cette transaction ?")) return;
+    if (!confirm("Supprimer cette transaction ? Cette action est irréversible.")) return;
     const { error } = await supabase.from("transactions").delete().eq("id", id);
     if (error) return toast.error(error.message);
-    toast.success("Supprimée");
+    await logAdminAction("delete_transaction", "transaction", id);
+    setItems((prev) => prev.filter((t) => t.id !== id));
+    toast.success("Transaction supprimée");
   };
 
   const badge = (s: TxStatus) => ({
@@ -1465,6 +1467,7 @@ type AdminUser = {
   last_sign_in_at: string | null;
   roles: string[];
   profile: { id: string; full_name: string | null; username: string | null; whatsapp: string | null } | null;
+  disabled?: boolean;
 };
 
 function UsersAdmin() {
@@ -1474,6 +1477,7 @@ function UsersAdmin() {
   const fetchUsers = useServerFn(listAdminUsersFn);
   const toggleAdmin = useServerFn(setUserAdminFn);
   const removeUser = useServerFn(deleteAppUserFn);
+  const toggleDisabled = useServerFn(setUserDisabledFn);
 
   const load = async () => {
     setLoading(true);
@@ -1505,6 +1509,18 @@ function UsersAdmin() {
     try {
       await removeUser({ data: { user_id: u.id } });
       toast.success("Utilisateur supprimé");
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Échec");
+    }
+  };
+
+  const onToggleDisabled = async (u: AdminUser) => {
+    const disable = !u.disabled;
+    if (disable && !confirm(`Désactiver ${u.email} ? Il/elle ne pourra plus se connecter.`)) return;
+    try {
+      await toggleDisabled({ data: { user_id: u.id, disabled: disable } });
+      toast.success(disable ? "Utilisateur désactivé" : "Utilisateur réactivé");
       load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Échec");
@@ -1553,7 +1569,9 @@ function UsersAdmin() {
                   <TableCell className="text-xs text-muted-foreground">{new Date(u.created_at).toLocaleDateString("fr-FR")}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">{u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleDateString("fr-FR") : "Jamais"}</TableCell>
                   <TableCell>
-                    {u.roles.includes("admin") ? (
+                    {u.disabled ? (
+                      <Badge variant="destructive">Désactivé</Badge>
+                    ) : u.roles.includes("admin") ? (
                       <Badge className="bg-primary/15 text-primary border border-primary/30">
                         <Shield className="w-3 h-3 mr-1" />Admin
                       </Badge>
@@ -1564,6 +1582,15 @@ function UsersAdmin() {
                   <TableCell className="text-right whitespace-nowrap">
                     <Button size="sm" variant="outline" onClick={() => onToggleAdmin(u)} className="mr-1">
                       {u.roles.includes("admin") ? "Retirer admin" : "Promouvoir"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onToggleDisabled(u)}
+                      className="mr-1"
+                      title={u.disabled ? "Réactiver" : "Désactiver"}
+                    >
+                      {u.disabled ? "Réactiver" : "Désactiver"}
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => onDelete(u)}>
                       <Trash2 className="w-4 h-4 text-destructive" />
@@ -1606,6 +1633,9 @@ const ACTION_LABELS: Record<string, string> = {
   promote_admin: "Promotion admin",
   demote_admin: "Rétrogradation admin",
   delete_user: "Suppression d'utilisateur",
+  disable_user: "Désactivation d'utilisateur",
+  enable_user: "Réactivation d'utilisateur",
+  delete_transaction: "Suppression de transaction",
 };
 
 function AuditAdmin() {

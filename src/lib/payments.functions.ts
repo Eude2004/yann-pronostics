@@ -64,20 +64,53 @@ export const initiatePayment = createServerFn({ method: "POST" })
     const amountXaf = c.price_xaf;
     const description = `Coupon: ${c.title}`;
 
-    // Création transaction pending
-    const { data: tx, error: txErr } = await supabase
+    // Idempotence : une seule transaction par (user_id, coupon_id).
+    // - completed → déjà payé, rien à faire
+    // - pending/failed/refunded → on RÉUTILISE la même ligne et on remet en pending
+    const { data: existing } = await supabase
       .from("transactions")
-      .insert({
-        user_id: userId,
-        kind: "coupon",
-        coupon_id: data.couponId,
-        amount_xaf: amountXaf,
-        status: "pending",
-        payment_method: "cinetpay",
-      })
-      .select("id")
-      .single();
-    if (txErr || !tx) throw new Error(txErr?.message ?? "Création transaction échouée.");
+      .select("id, status")
+      .eq("user_id", userId)
+      .eq("coupon_id", data.couponId)
+      .eq("kind", "coupon")
+      .maybeSingle();
+
+    if (existing && existing.status === "completed") {
+      throw new Error("Vous avez déjà acheté ce coupon.");
+    }
+
+    let tx: { id: string };
+    if (existing) {
+      const { data: upd, error: updErr } = await supabase
+        .from("transactions")
+        .update({
+          status: "pending",
+          amount_xaf: amountXaf,
+          payment_method: "cinetpay",
+          notes: "Nouvelle tentative",
+        })
+        .eq("id", existing.id)
+        .eq("user_id", userId)
+        .select("id")
+        .single();
+      if (updErr || !upd) throw new Error(updErr?.message ?? "Réutilisation transaction échouée.");
+      tx = upd;
+    } else {
+      const { data: ins, error: txErr } = await supabase
+        .from("transactions")
+        .insert({
+          user_id: userId,
+          kind: "coupon",
+          coupon_id: data.couponId,
+          amount_xaf: amountXaf,
+          status: "pending",
+          payment_method: "cinetpay",
+        })
+        .select("id")
+        .single();
+      if (txErr || !ins) throw new Error(txErr?.message ?? "Création transaction échouée.");
+      tx = ins;
+    }
 
     const apiKey = process.env.CINETPAY_API_KEY;
     const siteId = process.env.CINETPAY_SITE_ID;

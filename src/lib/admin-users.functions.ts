@@ -40,14 +40,19 @@ export const listAdminUsers = createServerFn({ method: "GET" })
     );
 
     return {
-      users: authList.users.map((u) => ({
-        id: u.id,
-        email: u.email ?? "",
-        created_at: u.created_at,
-        last_sign_in_at: u.last_sign_in_at ?? null,
-        roles: rolesByUser.get(u.id) ?? [],
-        profile: profileMap.get(u.id) ?? null,
-      })),
+      users: authList.users.map((u) => {
+        const banned = (u as { banned_until?: string | null }).banned_until ?? null;
+        const isBanned = !!(banned && new Date(banned).getTime() > Date.now());
+        return {
+          id: u.id,
+          email: u.email ?? "",
+          created_at: u.created_at,
+          last_sign_in_at: u.last_sign_in_at ?? null,
+          roles: rolesByUser.get(u.id) ?? [],
+          profile: profileMap.get(u.id) ?? null,
+          disabled: isBanned,
+        };
+      }),
     };
   });
 
@@ -96,6 +101,44 @@ export const setUserAdmin = createServerFn({ method: "POST" })
     });
 
     return { ok: true };
+  });
+
+export const setUserDisabled = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({
+      user_id: z.string().uuid(),
+      disabled: z.boolean(),
+    }).parse(input),
+  )
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    if (data.user_id === userId) throw new Error("Vous ne pouvez pas vous désactiver vous-même.");
+
+    const { data: roleRow } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "admin")
+      .maybeSingle();
+    if (!roleRow) throw new Error("Forbidden");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // ban_duration: durée très longue pour désactiver, "none" pour réactiver
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
+      ban_duration: data.disabled ? "876000h" : "none",
+    });
+    if (error) throw new Error(error.message);
+
+    await supabaseAdmin.from("admin_audit_log").insert({
+      actor_id: userId,
+      action: data.disabled ? "disable_user" : "enable_user",
+      entity_type: "user",
+      entity_id: data.user_id,
+      details: {},
+    });
+
+    return { ok: true, disabled: data.disabled };
   });
 
 export const deleteAppUser = createServerFn({ method: "POST" })
