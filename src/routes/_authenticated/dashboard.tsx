@@ -445,7 +445,7 @@ function UserCouponCard({
 
   return (
     <div
-      className={`group relative rounded-2xl border ${th.ring} bg-card overflow-hidden transition-all duration-300 hover:-translate-y-0.5 ${th.glow} hover:shadow-[0_0_60px_-8px_currentColor]`}
+      className={`group relative rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-0.5 glass-card ${paid ? "unlocked-border" : "locked-glow"}`}
     >
       {/* Unlock flash overlay */}
       {justUnlocked && (
@@ -456,41 +456,24 @@ function UserCouponCard({
       )}
 
       {/* Top header strip with badges */}
-      <div className="flex items-start justify-between px-4 pt-4">
-        <span
-          className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold border ${th.badgeBorder} ${th.badgeBg} ${th.text}`}
-        >
+      <div className="flex items-start justify-between px-3 pt-3">
+        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold glass-pill text-amber-300">
+          <Trophy className="w-3 h-3" />
           {typeLabel(coupon)}
         </span>
         {paid && (
           <span
-            className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold border border-emerald-500/50 bg-emerald-500/10 text-emerald-400 ${justUnlocked ? "unlock-burst" : ""}`}
+            className={`inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold badge-unlocked ${justUnlocked ? "unlock-burst" : ""}`}
           >
             {t("dashboard.unlocked")}
           </span>
         )}
       </div>
 
-      {/* Media / preview area — square, matches mockup */}
+      {/* Media / preview area — square */}
       <div
-        className={`mt-3 mx-3 sm:mx-4 rounded-xl border ${th.badgeBorder} aspect-square flex items-center justify-center overflow-hidden relative isolate`}
-        style={{
-          background:
-            "radial-gradient(120% 90% at 50% 0%, rgba(255,255,255,0.04), transparent 60%), linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.15))",
-        }}
+        className={`mt-3 mx-3 rounded-xl aspect-square flex items-center justify-center overflow-hidden relative isolate ${paid ? "bg-chart-dark" : "brushed-gold"}`}
       >
-        {/* Subtle grid backdrop */}
-        <div
-          aria-hidden
-          className="absolute inset-0 opacity-[0.07] pointer-events-none"
-          style={{
-            backgroundImage:
-              "linear-gradient(currentColor 1px, transparent 1px), linear-gradient(90deg, currentColor 1px, transparent 1px)",
-            backgroundSize: "22px 22px",
-            color: "white",
-          }}
-        />
-
         {url && playing ? (
           <video
             src={url}
@@ -503,70 +486,47 @@ function UserCouponCard({
             type="button"
             onClick={onUnlock}
             disabled={busy}
-            className="relative flex flex-col items-center justify-center gap-2 w-full h-full focus:outline-none group/play"
+            className="relative flex items-center justify-center w-full h-full focus:outline-none"
             aria-label={t("dashboard.watch")}
           >
-            <span
-              aria-hidden
-              className={`absolute w-20 h-20 rounded-full border ${th.badgeBorder} lock-ring-pulse`}
-            />
-            <span
-              className={`relative w-16 h-16 rounded-full flex items-center justify-center ${th.badgeBg} border ${th.badgeBorder} backdrop-blur-sm transition-transform group-hover/play:scale-110`}
-            >
+            <span className="glass-play">
               {busy ? (
-                <Loader2 className={`w-7 h-7 animate-spin ${th.text}`} />
+                <Loader2 className="w-7 h-7 animate-spin" />
               ) : (
-                <Play className={`w-7 h-7 ${th.text} fill-current ml-0.5`} />
+                <Play className="w-7 h-7 fill-current ml-0.5" style={{ filter: "drop-shadow(0 0 6px rgba(56,189,248,0.9))" }} />
               )}
             </span>
           </button>
         ) : (
-          <>
-            {/* Shimmer overlay */}
-            <div
-              aria-hidden
-              className="absolute inset-0 lock-shimmer pointer-events-none"
-            />
-            {/* Scanline */}
-            <div
-              aria-hidden
-              className={`absolute inset-x-0 h-px scanline ${th.text}`}
-              style={{ boxShadow: "0 0 12px currentColor" }}
-            />
-
-            <div className="relative flex flex-col items-center gap-3 px-4">
-              {/* Pulsing rings */}
-              <div className="relative flex items-center justify-center">
-                <span
-                  aria-hidden
-                  className={`absolute w-24 h-24 rounded-full border ${th.badgeBorder} lock-ring-pulse`}
-                  style={{ animationDelay: "0s" }}
-                />
-                <span
-                  aria-hidden
-                  className={`absolute w-24 h-24 rounded-full border ${th.badgeBorder} lock-ring-pulse`}
-                  style={{ animationDelay: "1.2s" }}
-                />
-                <span
-                  className={`relative w-16 h-16 rounded-full flex items-center justify-center ${th.badgeBg} border ${th.badgeBorder} backdrop-blur-sm lock-float`}
-                >
-                  <Lock className={`w-7 h-7 ${th.text}`} />
-                </span>
-              </div>
+          <div className="relative flex flex-col items-center gap-3 px-4">
+            {/* 3D-ish gold padlock */}
+            <div className="relative flex items-center justify-center">
               <span
-                className={`text-[10px] sm:text-[11px] font-semibold tracking-[0.18em] ${th.text} text-center`}
+                aria-hidden
+                className="absolute w-24 h-24 rounded-full lock-ring-pulse"
+                style={{ boxShadow: "0 0 0 1px rgba(255,255,255,0.25) inset" }}
+              />
+              <span
+                className="relative w-16 h-16 rounded-2xl flex items-center justify-center lock-float"
+                style={{
+                  background: "radial-gradient(circle at 30% 25%, #fff1b8, #d4af37 60%, #6b4f12)",
+                  boxShadow: "inset 0 2px 2px rgba(255,255,255,0.6), inset 0 -6px 12px rgba(0,0,0,0.35), 0 6px 14px rgba(0,0,0,0.45)",
+                }}
               >
-                {t("dashboard.access_restricted")}
+                <Lock className="w-7 h-7 text-amber-950" strokeWidth={2.5} />
               </span>
             </div>
-          </>
+            <span className="font-serif text-[13px] sm:text-sm font-bold text-bronze text-center">
+              ACCÈS RESTREINT
+            </span>
+          </div>
         )}
       </div>
 
       {/* Body */}
-      <div className="px-4 pt-4 pb-4 space-y-3">
+      <div className="px-4 pt-3 pb-4 space-y-2.5">
         <div>
-          <h3 className="font-display text-xl tracking-wide text-foreground">
+          <h3 className="font-serif text-xl tracking-wide text-foreground">
             {coupon.title}
           </h3>
           <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2 min-h-[2rem]">
@@ -574,15 +534,22 @@ function UserCouponCard({
           </p>
         </div>
 
-        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-          <Info className="w-3.5 h-3.5" />
-          <span>{t("dashboard.available_today")}</span>
+        <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5">
+            <Info className="w-3.5 h-3.5" />
+            {t("dashboard.available_today")}
+          </span>
+          {!paid && (
+            <button type="button" className="text-amber-300 hover:text-amber-200 underline-offset-2 hover:underline">
+              {t("dashboard.learn_more", { defaultValue: "Savoir Plus" })}
+            </button>
+          )}
         </div>
 
         <div className="flex items-end justify-between gap-3 pt-1">
-          <div className="font-display text-2xl text-gold leading-none">
+          <div className="font-sans text-2xl font-bold text-gold leading-none">
             {coupon.price_xaf.toLocaleString("fr-FR")}
-            <span className="block text-xs font-sans text-muted-foreground mt-1">
+            <span className="block text-[10px] font-semibold text-muted-foreground mt-1 tracking-wider">
               FCFA
             </span>
           </div>
@@ -591,9 +558,9 @@ function UserCouponCard({
             <div className="flex items-center gap-2">
               <Button
                 size="sm"
-                variant="outline"
+                variant="ghost"
                 onClick={onDownload}
-                className={`border ${th.badgeBorder} bg-transparent ${th.text} hover:bg-emerald-500/10`}
+                className="glass-pill rounded-full px-3 h-9 text-foreground"
               >
                 <Download className="w-4 h-4 mr-1" />
                 {t("dashboard.download")}
@@ -602,7 +569,8 @@ function UserCouponCard({
                 size="sm"
                 onClick={onUnlock}
                 disabled={busy}
-                className={`${th.btnBg} ${th.btnHover} text-white font-semibold`}
+                className="glass-pill rounded-full px-3 h-9 text-emerald-300 hover:text-emerald-200"
+                style={{ boxShadow: "0 0 18px rgba(52,211,153,0.35)" }}
               >
                 {busy ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -619,13 +587,13 @@ function UserCouponCard({
               size="sm"
               onClick={onBuy}
               disabled={busy}
-              className="bg-gold-gradient text-primary-foreground font-semibold shadow-gold"
+              className="btn-gold rounded-full px-5 h-9 font-semibold"
             >
               {busy ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <>
-                  <ShoppingCart className="w-4 h-4 mr-1" />
+                  <ShoppingCart className="w-4 h-4 mr-1.5" />
                   {t("coupon.buy")}
                 </>
               )}
