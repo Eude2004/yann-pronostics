@@ -1465,6 +1465,7 @@ type AdminUser = {
   last_sign_in_at: string | null;
   roles: string[];
   profile: { id: string; full_name: string | null; username: string | null; whatsapp: string | null } | null;
+  disabled?: boolean;
 };
 
 function UsersAdmin() {
@@ -1474,6 +1475,7 @@ function UsersAdmin() {
   const fetchUsers = useServerFn(listAdminUsersFn);
   const toggleAdmin = useServerFn(setUserAdminFn);
   const removeUser = useServerFn(deleteAppUserFn);
+  const toggleDisabled = useServerFn(setUserDisabledFn);
 
   const load = async () => {
     setLoading(true);
