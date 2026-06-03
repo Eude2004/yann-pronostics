@@ -133,6 +133,7 @@ function Dashboard() {
 
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [paidIds, setPaidIds] = useState<Set<string>>(new Set());
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     if (!loading && isAdmin) {
