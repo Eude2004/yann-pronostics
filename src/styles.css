@@ -43,7 +43,8 @@
   --color-sidebar-ring: var(--sidebar-ring);
 
   --font-display: "Bebas Neue", system-ui, sans-serif;
-  --font-sans: "Inter", system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
+  --font-serif: "Playfair Display", Georgia, serif;
 }
 
 :root {
