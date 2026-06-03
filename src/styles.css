@@ -223,3 +223,35 @@
   20% { opacity: 0.7; }
   100% { transform: translateY(220%); opacity: 0; }
 }
+
+/* Unlock burst — plays once when a coupon flips from locked → paid */
+.unlock-burst { animation: unlock-burst 900ms ease-out both; }
+@keyframes unlock-burst {
+  0%   { transform: scale(0.6); opacity: 0; box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+  35%  { transform: scale(1.08); opacity: 1; box-shadow: 0 0 0 8px rgba(16,185,129,0.35); }
+  70%  { transform: scale(1); opacity: 1; box-shadow: 0 0 0 24px rgba(16,185,129,0); }
+  100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+}
+
+.unlock-flash { animation: unlock-flash 900ms ease-out both; }
+@keyframes unlock-flash {
+  0%   { background: rgba(16,185,129,0); }
+  40%  { background: rgba(16,185,129,0.18); }
+  100% { background: rgba(16,185,129,0); }
+}
+
+/* Skeleton shimmer for loading cards */
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.04) 0%,
+    rgba(255,255,255,0.10) 50%,
+    rgba(255,255,255,0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-move 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-move {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
