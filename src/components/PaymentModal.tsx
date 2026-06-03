@@ -67,10 +67,14 @@ export function PaymentModal({
       if (res.mode === "test") {
         // Simulate immediate confirmation
         await simulate({ data: { transactionId: res.transactionId, outcome: "completed" } });
-        const v = await getVideo({ data: { couponId: coupon.id } });
-        setVideoUrl(v.url);
+        try {
+          const v = await getVideo({ data: { couponId: coupon.id } });
+          setVideoUrl(v.url);
+        } catch {}
         setStep("success");
-        toast.success("Paiement confirmé !");
+        toast.success("Paiement confirmé ! Coupon débloqué.");
+        // Auto-close so the card on the page reflects the unlocked state
+        setTimeout(() => onOpenChange(false), 1400);
       } else {
         // Live mode → redirect to provider
         window.location.href = res.paymentUrl;

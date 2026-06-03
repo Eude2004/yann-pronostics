@@ -5,7 +5,8 @@ import { useTranslation } from "react-i18next";
 import logo from "@/assets/yann-logo.png";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Lock, TrendingUp, Trophy, Zap, ShieldCheck, Star, Flame, ArrowRight, MessageCircle, LayoutDashboard, Calendar, ShoppingCart, Loader2 } from "lucide-react";
+import { Lock, TrendingUp, Trophy, Zap, ShieldCheck, Star, Flame, ArrowRight, MessageCircle, LayoutDashboard, Calendar, ShoppingCart, Loader2, Play, CheckCircle2 } from "lucide-react";
+import { getCouponVideoAccess } from "@/lib/coupon-access.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { useSettings, whatsappLink } from "@/hooks/use-settings";
@@ -155,7 +156,9 @@ function Stats() {
 
 
 function CouponsSection() {
+  const { session } = useAuth();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [paidIds, setPaidIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
@@ -170,6 +173,17 @@ function CouponsSection() {
     setLoading(false);
   };
 
+  const loadPaid = async () => {
+    if (!session?.user) { setPaidIds(new Set()); return; }
+    const { data } = await supabase
+      .from("transactions")
+      .select("coupon_id")
+      .eq("user_id", session.user.id)
+      .eq("status", "completed")
+      .eq("kind", "coupon");
+    setPaidIds(new Set((data ?? []).map((t: any) => t.coupon_id).filter(Boolean)));
+  };
+
   useEffect(() => {
     load();
     const channel = supabase
@@ -179,6 +193,22 @@ function CouponsSection() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
+  useEffect(() => {
+    loadPaid();
+    if (!session?.user) return;
+    const ch = supabase
+      .channel(`home-tx-${session.user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "transactions", filter: `user_id=eq.${session.user.id}` },
+        loadPaid,
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.id]);
+
+  const purchasedCount = paidIds.size;
 
   return (
     <section id="coupons" className="py-20 sm:py-28">
@@ -189,30 +219,57 @@ function CouponsSection() {
           </Badge>
           <h2 className="mt-4 font-display text-4xl sm:text-5xl">Choisissez votre <span className="text-gold">coupon premium</span></h2>
           <p className="mt-3 text-muted-foreground max-w-xl mx-auto">4 coupons exclusifs chaque jour. Vidéo verrouillée jusqu'au paiement, déblocage instantané.</p>
+          {session && (
+            <div className="mt-4 inline-flex items-center gap-2 text-xs text-muted-foreground">
+              <span>{coupons.length} coupons disponibles</span>
+              {purchasedCount > 0 && (
+                <>
+                  <span>·</span>
+                  <span className="text-emerald-500 font-medium inline-flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" /> {purchasedCount} acheté{purchasedCount > 1 ? "s" : ""}
+                  </span>
+                </>
+              )}
+            </div>
+          )}
         </div>
         {loading ? (
           <div className="text-center text-muted-foreground py-12">Chargement…</div>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {coupons.map((c) => <CouponCard key={c.id} coupon={c} />)}
+            {coupons.map((c) => <CouponCard key={c.id} coupon={c} paid={paidIds.has(c.id)} />)}
           </div>
         )}
       </div>
+
     </section>
   );
 }
 
-function CouponCard({ coupon }: { coupon: Coupon }) {
+function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
   const { t } = useTranslation();
   const { session } = useAuth();
+  const getAccess = useServerFn(getCouponVideoAccess);
   const [promptOpen, setPromptOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
+  const [url, setUrl] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const meta = coupon.coupon_type ? TYPE_META[coupon.coupon_type] : TYPE_META.cote_10;
   const Icon = meta.icon;
 
   const dateLabel = coupon.start_date
     ? new Date(coupon.start_date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })
     : new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
+
+  useEffect(() => {
+    if (!paid || url) return;
+    (async () => {
+      try {
+        const res = await getAccess({ data: { couponId: coupon.id } });
+        if (res.url) setUrl(res.url);
+      } catch {}
+    })();
+  }, [paid, url, getAccess, coupon.id]);
 
   const handleBuy = () => {
     if (!session) {
@@ -226,12 +283,31 @@ function CouponCard({ coupon }: { coupon: Coupon }) {
     setPayOpen(true);
   };
 
+  const handlePlay = async () => {
+    if (url) return;
+    setBusy(true);
+    try {
+      const res = await getAccess({ data: { couponId: coupon.id } });
+      if (res.url) setUrl(res.url);
+      else if (res.reason === "no_video") toast.info("Vidéo bientôt disponible.");
+      else toast.error("Accès refusé.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur d'accès.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
-    <div className="group relative rounded-2xl border border-border/60 bg-card overflow-hidden transition-all hover:border-primary/50 hover:shadow-gold">
+    <div className={`group relative rounded-2xl border bg-card overflow-hidden transition-all hover:shadow-gold ${paid ? "border-emerald-500/50" : "border-border/60 hover:border-primary/50"}`}>
       <Badge className="absolute top-4 right-4 z-10 bg-gold-gradient text-primary-foreground border-0 shadow-gold">
         <Star className="w-3 h-3 mr-1 fill-current" /> Premium
       </Badge>
-      {meta.hot && (
+      {paid ? (
+        <Badge className="absolute top-4 left-4 z-10 bg-emerald-500 text-white border-0">
+          <CheckCircle2 className="w-3 h-3 mr-1" /> Débloqué
+        </Badge>
+      ) : meta.hot && (
         <Badge className="absolute top-4 left-4 z-10 bg-destructive text-destructive-foreground">
           <Flame className="w-3 h-3 mr-1" /> HOT
         </Badge>
@@ -256,9 +332,21 @@ function CouponCard({ coupon }: { coupon: Coupon }) {
           {coupon.description || "Pronostic premium analysé par nos experts."}
         </p>
 
-        <div className="mt-4 relative rounded-xl border border-dashed border-primary/30 bg-background/40 p-6 flex flex-col items-center justify-center min-h-32">
-          {coupon.image_url ? (
-            <div className="relative w-full h-32 rounded-lg overflow-hidden">
+        <div className="mt-4 relative rounded-xl border border-dashed border-primary/30 bg-background/40 overflow-hidden aspect-video flex items-center justify-center">
+          {paid && url ? (
+            <video src={url} controls className="w-full h-full bg-black" />
+          ) : paid ? (
+            <button
+              type="button"
+              onClick={handlePlay}
+              disabled={busy}
+              className="w-full h-full flex flex-col items-center justify-center bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors"
+            >
+              {busy ? <Loader2 className="w-8 h-8 animate-spin text-emerald-500" /> : <Play className="w-10 h-10 text-emerald-500 fill-emerald-500" />}
+              <p className="mt-2 text-xs text-emerald-500 font-medium">Lire la vidéo</p>
+            </button>
+          ) : coupon.image_url ? (
+            <div className="relative w-full h-full">
               <img src={coupon.image_url} alt="" className="w-full h-full object-cover blur-md" />
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/60">
                 <Lock className="w-7 h-7 text-primary" />
@@ -266,26 +354,37 @@ function CouponCard({ coupon }: { coupon: Coupon }) {
               </div>
             </div>
           ) : (
-            <>
+            <div className="flex flex-col items-center">
               <Lock className="w-7 h-7 text-primary/70" />
               <p className="mt-2 text-xs text-muted-foreground">Vidéo verrouillée</p>
-            </>
+            </div>
           )}
         </div>
 
         <div className="mt-6 flex items-center justify-between gap-2">
           <div>
             <div className="text-xs text-muted-foreground">{t("coupon.price")}</div>
-            <div className="font-display text-2xl text-gold">{coupon.price_xaf.toLocaleString("fr-FR")} XAF</div>
+            <div className="font-display text-2xl text-gold">{coupon.price_xaf.toLocaleString("fr-FR")} FCFA</div>
           </div>
-          <Button
-            onClick={handleBuy}
-            className="bg-gold-gradient text-primary-foreground hover:opacity-90 font-semibold shadow-gold"
-          >
-            {t("coupon.buy")}
-          </Button>
+          {paid ? (
+            <Button
+              onClick={handlePlay}
+              disabled={busy || !!url}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold"
+            >
+              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Play className="w-4 h-4 mr-1 fill-current" /> Voir</>}
+            </Button>
+          ) : (
+            <Button
+              onClick={handleBuy}
+              className="bg-gold-gradient text-primary-foreground hover:opacity-90 font-semibold shadow-gold"
+            >
+              {t("coupon.buy")}
+            </Button>
+          )}
         </div>
       </div>
+
       <VisitorSignupPrompt open={promptOpen} onOpenChange={setPromptOpen} couponId={coupon.id} />
       {session && (
         <PaymentModal
