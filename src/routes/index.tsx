@@ -276,8 +276,17 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
   const [url, setUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [now, setNow] = useState(() => new Date());
   const meta = coupon.coupon_type ? TYPE_META[coupon.coupon_type] : TYPE_META.cote_10;
   const Icon = meta.icon;
+
+  // Re-check expiry every 30s so the card flips to "TERMINÉ" without a reload.
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const ended = !!coupon.end_date && new Date(coupon.end_date).getTime() <= now.getTime();
 
   const dateLabel = coupon.start_date
     ? new Date(coupon.start_date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })
@@ -294,6 +303,10 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
   }, [paid, url, getAccess, coupon.id]);
 
   const handleBuy = () => {
+    if (ended) {
+      toast.info("Ce coupon est terminé et n'est plus disponible à l'achat.");
+      return;
+    }
     if (!session) {
       toast.info("Connectez-vous pour acheter un coupon.");
       navigate({ to: "/auth", search: { redirect: "/" } as any });
