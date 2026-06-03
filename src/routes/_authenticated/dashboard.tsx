@@ -50,7 +50,7 @@ function Dashboard() {
     const [{ data: cps }, { data: txs }] = await Promise.all([
       supabase
         .from("coupons")
-        .select("*")
+        .select("id, title, slug, description, sport, category_id, price_xaf, odds, image_url, preview_content, status, is_featured, created_by, created_at, updated_at, coupon_type, video_url, start_date, end_date, sales_count, event_date")
         .eq("status", "published")
         .or(`end_date.is.null,end_date.gte.${now}`)
         .order("coupon_type"),
