@@ -249,7 +249,7 @@ function CouponsSection() {
 function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
   const { t } = useTranslation();
   const { session } = useAuth();
-  const getAccess = _useServerFn(getCouponVideoAccess);
+  const getAccess = useServerFn(getCouponVideoAccess);
   const [promptOpen, setPromptOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
   const [url, setUrl] = useState<string | null>(null);
