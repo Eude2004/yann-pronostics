@@ -11,8 +11,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSettings, whatsappLink } from "@/hooks/use-settings";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageToggle } from "@/components/LanguageToggle";
-import { initiatePayment } from "@/lib/payments.functions";
 import { VisitorSignupPrompt } from "@/components/VisitorSignupPrompt";
+import { PaymentModal } from "@/components/PaymentModal";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
