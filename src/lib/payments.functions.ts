@@ -222,7 +222,17 @@ export const simulatePaymentCompletion = createServerFn({ method: "POST" })
       .select("id, status")
       .maybeSingle();
     if (error) throw new Error(error.message);
-    if (!tx) throw new Error("Transaction déjà finalisée ou introuvable.");
+    if (!tx) {
+      // Idempotent: si la transaction a déjà été finalisée, renvoyer son état actuel
+      const { data: existing } = await supabase
+        .from("transactions")
+        .select("id, status")
+        .eq("id", data.transactionId)
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (existing) return existing;
+      throw new Error("Transaction introuvable.");
+    }
     return tx;
   });
 
