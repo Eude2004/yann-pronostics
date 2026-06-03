@@ -1567,7 +1567,9 @@ function UsersAdmin() {
                   <TableCell className="text-xs text-muted-foreground">{new Date(u.created_at).toLocaleDateString("fr-FR")}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">{u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleDateString("fr-FR") : "Jamais"}</TableCell>
                   <TableCell>
-                    {u.roles.includes("admin") ? (
+                    {u.disabled ? (
+                      <Badge variant="destructive">Désactivé</Badge>
+                    ) : u.roles.includes("admin") ? (
                       <Badge className="bg-primary/15 text-primary border border-primary/30">
                         <Shield className="w-3 h-3 mr-1" />Admin
                       </Badge>
@@ -1578,6 +1580,15 @@ function UsersAdmin() {
                   <TableCell className="text-right whitespace-nowrap">
                     <Button size="sm" variant="outline" onClick={() => onToggleAdmin(u)} className="mr-1">
                       {u.roles.includes("admin") ? "Retirer admin" : "Promouvoir"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onToggleDisabled(u)}
+                      className="mr-1"
+                      title={u.disabled ? "Réactiver" : "Désactiver"}
+                    >
+                      {u.disabled ? "Réactiver" : "Désactiver"}
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => onDelete(u)}>
                       <Trash2 className="w-4 h-4 text-destructive" />
