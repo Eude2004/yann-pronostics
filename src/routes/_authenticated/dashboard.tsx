@@ -161,9 +161,9 @@ function UserCouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const getAccess = useServerFn(getCouponVideoAccess);
-  const initiate = useServerFn(initiatePayment);
   const [busy, setBusy] = useState(false);
   const [url, setUrl] = useState<string | null>(null);
+  const [payOpen, setPayOpen] = useState(false);
 
   // Auto-fetch the video URL when paid (so it unlocks instantly via realtime)
   useEffect(() => {
@@ -194,27 +194,7 @@ function UserCouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
     }
   };
 
-  const onBuy = async () => {
-    if (!user) return;
-    setBusy(true);
-    try {
-      const res = await initiate({
-        data: {
-          kind: "coupon",
-          couponId: coupon.id,
-          returnOrigin: window.location.origin,
-          customer: {
-            name: user.user_metadata?.full_name ?? undefined,
-            email: user.email ?? undefined,
-          },
-        },
-      });
-      window.location.href = res.paymentUrl;
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("coupon.init_failed"));
-      setBusy(false);
-    }
-  };
+  const onBuy = () => setPayOpen(true);
 
   return (
     <div className="rounded-2xl border border-border/60 bg-card overflow-hidden">
