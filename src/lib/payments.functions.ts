@@ -110,15 +110,20 @@ export const initiatePayment = createServerFn({ method: "POST" })
       throw new Error("Vous avez déjà acheté ce coupon.");
     }
 
+    // ⚠️ MODE TEST GLOBAL : toute nouvelle transaction est créée comme "completed"
+    // pour débloquer immédiatement la vidéo. À retirer avant la mise en production.
+    const TEST_AUTO_COMPLETE = true;
+    const initialStatus = TEST_AUTO_COMPLETE ? "completed" : "pending";
+
     let tx: { id: string };
     if (existing) {
       const { data: upd, error: updErr } = await supabase
         .from("transactions")
         .update({
-          status: "pending",
+          status: initialStatus,
           amount_xaf: amountXaf,
           payment_method: "cinetpay",
-          notes: "Nouvelle tentative",
+          notes: TEST_AUTO_COMPLETE ? "Auto-validé (mode test)" : "Nouvelle tentative",
         })
         .eq("id", existing.id)
         .eq("user_id", userId)
@@ -134,8 +139,9 @@ export const initiatePayment = createServerFn({ method: "POST" })
           kind: "coupon",
           coupon_id: data.couponId,
           amount_xaf: amountXaf,
-          status: "pending",
+          status: initialStatus,
           payment_method: "cinetpay",
+          notes: TEST_AUTO_COMPLETE ? "Auto-validé (mode test)" : null,
         })
         .select("id")
         .single();
@@ -149,20 +155,35 @@ export const initiatePayment = createServerFn({ method: "POST" })
     const notifyUrl = `${origin}/api/public/cinetpay/notify`;
     const returnUrl = `${origin}/payment/return?tx=${tx.id}`;
 
-    // Mode test : pas de clés OU Mode Test Pay activé
-    if (!apiKey || !siteId || testPayMode) {
+    // Mode test : auto-complete, pas de clés OU Mode Test Pay activé
+    if (TEST_AUTO_COMPLETE || !apiKey || !siteId || testPayMode) {
+      const ref = `MOCK-${tx.id.slice(0, 8)}`;
       await supabase
         .from("transactions")
         .update({
-          reference: `MOCK-${tx.id.slice(0, 8)}`,
-          notes: testPayMode ? "Mode Test Pay (admin)" : "Mode test (CinetPay non configuré)",
+          reference: ref,
+          notes: TEST_AUTO_COMPLETE
+            ? "Auto-validé (mode test global)"
+            : testPayMode ? "Mode Test Pay (admin)" : "Mode test (CinetPay non configuré)",
         })
         .eq("id", tx.id);
+
+      // Incrémente sales_count si on a auto-validé une nouvelle vente
+      if (TEST_AUTO_COMPLETE && !existing) {
+        const { supabaseAdmin: sa2 } = await import("@/integrations/supabase/client.server");
+        const { data: cur } = await sa2
+          .from("coupons").select("sales_count").eq("id", data.couponId).maybeSingle();
+        await sa2
+          .from("coupons")
+          .update({ sales_count: (cur?.sales_count ?? 0) + 1 })
+          .eq("id", data.couponId);
+      }
+
       return {
         mode: "test" as const,
         transactionId: tx.id,
         paymentUrl: returnUrl,
-        reference: `MOCK-${tx.id.slice(0, 8)}`,
+        reference: ref,
       };
     }
 
