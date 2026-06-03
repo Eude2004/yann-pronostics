@@ -424,3 +424,96 @@
 
 /* Theme-fade for premium switch */
 .theme-fade, .theme-fade * { transition: background-color 400ms ease, color 400ms ease, border-color 400ms ease, box-shadow 400ms ease; }
+
+/* ============== Premium polish: a11y, hover, theme transitions ============== */
+
+/* Smooth theme transition for all themable surfaces (no flicker) */
+html, body, header, main, section, aside,
+.glass-card, .glass-pill, .btn-gold, .badge-unlocked,
+.bg-luxury, .bg-chart-dark, .brushed-gold,
+button, a, input, textarea, select {
+  transition:
+    background-color 380ms ease,
+    color 380ms ease,
+    border-color 380ms ease,
+    box-shadow 380ms ease;
+}
+
+/* Keyboard focus — visible gold ring everywhere */
+:where(button, a, [role="button"], input, select, textarea):focus-visible {
+  outline: 2px solid rgba(212,175,55,0.85);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* Light-mode contrast overrides — keep gold identity but legible */
+.light .text-gold {
+  background: linear-gradient(135deg, #8a6b1f, #b8861f 50%, #6b4f12);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+}
+.light .glass-pill { color: #1a1a1a; }
+.light .glass-pill .text-amber-300,
+.light .glass-pill[class*="text-amber"] { color: #7a5a14 !important; }
+.light .text-amber-300 { color: #7a5a14; }
+.light .text-amber-400 { color: #6b4f12; }
+.light .text-sky-300 { color: #075985; }
+.light .text-emerald-300 { color: #047857; }
+.light .text-muted-foreground { color: #4a4a4a; }
+
+.light .badge-unlocked {
+  background: linear-gradient(180deg, rgba(16,185,129,0.18), rgba(16,185,129,0.08));
+  color: #065f46;
+  border-color: rgba(5,150,105,0.55);
+  text-shadow: none;
+}
+
+.light .btn-gold {
+  background: linear-gradient(180deg, #f5e3a5, #e9c763);
+  color: #4a3608;
+  border-color: #b8861f;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.6);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 4px 14px rgba(212,175,55,0.35);
+}
+.light .btn-gold:hover {
+  background: linear-gradient(180deg, #fff0b3, #f1d069);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 6px 22px rgba(212,175,55,0.5);
+}
+
+/* Locked-card glow visible in light mode too */
+.light .locked-glow {
+  box-shadow:
+    0 0 0 1px rgba(184,134,31,0.55),
+    0 0 26px rgba(212,175,55,0.45),
+    0 12px 36px -14px rgba(184,134,31,0.5);
+}
+
+/* Card hover micro-animation */
+.glass-card { transform: translateZ(0); }
+.glass-card:hover { transform: translateY(-2px) scale(1.005); }
+.glass-card:hover .glass-play { transform: scale(1.08); }
+
+/* Buy/Watch button subtle press */
+.btn-gold:active, .glass-pill:active { transform: translateY(1px); }
+
+/* Harmonize unlock burst with the new palette (emerald → gold tail) */
+@keyframes unlock-burst {
+  0%   { transform: scale(0.6); opacity: 0; box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+  35%  { transform: scale(1.10); opacity: 1; box-shadow: 0 0 0 10px rgba(16,185,129,0.40); }
+  70%  { transform: scale(1); opacity: 1; box-shadow: 0 0 0 26px rgba(212,175,55,0.0); }
+  100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+}
+@keyframes unlock-flash {
+  0%   { background: rgba(16,185,129,0); }
+  35%  { background: rgba(16,185,129,0.18); }
+  70%  { background: rgba(212,175,55,0.10); }
+  100% { background: rgba(16,185,129,0); }
+}
+
+/* Grid: 4 columns at lg with sensible mins; 2 columns on tablet stays square */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .grid.lg\:grid-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Bronze a touch darker for AA on brushed gold */
+.text-bronze { color: #4a3308; }
