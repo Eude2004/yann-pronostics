@@ -24,7 +24,7 @@ import logo from "@/assets/yann-logo.png";
 import { CouponStatusBadge } from "@/components/CouponStatusBadge";
 import { isoToZonedInput, zonedInputToIso, getBrowserTimezone } from "@/lib/coupon-status";
 import {
-  ArrowLeft, Plus, Pencil, Trash2, Check, X, Star, Shield, LogOut,
+  ArrowLeft, Plus, Pencil, Trash2, Check, X, Shield, LogOut,
   Save, Download, FileText, TrendingUp, FlaskConical, Users, History,
   LayoutDashboard, Ticket, Receipt, Settings as SettingsIcon,
   DollarSign, ShoppingCart, Package, ArrowUpRight, Menu, Wifi, WifiOff, EyeOff,
