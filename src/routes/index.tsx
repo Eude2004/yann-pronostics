@@ -399,13 +399,25 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
             <div className="font-display text-2xl text-gold">{coupon.price_xaf.toLocaleString("fr-FR")} FCFA</div>
           </div>
           {paid ? (
-            <Button
-              onClick={handlePlay}
-              disabled={busy || !!url}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold"
-            >
-              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Play className="w-4 h-4 mr-1 fill-current" /> Voir</>}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handlePlay}
+                disabled={busy || !!url}
+                className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold"
+              >
+                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Play className="w-4 h-4 mr-1 fill-current" /> Voir</>}
+              </Button>
+              <Button
+                onClick={handleDownload}
+                disabled={downloading}
+                variant="outline"
+                size="icon"
+                title="Télécharger la vidéo"
+                aria-label="Télécharger la vidéo"
+              >
+                {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              </Button>
+            </div>
           ) : (
             <Button
               onClick={handleBuy}
@@ -417,7 +429,7 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
         </div>
       </div>
 
-      <VisitorSignupPrompt open={promptOpen} onOpenChange={setPromptOpen} couponId={coupon.id} />
+
       {session && (
         <PaymentModal
           open={payOpen}
