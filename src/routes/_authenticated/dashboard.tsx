@@ -39,6 +39,8 @@ type Coupon = {
   coupon_type: string | null;
   start_date: string | null;
   end_date: string | null;
+  event_date?: string | null;
+  disable_purchase_action?: boolean | null;
 };
 
 // Color theme per card position (matches the reference: green, blue, amber, orange)
