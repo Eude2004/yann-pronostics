@@ -682,6 +682,20 @@ function CouponsAdmin() {
                 <span className="text-sm">Mettre en avant ⭐</span>
               </label>
             </div>
+            <label className="flex items-start gap-2 pt-1 rounded-md border border-border/60 p-3 bg-muted/30">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={form.disable_purchase_action}
+                onChange={(e) => setForm({ ...form, disable_purchase_action: e.target.checked })}
+              />
+              <span className="text-sm">
+                <span className="font-medium">Désactiver l'action du bouton d'achat</span>
+                <span className="block text-xs text-muted-foreground">
+                  Le coupon s'affiche normalement (prix + bouton « Acheter » visible), mais le clic sur « Acheter » ne déclenche aucune action.
+                </span>
+              </span>
+            </label>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
