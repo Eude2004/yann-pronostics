@@ -302,7 +302,7 @@ function AdminSidebar({ view, setView }: { view: AdminView; setView: (v: AdminVi
 const emptyCouponForm = {
   coupon_type: "cote_10" as CouponType,
   description: "", image_url: "", video_url: "",
-  start_date: "", end_date: "",
+  start_date: "", end_date: "", event_date: "",
   status: "draft" as PublishStatus, is_featured: false,
 };
 
