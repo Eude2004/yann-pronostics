@@ -140,7 +140,13 @@
     background: var(--gradient-dark);
     color: var(--color-foreground);
     font-family: var(--font-sans);
-    min-height: 100vh;
+    min-height: 100svh;
+  }
+  /* Use dynamic/small viewport units so mobile keyboard / URL bar
+     don't cause layout "dance" or perceived refresh. */
+  .min-h-screen { min-height: 100svh; }
+  @supports (min-height: 100dvh) {
+    .min-h-screen { min-height: 100dvh; }
   }
   h1, h2, h3, .font-display { font-family: var(--font-display); letter-spacing: 0.02em; }
 
