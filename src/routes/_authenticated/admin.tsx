@@ -305,6 +305,7 @@ const emptyCouponForm = {
   description: "", image_url: "", video_url: "",
   start_date: "", end_date: "", event_date: "",
   status: "draft" as PublishStatus, is_featured: false,
+  disable_purchase_action: false,
 };
 
 const TZ_OPTIONS = [
@@ -378,7 +379,7 @@ function CouponsAdmin() {
   const load = async () => {
     // Coupon statuses are refreshed automatically by a pg_cron job every minute.
     const { data, error } = await supabase.from("coupons")
-      .select("id, title, slug, description, sport, category_id, price_xaf, odds, image_url, preview_content, status, is_featured, created_by, created_at, updated_at, coupon_type, video_url, start_date, end_date, sales_count, event_date")
+      .select("id, title, slug, description, sport, category_id, price_xaf, odds, image_url, preview_content, status, is_featured, created_by, created_at, updated_at, coupon_type, video_url, start_date, end_date, sales_count, event_date, disable_purchase_action")
       .order("created_at", { ascending: false });
     if (error) toast.error(error.message); else setItems((data as Coupon[]) ?? []);
   };
@@ -403,6 +404,7 @@ function CouponsAdmin() {
       end_date: isoToZonedInput(c.end_date, timezone),
       event_date: isoToZonedInput(c.event_date, timezone),
       status: c.status, is_featured: c.is_featured,
+      disable_purchase_action: (c as any).disable_purchase_action ?? false,
     });
     setOpen(true);
   };
@@ -446,6 +448,7 @@ function CouponsAdmin() {
       event_date: zonedInputToIso(form.event_date, timezone) ?? defaultEventDateIso(),
       status: form.status,
       is_featured: form.is_featured,
+      disable_purchase_action: form.disable_purchase_action,
     };
     const slug = form.coupon_type + "-" + Date.now();
     const insertPayload = { ...basePayload, slug };
@@ -679,6 +682,20 @@ function CouponsAdmin() {
                 <span className="text-sm">Mettre en avant ⭐</span>
               </label>
             </div>
+            <label className="flex items-start gap-2 pt-1 rounded-md border border-border/60 p-3 bg-muted/30">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={form.disable_purchase_action}
+                onChange={(e) => setForm({ ...form, disable_purchase_action: e.target.checked })}
+              />
+              <span className="text-sm">
+                <span className="font-medium">Désactiver l'action du bouton d'achat</span>
+                <span className="block text-xs text-muted-foreground">
+                  Le coupon s'affiche normalement (prix + bouton « Acheter » visible), mais le clic sur « Acheter » ne déclenche aucune action.
+                </span>
+              </span>
+            </label>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
@@ -1043,7 +1060,7 @@ function StatsAdmin() {
       supabase.from("transactions").select("*").eq("kind", "coupon").order("created_at", { ascending: false }),
       supabase.from("profiles").select("id", { count: "exact", head: true }),
       supabase.from("coupons").select("id", { count: "exact", head: true }).eq("status", "published"),
-      supabase.from("coupons").select("id, title, slug, description, sport, category_id, price_xaf, odds, image_url, preview_content, status, is_featured, created_by, created_at, updated_at, coupon_type, video_url, start_date, end_date, sales_count, event_date"),
+      supabase.from("coupons").select("id, title, slug, description, sport, category_id, price_xaf, odds, image_url, preview_content, status, is_featured, created_by, created_at, updated_at, coupon_type, video_url, start_date, end_date, sales_count, event_date, disable_purchase_action"),
     ]);
     setTxs((t.data as Transaction[]) ?? []);
     setCoupons((cAll.data as Coupon[]) ?? []);

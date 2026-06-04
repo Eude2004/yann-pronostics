@@ -1,0 +1,1 @@
+ALTER TABLE public.coupons ADD COLUMN IF NOT EXISTS disable_purchase_action boolean NOT NULL DEFAULT false;
