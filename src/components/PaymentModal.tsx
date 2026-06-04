@@ -7,7 +7,9 @@ import { Loader2, ShieldCheck, Smartphone, CheckCircle2, Play, AlertTriangle, Ro
 import { useServerFn } from "@tanstack/react-start";
 import { initiatePayment, simulatePaymentCompletion } from "@/lib/payments.functions";
 import { getCouponVideoAccess } from "@/lib/coupon-access.functions";
+import { EventCountdown } from "@/components/EventCountdown";
 import { toast } from "sonner";
+
 
 type Method = "mtn" | "orange" | "moov";
 
