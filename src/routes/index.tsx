@@ -371,6 +371,40 @@ const COUPON_TYPE_LABEL: Record<CouponType, string> = {
   pair_corner: "Coupon Total Pair Corner",
 };
 
+function formatCountdown(ms: number): string {
+  if (ms <= 0) return "0s";
+  const s = Math.floor(ms / 1000);
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  if (d > 0) return `${d}j ${pad(h)}h ${pad(m)}m ${pad(sec)}s`;
+  return `${pad(h)}h ${pad(m)}m ${pad(sec)}s`;
+}
+
+function EventCountdown({ eventDate }: { eventDate: string }) {
+  const target = new Date(eventDate).getTime();
+  const [remaining, setRemaining] = useState(() => target - Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setRemaining(target - Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [target]);
+  if (remaining <= 0) return null;
+  return (
+    <div
+      className="mt-2 rounded-md px-2.5 py-1.5 text-[11px] font-semibold tracking-wide flex items-center gap-2 border border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+      role="status"
+      aria-live="polite"
+    >
+      <Calendar className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+      <span>Les événements de ce coupon débuteront dans <span className="font-mono tabular-nums">{formatCountdown(remaining)}</span></span>
+    </div>
+  );
+}
+
+
+
 function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
   const { t } = useTranslation();
   const { session } = useAuth();
@@ -612,6 +646,9 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
                 ? t(`coupon.fallback_desc_${coupon.coupon_type}`, { defaultValue: t("coupon.fallback_desc") })
                 : t("coupon.fallback_desc"))}
           </p>
+          {!inProgress && !ended && coupon.event_date && (
+            <EventCountdown eventDate={coupon.event_date} />
+          )}
           {inProgress && (
             <div
               className="live-banner mt-2 rounded-md px-2.5 py-1.5 text-[11px] font-semibold tracking-wide flex items-center gap-2"
@@ -623,6 +660,7 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
               <span>{t("coupon.in_progress_banner", { defaultValue: "Coupon en cours, vous ne pouvez plus acheter" })}</span>
             </div>
           )}
+
         </div>
 
         <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
