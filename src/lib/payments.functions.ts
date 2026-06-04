@@ -87,11 +87,16 @@ export const initiatePayment = createServerFn({ method: "POST" })
     // Résolution du coupon
     const { data: c, error } = await supabase
       .from("coupons")
-      .select("id, title, price_xaf, status, end_date, event_date")
+      .select("id, title, price_xaf, status, end_date, event_date, disable_purchase_action")
       .eq("id", data.couponId)
       .maybeSingle();
     if (error || !c) throw new Error("Coupon introuvable.");
     if (c.status !== "published") throw new Error("Coupon non disponible.");
+    // Garde-fou serveur : si l'admin a désactivé l'action d'achat, on bloque
+    // silencieusement toute tentative directe (le front ne déclenche rien non plus).
+    if ((c as any).disable_purchase_action === true) {
+      throw new Error("Action indisponible.");
+    }
     // Garde-fou serveur : un coupon dont la date de fin est passée ne peut plus
     // être acheté, même si un appel direct contourne le bouton désactivé du front.
     if (c.end_date && new Date(c.end_date).getTime() <= Date.now()) {
