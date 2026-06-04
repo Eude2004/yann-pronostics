@@ -161,7 +161,7 @@ function ValidatedCard({ item, index }: { item: ValidatedCoupon; index: number }
           <span>
             {t("validated.published_on", { defaultValue: "Publié le" })}{" "}
             {new Date(item.published_at).toLocaleDateString("fr-FR", {
-              day: "2-digit", month: "short", year: "numeric",
+              day: "2-digit", month: "short", year: "numeric", timeZone: "Africa/Lagos",
             })}
           </span>
         </div>
