@@ -178,7 +178,7 @@ function CouponsSection() {
     // reste affiché tant qu'aucun nouveau coupon de sa catégorie ne le remplace.
     const { data } = await supabase
       .from("coupons")
-      .select("id, title, slug, description, sport, category_id, price_xaf, odds, image_url, preview_content, status, is_featured, created_by, created_at, updated_at, coupon_type, video_url, start_date, end_date, sales_count, event_date, disable_purchase_action")
+      .select("id, title, slug, description, sport, category_id, price_xaf, odds, image_url, preview_content, status, is_featured, created_by, created_at, updated_at, coupon_type, video_url, start_date, end_date, sales_count, event_date")
       .eq("status", "published")
       .order("coupon_type");
     setCoupons((data as Coupon[]) ?? []);
