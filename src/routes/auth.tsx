@@ -35,7 +35,6 @@ function AuthPage() {
   const { session, loading, isAdmin } = useAuth();
   const navigate = useNavigate();
   const search = Route.useSearch();
-  const [tab, setTab] = useState<"login" | "signup">(search.tab);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [justSignedUp, setJustSignedUp] = useState(false);
@@ -46,9 +45,11 @@ function AuthPage() {
     }
   }, [session, loading, isAdmin, navigate]);
 
-  useEffect(() => {
-    setTab(search.tab);
-  }, [search.tab]);
+  const tab = search.tab;
+
+  const setTab = (nextTab: "login" | "signup") => {
+    navigate({ to: "/auth", search: { tab: nextTab }, replace: true, resetScroll: false });
+  };
 
   const handleSignedUp = async (email: string, password: string) => {
     // Auto-confirm activé : Supabase crée une session automatiquement.
