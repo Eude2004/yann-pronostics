@@ -71,6 +71,7 @@ type Coupon = {
   id: string; coupon_type: CouponType | null; title: string;
   description: string | null; price_xaf: number; image_url: string | null;
   video_url: string | null; start_date: string | null; end_date: string | null;
+  event_date: string | null;
   status: PublishStatus; sales_count: number; is_featured: boolean;
 };
 type Transaction = {
