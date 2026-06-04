@@ -139,7 +139,7 @@ function ValidatedCouponsPage() {
   );
 }
 
-function ValidatedCard({ item, index }: { item: ValidatedCoupon; index: number }) {
+function ValidatedCard({ item, index, onOpen }: { item: ValidatedCoupon; index: number; onOpen: () => void }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language === "en" ? "en-US" : "fr-FR";
   return (
@@ -152,25 +152,33 @@ function ValidatedCard({ item, index }: { item: ValidatedCoupon; index: number }
           <CheckCircle2 className="w-3 h-3" /> {t("validated.badge", { defaultValue: "GAGNANT" })}
         </span>
       </div>
-      <div className="aspect-video bg-chart-dark relative overflow-hidden gold-shimmer-overlay">
+      <div className="bg-black/5 dark:bg-black/40 relative overflow-hidden gold-shimmer-overlay">
         {item.media_url ? (
           item.media_type === "video" ? (
             <video
               src={item.media_url}
               controls
               preload="metadata"
-              className="absolute inset-0 w-full h-full object-cover bg-black"
+              className="w-full max-h-[600px] object-contain bg-black cursor-zoom-in"
+              onClick={onOpen}
             />
           ) : (
-            <img
-              src={item.media_url}
-              alt={item.title}
-              loading="lazy"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
+            <button
+              type="button"
+              onClick={onOpen}
+              aria-label={t("validated.expand", { defaultValue: "Agrandir l'image" })}
+              className="block w-full cursor-zoom-in"
+            >
+              <img
+                src={item.media_url}
+                alt={item.title}
+                loading="lazy"
+                className="w-full h-auto max-h-[600px] object-contain"
+              />
+            </button>
           )
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+          <div className="aspect-video flex items-center justify-center text-muted-foreground">
             <Trophy className="w-12 h-12 opacity-30" />
           </div>
         )}
