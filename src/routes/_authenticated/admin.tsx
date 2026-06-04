@@ -73,6 +73,7 @@ type Coupon = {
   video_url: string | null; start_date: string | null; end_date: string | null;
   event_date: string | null;
   status: PublishStatus; sales_count: number; is_featured: boolean;
+  disable_purchase_action: boolean;
 };
 type Transaction = {
   id: string; user_id: string; amount_xaf: number;
