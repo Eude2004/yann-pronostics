@@ -1689,3 +1689,289 @@ function AuditAdmin() {
     </div>
   );
 }
+
+/* ---------------- COUPONS VALIDÉS (Historique des gains) ---------------- */
+
+type ValidatedCoupon = {
+  id: string;
+  title: string;
+  description: string | null;
+  media_url: string | null;
+  media_type: "image" | "video";
+  published_at: string;
+  display_start: string | null;
+  display_end: string | null;
+  status: "draft" | "published" | "archived";
+};
+
+const emptyValidatedForm = {
+  title: "",
+  description: "",
+  media_url: "",
+  media_type: "image" as "image" | "video",
+  published_at: "",
+  display_start: "",
+  display_end: "",
+  status: "published" as "draft" | "published" | "archived",
+};
+
+function ValidatedCouponsAdmin() {
+  const [items, setItems] = useState<ValidatedCoupon[]>([]);
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<ValidatedCoupon | null>(null);
+  const [form, setForm] = useState({ ...emptyValidatedForm });
+  const [uploading, setUploading] = useState(false);
+  const [timezone] = useState<string>(() => {
+    if (typeof window === "undefined") return getBrowserTimezone();
+    return localStorage.getItem("coupon_tz") || getBrowserTimezone();
+  });
+
+  const load = async () => {
+    const { data, error } = await supabase
+      .from("validated_coupons")
+      .select("id, title, description, media_url, media_type, published_at, display_start, display_end, status")
+      .order("published_at", { ascending: false });
+    if (error) toast.error(error.message);
+    else setItems((data as ValidatedCoupon[]) ?? []);
+  };
+
+  useEffect(() => {
+    load();
+    const ch = supabase
+      .channel("admin-validated-coupons")
+      .on("postgres_changes", { event: "*", schema: "public", table: "validated_coupons" }, load)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, []);
+
+  const upload = async (file: File) => {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const isVideo = file.type.startsWith("video/");
+      const bucket = isVideo ? "coupon-videos" : "coupon-images";
+      const ext = (file.name.split(".").pop() || (isVideo ? "mp4" : "jpg")).toLowerCase();
+      const path = `validated/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from(bucket).upload(path, file, {
+        contentType: file.type || (isVideo ? "video/*" : "image/*"),
+        upsert: false,
+      });
+      if (error) throw error;
+      const { data: signed, error: sErr } = await supabase.storage
+        .from(bucket)
+        .createSignedUrl(path, 60 * 60 * 24 * 365);
+      if (sErr) throw sErr;
+      setForm((f) => ({ ...f, media_url: signed.signedUrl, media_type: isVideo ? "video" : "image" }));
+      toast.success("Média téléversé");
+    } catch (e: any) {
+      toast.error(e.message ?? "Échec du téléversement");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const openNew = () => { setEditing(null); setForm({ ...emptyValidatedForm }); setOpen(true); };
+  const openEdit = (c: ValidatedCoupon) => {
+    setEditing(c);
+    setForm({
+      title: c.title,
+      description: c.description ?? "",
+      media_url: c.media_url ?? "",
+      media_type: c.media_type,
+      published_at: isoToZonedInput(c.published_at, timezone),
+      display_start: isoToZonedInput(c.display_start, timezone),
+      display_end: isoToZonedInput(c.display_end, timezone),
+      status: c.status,
+    });
+    setOpen(true);
+  };
+
+  const save = async () => {
+    if (!form.title.trim()) { toast.error("Le titre est requis."); return; }
+    const payload = {
+      title: form.title.trim(),
+      description: form.description.trim() || null,
+      media_url: form.media_url || null,
+      media_type: form.media_type,
+      published_at: zonedInputToIso(form.published_at, timezone) ?? new Date().toISOString(),
+      display_start: zonedInputToIso(form.display_start, timezone),
+      display_end: zonedInputToIso(form.display_end, timezone),
+      status: form.status,
+    };
+    const { error, data: saved } = editing
+      ? await supabase.from("validated_coupons").update(payload).eq("id", editing.id).select("id").maybeSingle()
+      : await supabase.from("validated_coupons").insert(payload).select("id").maybeSingle();
+    if (error) return toast.error(error.message);
+    await logAdminAction(
+      editing ? "update_validated_coupon" : "create_validated_coupon",
+      "validated_coupon",
+      saved?.id ?? editing?.id,
+      { title: payload.title, status: payload.status },
+    );
+    toast.success(editing ? "Coupon validé mis à jour" : "Coupon validé créé");
+    setOpen(false); load();
+  };
+
+  const remove = async (id: string) => {
+    if (!confirm("Supprimer ce coupon validé ?")) return;
+    const { error } = await supabase.from("validated_coupons").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    await logAdminAction("delete_validated_coupon", "validated_coupon", id);
+    toast.success("Coupon validé supprimé"); load();
+  };
+
+  const setStatus = async (id: string, status: "draft" | "published" | "archived") => {
+    const { error } = await supabase.from("validated_coupons").update({ status }).eq("id", id);
+    if (error) return toast.error(error.message);
+    await logAdminAction("update_validated_coupon_status", "validated_coupon", id, { status });
+    toast.success("Statut mis à jour"); load();
+  };
+
+  const badge = (s: ValidatedCoupon["status"]) => ({
+    draft: <Badge variant="secondary">Brouillon</Badge>,
+    published: <Badge className="bg-green-600/20 text-green-500 border border-green-600/30">Publié</Badge>,
+    archived: <Badge variant="outline">Archivé</Badge>,
+  }[s]);
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+        <div>
+          <h2 className="text-xl font-display">Coupons validés ({items.length})</h2>
+          <p className="text-xs text-muted-foreground">Historique public des gains. Pas de limite, pas de catégorie.</p>
+        </div>
+        <Button onClick={openNew} className="bg-gold-gradient text-primary-foreground">
+          <Plus className="w-4 h-4 mr-2" />Nouveau coupon validé
+        </Button>
+      </div>
+
+      <div className="rounded-xl border border-border/60 bg-card overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Titre</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Publié le</TableHead>
+              <TableHead>Affichage</TableHead>
+              <TableHead>Statut</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.map((c) => (
+              <TableRow key={c.id}>
+                <TableCell className="font-medium">{c.title}</TableCell>
+                <TableCell className="text-xs">{c.media_type === "video" ? "🎥 Vidéo" : "🖼️ Image"}</TableCell>
+                <TableCell className="text-xs text-muted-foreground">
+                  {new Date(c.published_at).toLocaleDateString("fr-FR")}
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground">
+                  {c.display_start ? new Date(c.display_start).toLocaleDateString("fr-FR") : "—"}
+                  {" → "}
+                  {c.display_end ? new Date(c.display_end).toLocaleDateString("fr-FR") : "∞"}
+                </TableCell>
+                <TableCell>{badge(c.status)}</TableCell>
+                <TableCell className="text-right whitespace-nowrap">
+                  <Select value={c.status} onValueChange={(v) => setStatus(c.id, v as any)}>
+                    <SelectTrigger className="w-32 inline-flex h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">Brouillon</SelectItem>
+                      <SelectItem value="published">Publié</SelectItem>
+                      <SelectItem value="archived">Archivé</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button size="sm" variant="ghost" onClick={() => openEdit(c)}><Pencil className="w-4 h-4" /></Button>
+                  <Button size="sm" variant="ghost" onClick={() => remove(c.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                </TableCell>
+              </TableRow>
+            ))}
+            {items.length === 0 && (
+              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Aucun coupon validé</TableCell></TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>{editing ? "Modifier" : "Nouveau"} coupon validé</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Titre *</Label>
+              <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Ex : Combo Premier League — 14 décembre" />
+            </div>
+            <div>
+              <Label>Description</Label>
+              <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Détail du gain, côte obtenue, etc." />
+            </div>
+            <div className="space-y-2">
+              <Label>Image ou vidéo du résultat (publique)</Label>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" size="sm" disabled={uploading}
+                  onClick={() => document.getElementById("validated-media-pick")?.click()}>
+                  📁 Galerie / Fichier
+                </Button>
+                {form.media_url && (
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setForm({ ...form, media_url: "" })}>
+                    <X className="w-4 h-4 mr-1" />Retirer
+                  </Button>
+                )}
+              </div>
+              <input id="validated-media-pick" type="file" accept="image/*,video/*" className="hidden"
+                onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
+              <Input value={form.media_url}
+                onChange={(e) => setForm({ ...form, media_url: e.target.value })}
+                placeholder="ou collez une URL" />
+              {uploading && <p className="text-xs text-muted-foreground">Téléversement en cours…</p>}
+              {form.media_url && !uploading && (
+                form.media_type === "video"
+                  ? <video src={form.media_url} controls className="h-32 rounded border border-border/60" />
+                  : <img src={form.media_url} alt="" className="h-32 rounded border border-border/60 object-cover" />
+              )}
+              <Select value={form.media_type} onValueChange={(v) => setForm({ ...form, media_type: v as "image" | "video" })}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="image">Image</SelectItem>
+                  <SelectItem value="video">Vidéo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Date de publication (affichée publiquement)</Label>
+              <Input type="datetime-local" value={form.published_at}
+                onChange={(e) => setForm({ ...form, published_at: e.target.value })} />
+              <p className="text-[11px] text-muted-foreground mt-1">Vide = maintenant.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Début d'affichage</Label>
+                <Input type="datetime-local" value={form.display_start}
+                  onChange={(e) => setForm({ ...form, display_start: e.target.value })} />
+              </div>
+              <div>
+                <Label>Fin d'affichage</Label>
+                <Input type="datetime-local" value={form.display_end}
+                  onChange={(e) => setForm({ ...form, display_end: e.target.value })} />
+              </div>
+            </div>
+            <div>
+              <Label>Statut</Label>
+              <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as any })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Brouillon</SelectItem>
+                  <SelectItem value="published">Publié</SelectItem>
+                  <SelectItem value="archived">Archivé</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
+            <Button onClick={save} className="bg-gold-gradient text-primary-foreground">Enregistrer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
