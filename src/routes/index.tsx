@@ -700,7 +700,7 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
         <PaymentModal
           open={payOpen}
           onOpenChange={setPayOpen}
-          coupon={{ id: coupon.id, title: coupon.title, price_xaf: coupon.price_xaf }}
+          coupon={{ id: coupon.id, title: coupon.title, price_xaf: coupon.price_xaf, event_date: coupon.event_date }}
           customer={{
             name: session.user.user_metadata?.full_name ?? undefined,
             email: session.user.email ?? undefined,
