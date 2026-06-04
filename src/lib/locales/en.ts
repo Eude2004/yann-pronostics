@@ -78,7 +78,17 @@ export const en = {
     expired: "EXPIRED",
     expired_blocked: "This coupon has ended and is no longer available for purchase.",
     coming_soon: "Coming soon",
+    in_progress: "LIVE",
+    in_progress_banner: "Matches in progress on this coupon",
+    in_progress_blocked: "Matches have started, purchase locked.",
   },
+  validated: {
+    nav: "Validated coupons",
+    title: "Validated Coupons",
+    subtitle: "Our hall of fame: past winning coupons. Transparent proof of our expertise.",
+    empty: "No validated coupon yet.",
+    published_on: "Published on",
+    badge: "WINNER",
   dashboard: {
     welcome: "Welcome",
     hello: "Hello,",

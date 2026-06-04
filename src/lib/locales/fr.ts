@@ -78,7 +78,17 @@ export const fr = {
     expired: "TERMINÉ",
     expired_blocked: "Ce coupon est terminé et n'est plus disponible à l'achat.",
     coming_soon: "Bientôt disponible",
+    in_progress: "EN COURS",
+    in_progress_banner: "En cours sur ce coupon",
+    in_progress_blocked: "Les matchs ont commencé, achat verrouillé.",
   },
+  validated: {
+    nav: "Coupons validés",
+    title: "Coupons Validés",
+    subtitle: "L'historique de nos coupons gagnants. Preuve transparente de notre expertise.",
+    empty: "Aucun coupon validé pour le moment.",
+    published_on: "Publié le",
+    badge: "GAGNANT",
   dashboard: {
     welcome: "Bienvenue",
     hello: "Bonjour,",
