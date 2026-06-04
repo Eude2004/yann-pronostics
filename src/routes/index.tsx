@@ -612,6 +612,9 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
                 ? t(`coupon.fallback_desc_${coupon.coupon_type}`, { defaultValue: t("coupon.fallback_desc") })
                 : t("coupon.fallback_desc"))}
           </p>
+          {!inProgress && !ended && coupon.event_date && (
+            <EventCountdown eventDate={coupon.event_date} />
+          )}
           {inProgress && (
             <div
               className="live-banner mt-2 rounded-md px-2.5 py-1.5 text-[11px] font-semibold tracking-wide flex items-center gap-2"
@@ -623,6 +626,7 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
               <span>{t("coupon.in_progress_banner", { defaultValue: "Coupon en cours, vous ne pouvez plus acheter" })}</span>
             </div>
           )}
+
         </div>
 
         <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
