@@ -161,7 +161,7 @@ function ValidatedCard({ item, index }: { item: ValidatedCoupon; index: number }
           <Calendar className="w-3.5 h-3.5" />
           <span>
             {t("validated.published_on", { defaultValue: "Publié le" })}{" "}
-            {new Date(item.published_at).toLocaleDateString("fr-FR", {
+            {new Date(item.published_at).toLocaleDateString(locale, {
               day: "2-digit", month: "short", year: "numeric", timeZone: "Africa/Lagos",
             })}
           </span>
