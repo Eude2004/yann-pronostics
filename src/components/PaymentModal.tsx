@@ -169,7 +169,14 @@ export function PaymentModal({
               </DialogDescription>
             </DialogHeader>
 
+            {coupon.event_date && (
+              <div className="px-6 pb-2">
+                <EventCountdown eventDate={coupon.event_date} />
+              </div>
+            )}
+
             <div className="px-6 pb-4 space-y-2">
+
               {METHODS.map((m) => {
                 const selected = method === m.id;
                 return (
