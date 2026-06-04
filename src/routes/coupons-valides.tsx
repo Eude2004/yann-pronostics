@@ -105,12 +105,36 @@ function ValidatedCouponsPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {items.map((c, i) => (
-                <ValidatedCard key={c.id} item={c} index={i} />
+                <ValidatedCard key={c.id} item={c} index={i} onOpen={() => setLightbox(c)} />
               ))}
             </div>
           )}
         </div>
       </section>
+
+      {lightbox && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setLightbox(null)}
+          className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+        >
+          <button
+            onClick={() => setLightbox(null)}
+            aria-label="Fermer"
+            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <div className="max-w-6xl max-h-[90vh] w-full flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+            {lightbox.media_url && lightbox.media_type === "video" ? (
+              <video src={lightbox.media_url} controls autoPlay className="max-h-[90vh] max-w-full rounded-lg" />
+            ) : lightbox.media_url ? (
+              <img src={lightbox.media_url} alt={lightbox.title} className="max-h-[90vh] max-w-full object-contain rounded-lg" />
+            ) : null}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
