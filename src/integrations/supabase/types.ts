@@ -484,6 +484,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      archive_expired_validated_coupons: { Args: never; Returns: number }
       has_active_vip: { Args: { _user_id: string }; Returns: boolean }
       has_paid_coupon: {
         Args: { _coupon_id: string; _user_id: string }
