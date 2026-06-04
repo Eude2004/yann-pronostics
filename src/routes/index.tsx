@@ -496,8 +496,13 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
             {t("coupon.expired", { defaultValue: "TERMINÉ" })}
           </span>
         ) : inProgress ? (
-          <span className="live-pulse inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-extrabold border border-amber-400/70 bg-amber-500/10 text-amber-300 tracking-wider">
-            <span className="live-dot inline-block w-1.5 h-1.5 rounded-full bg-amber-300" />
+          <span
+            role="status"
+            aria-live="polite"
+            aria-label={t("coupon.in_progress_aria", { defaultValue: "Coupon en cours, achat verrouillé" })}
+            className="live-pulse inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-extrabold border border-amber-500/70 bg-amber-500/15 text-amber-700 dark:text-amber-200 tracking-wider"
+          >
+            <span aria-hidden="true" className="live-dot inline-block w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-300" />
             {t("coupon.in_progress", { defaultValue: "EN COURS" })}
           </span>
         ) : paid ? (
