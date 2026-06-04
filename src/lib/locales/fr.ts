@@ -80,7 +80,7 @@ export const fr = {
     coming_soon: "Bientôt disponible",
     in_progress: "EN COURS",
     in_progress_aria: "Coupon en cours, achat verrouillé",
-    in_progress_banner: "Coupon en cours",
+    in_progress_banner: "Coupon en cours, vous ne pouvez plus acheter",
     in_progress_blocked: "Les matchs ont commencé, achat verrouillé.",
   },
   validated: {

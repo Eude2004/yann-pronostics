@@ -615,7 +615,7 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
               aria-label={t("coupon.in_progress_aria", { defaultValue: "Coupon en cours, achat verrouillé" })}
             >
               <span aria-hidden="true" className="live-dot inline-block w-1.5 h-1.5 rounded-full" />
-              <span>{t("coupon.in_progress_banner", { defaultValue: "Coupon en cours" })}</span>
+              <span>{t("coupon.in_progress_banner", { defaultValue: "Coupon en cours, vous ne pouvez plus acheter" })}</span>
             </div>
           )}
         </div>
