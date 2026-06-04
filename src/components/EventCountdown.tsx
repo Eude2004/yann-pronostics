@@ -39,26 +39,21 @@ export function EventCountdown({ eventDate, displayTimezone, compact, className 
   const adminTz = useAdminTimezone();
   const tz = displayTimezone ?? adminTz;
   const offset = useServerTimeOffset();
+  const target = new Date(eventDate).getTime();
   const [remaining, setRemaining] = useState(() => target - serverNow(offset));
 
   useEffect(() => {
-    let raf = 0;
-    const tick = () => {
-      setRemaining(target - serverNow(offset));
-    };
+    const tick = () => setRemaining(target - serverNow(offset));
     tick();
     const id = window.setInterval(tick, 1000);
-    return () => {
-      window.clearInterval(id);
-      cancelAnimationFrame(raf);
-    };
+    return () => window.clearInterval(id);
   }, [target, offset]);
 
   if (!Number.isFinite(target) || remaining <= 0) return null;
 
-  const fmt = (tz: string) =>
+  const fmt = (zone: string) =>
     new Intl.DateTimeFormat("fr-FR", {
-      timeZone: tz,
+      timeZone: zone,
       day: "2-digit",
       month: "short",
       hour: "2-digit",
@@ -66,7 +61,7 @@ export function EventCountdown({ eventDate, displayTimezone, compact, className 
     }).format(new Date(target));
 
   const userTz = getBrowserTimezone();
-  const showUserTz = userTz && userTz !== displayTimezone;
+  const showUserTz = userTz && userTz !== tz;
 
   return (
     <div
@@ -83,7 +78,7 @@ export function EventCountdown({ eventDate, displayTimezone, compact, className 
       </div>
       {!compact && (
         <div className="mt-1 pl-5 text-[10px] font-normal opacity-90">
-          Coup d'envoi : {fmt(displayTimezone)} ({displayTimezone})
+          Coup d'envoi : {fmt(tz)} ({tz})
           {showUserTz && <> · {fmt(userTz)} (heure locale)</>}
         </div>
       )}
