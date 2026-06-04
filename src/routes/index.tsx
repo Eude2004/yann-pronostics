@@ -406,8 +406,8 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
   const lockedForPurchase = ended || (inProgress && !paid);
 
   const dateLabel = coupon.start_date
-    ? new Date(coupon.start_date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })
-    : new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
+    ? new Date(coupon.start_date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", timeZone: "Africa/Lagos" })
+    : new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "short", timeZone: "Africa/Lagos" });
 
   useEffect(() => {
     if (!paid || url) return;
