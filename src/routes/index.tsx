@@ -611,7 +611,7 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
                 : t("coupon.fallback_desc"))}
           </p>
           {!inProgress && !ended && coupon.event_date && (
-            <EventCountdown eventDate={coupon.event_date} />
+            <EventCountdown eventDate={coupon.event_date} compact />
           )}
           {inProgress && (
             <div
