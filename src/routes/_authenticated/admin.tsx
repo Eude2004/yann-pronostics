@@ -404,6 +404,7 @@ function CouponsAdmin() {
       end_date: isoToZonedInput(c.end_date, timezone),
       event_date: isoToZonedInput(c.event_date, timezone),
       status: c.status, is_featured: c.is_featured,
+      disable_purchase_action: (c as any).disable_purchase_action ?? false,
     });
     setOpen(true);
   };
