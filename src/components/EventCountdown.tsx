@@ -35,9 +35,10 @@ type Props = {
  *   sees the exact wall-clock instant the coupon becomes locked.
  * - Theme-independent: uses semantic emerald tokens that work in light/dark.
  */
-export function EventCountdown({ eventDate, displayTimezone = "Africa/Lagos", compact, className }: Props) {
+export function EventCountdown({ eventDate, displayTimezone, compact, className }: Props) {
+  const adminTz = useAdminTimezone();
+  const tz = displayTimezone ?? adminTz;
   const offset = useServerTimeOffset();
-  const target = new Date(eventDate).getTime();
   const [remaining, setRemaining] = useState(() => target - serverNow(offset));
 
   useEffect(() => {
