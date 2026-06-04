@@ -604,12 +604,13 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
           </p>
           {inProgress && (
             <div
-              className="live-banner mt-2 rounded-md px-2.5 py-1.5 text-[11px] tracking-wide flex items-center gap-2"
+              className="live-banner mt-2 rounded-md px-2.5 py-1.5 text-[11px] font-semibold tracking-wide flex items-center gap-2"
               role="status"
               aria-live="polite"
+              aria-label={t("coupon.in_progress_aria", { defaultValue: "Coupon en cours, achat verrouillé" })}
             >
-              <span className="live-dot inline-block w-1.5 h-1.5 rounded-full" />
-              {t("coupon.in_progress_banner", { defaultValue: "En cours sur ce coupon" })}
+              <span aria-hidden="true" className="live-dot inline-block w-1.5 h-1.5 rounded-full" />
+              <span>{t("coupon.in_progress_banner", { defaultValue: "Coupon en cours" })}</span>
             </div>
           )}
         </div>
