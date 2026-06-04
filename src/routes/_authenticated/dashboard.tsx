@@ -146,15 +146,13 @@ function Dashboard() {
 
   const loadAll = async () => {
     if (!user) return;
-    const now = new Date().toISOString();
     const [{ data: cps }, { data: txs }] = await Promise.all([
       supabase
         .from("coupons")
         .select(
-          "id, title, slug, description, sport, category_id, price_xaf, odds, image_url, preview_content, status, is_featured, created_by, created_at, updated_at, coupon_type, video_url, start_date, end_date, sales_count, event_date",
+          "id, title, slug, description, sport, category_id, price_xaf, odds, image_url, preview_content, status, is_featured, created_by, created_at, updated_at, coupon_type, video_url, start_date, end_date, sales_count, event_date, disable_purchase_action",
         )
         .eq("status", "published")
-        .or(`end_date.is.null,end_date.gte.${now}`)
         .order("coupon_type"),
       supabase
         .from("transactions")
