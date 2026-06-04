@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Lock, TrendingUp, Trophy, Zap, ShieldCheck, Star, Flame, ArrowRight, MessageCircle, LayoutDashboard, Calendar, Loader2, Play, Download } from "lucide-react";
 import { CouponStatusBadge } from "@/components/CouponStatusBadge";
+import { EventCountdown } from "@/components/EventCountdown";
+import { useServerTimeOffset } from "@/hooks/use-server-time-offset";
+
 import { getCouponVideoAccess } from "@/lib/coupon-access.functions";
 import { refreshAndGetNextTransition } from "@/lib/coupon-schedule.functions";
 import { useAuth } from "@/hooks/use-auth";
