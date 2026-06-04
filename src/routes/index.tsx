@@ -127,6 +127,11 @@ function Hero() {
               Voir les coupons du jour <ArrowRight className="ml-2 w-4 h-4" />
             </Button>
           </a>
+          <Link to="/coupons-valides">
+            <Button size="lg" variant="outline" className="border-primary/40 hover:bg-primary/10 h-12 px-8 font-semibold">
+              <Trophy className="mr-2 w-4 h-4" /> Coupons validés
+            </Button>
+          </Link>
           <a href="#why">
             <Button size="lg" variant="outline" className="border-primary/40 hover:bg-primary/10 h-12 px-8">
               Comment ça marche
