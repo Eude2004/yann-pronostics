@@ -73,6 +73,7 @@ type Coupon = {
   video_url: string | null; start_date: string | null; end_date: string | null;
   event_date: string | null;
   status: PublishStatus; sales_count: number; is_featured: boolean;
+  disable_purchase_action: boolean;
 };
 type Transaction = {
   id: string; user_id: string; amount_xaf: number;
@@ -510,7 +511,18 @@ function CouponsAdmin() {
           <TableBody>
             {items.map((c) => (
               <TableRow key={c.id}>
-                <TableCell className="font-medium">{c.is_featured && "⭐ "}{c.title}</TableCell>
+                <TableCell className="font-medium">
+                  {c.is_featured && "⭐ "}{c.title}
+                  {(c as any).disable_purchase_action && (
+                    <Badge
+                      variant="outline"
+                      className="ml-2 text-[10px] uppercase tracking-wide border-amber-500/60 text-amber-600 dark:text-amber-300"
+                      title="L'action du bouton d'achat est désactivée pour ce coupon (visible uniquement par l'admin)."
+                    >
+                      Achat bloqué
+                    </Badge>
+                  )}
+                </TableCell>
                 <TableCell>{c.price_xaf.toLocaleString()} XAF</TableCell>
                 <TableCell className="text-xs text-muted-foreground">
                   {c.start_date ? new Date(c.start_date).toLocaleDateString("fr-FR") : "—"}
