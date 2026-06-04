@@ -28,6 +28,7 @@ import {
   Save, Download, FileText, TrendingUp, FlaskConical, Users, History,
   LayoutDashboard, Ticket, Receipt, Settings as SettingsIcon,
   DollarSign, ShoppingCart, Package, ArrowUpRight, Menu, Wifi, WifiOff, EyeOff,
+  Trophy,
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -42,7 +43,7 @@ import { setTestPayMode as setTestPayModeFn } from "@/lib/payments.functions";
 import { listAdminUsers as listAdminUsersFn, setUserAdmin as setUserAdminFn, deleteAppUser as deleteAppUserFn, setUserDisabled as setUserDisabledFn } from "@/lib/admin-users.functions";
 import { logAdminAction } from "@/lib/audit";
 
-const ADMIN_VIEWS = ["stats", "coupons", "transactions", "users", "audit", "settings"] as const;
+const ADMIN_VIEWS = ["stats", "coupons", "validated", "transactions", "users", "audit", "settings"] as const;
 type AdminViewKey = (typeof ADMIN_VIEWS)[number];
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -79,12 +80,13 @@ type Transaction = {
 };
 
 type AdminView =
-  | "stats" | "coupons" | "transactions"
+  | "stats" | "coupons" | "validated" | "transactions"
   | "users" | "audit" | "settings";
 
 const NAV_ITEMS: { id: AdminView; label: string; icon: any }[] = [
   { id: "stats", label: "Tableau de bord", icon: LayoutDashboard },
   { id: "coupons", label: "Coupons", icon: Ticket },
+  { id: "validated", label: "Coupons validés", icon: Trophy },
   { id: "transactions", label: "Transactions", icon: Receipt },
   { id: "users", label: "Utilisateurs", icon: Users },
   { id: "audit", label: "Journal", icon: History },
@@ -145,8 +147,9 @@ function AdminPage() {
           <main className="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto">
             {view === "stats" && <StatsAdmin />}
             {view === "coupons" && <CouponsAdmin />}
+            {view === "validated" && <ValidatedCouponsAdmin />}
             {view === "transactions" && <TransactionsAdmin />}
-            
+
             {view === "users" && <UsersAdmin />}
             {view === "audit" && <AuditAdmin />}
             {view === "settings" && <SettingsAdmin />}
