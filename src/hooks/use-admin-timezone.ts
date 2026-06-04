@@ -43,7 +43,7 @@ export function useAdminTimezone(): string {
     else setTz(cached);
 
     const channel = supabase
-      .channel("app-settings-tz")
+      .channel(`app-settings-tz-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "app_settings", filter: "key=eq.admin_timezone" },
