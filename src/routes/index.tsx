@@ -619,9 +619,7 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
             <Calendar className="w-3.5 h-3.5" />
             {dateLabel}
           </span>
-          <span className="inline-flex items-center gap-1.5">
-            <ShoppingCart className="w-3 h-3" /> {coupon.sales_count}
-          </span>
+          {/* Sales/purchase volume intentionally hidden from client UI (confidentiality) */}
         </div>
 
         <div className="flex items-end justify-between gap-3 pt-1">
