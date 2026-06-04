@@ -146,7 +146,7 @@ function Hero() {
 function Stats() {
   const stats = [
     { v: "12 580+", l: "Coupons vendus" },
-    { v: "87%", l: "Taux de réussite" },
+    { v: "92%", l: "Taux de réussite" },
     { v: "5 200+", l: "Clients satisfaits" },
     { v: "24/7", l: "Support WhatsApp" },
   ];
