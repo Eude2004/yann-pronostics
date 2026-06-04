@@ -401,9 +401,20 @@ function CouponsAdmin() {
       video_url: c.video_url ?? "",
       start_date: isoToZonedInput(c.start_date, timezone),
       end_date: isoToZonedInput(c.end_date, timezone),
+      event_date: isoToZonedInput(c.event_date, timezone),
       status: c.status, is_featured: c.is_featured,
     });
     setOpen(true);
+  };
+
+  // Default event_date to today 15:00 in the chosen timezone when admin leaves it blank.
+  const defaultEventDateIso = (): string => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+    const local = `${yyyy}-${mm}-${dd}T15:00`;
+    return zonedInputToIso(local, timezone) ?? new Date().toISOString();
   };
 
   const defaultDescriptionFor = (type: CouponType): string => {
@@ -432,6 +443,7 @@ function CouponsAdmin() {
       video_url: form.video_url || null,
       start_date: zonedInputToIso(form.start_date, timezone),
       end_date: zonedInputToIso(form.end_date, timezone),
+      event_date: zonedInputToIso(form.event_date, timezone) ?? defaultEventDateIso(),
       status: form.status,
       is_featured: form.is_featured,
     };
