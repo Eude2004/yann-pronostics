@@ -36,6 +36,7 @@ type Coupon = {
   id: string; coupon_type: CouponType | null; title: string;
   description: string | null; price_xaf: number; image_url: string | null;
   video_url: string | null; start_date: string | null; end_date: string | null;
+  event_date: string | null;
   sales_count: number; status: "draft" | "published" | "archived";
 };
 
@@ -72,6 +73,9 @@ function Header() {
         </Link>
         <div className="hidden md:flex items-center gap-8 text-sm">
           <a href="#coupons" className="hover:text-primary transition-colors">{t("nav.coupons")}</a>
+          <Link to="/coupons-valides" className="hover:text-primary transition-colors text-gold font-semibold">
+            {t("validated.nav", { defaultValue: "Coupons validés" })}
+          </Link>
           <a href="#why" className="hover:text-primary transition-colors">{t("nav.why")}</a>
           <a href="#contact" className="hover:text-primary transition-colors">{t("nav.contact")}</a>
         </div>
