@@ -653,6 +653,15 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
             >
               {t("coupon.expired", { defaultValue: "TERMINÉ" })}
             </Button>
+          ) : inProgress ? (
+            <Button
+              size="sm"
+              disabled
+              aria-disabled="true"
+              className="live-pulse rounded-full px-5 h-9 font-semibold bg-amber-500/15 text-amber-200 border border-amber-400/50 cursor-not-allowed"
+            >
+              {t("coupon.in_progress", { defaultValue: "EN COURS" })}
+            </Button>
           ) : (
             <Button
               size="sm"
