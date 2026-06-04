@@ -672,7 +672,7 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
               size="sm"
               disabled
               aria-disabled="true"
-              className="live-pulse rounded-full px-5 h-9 font-semibold bg-amber-500/15 text-amber-200 border border-amber-400/50 cursor-not-allowed"
+              className="live-pulse rounded-full px-5 h-9 font-extrabold bg-amber-500/25 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200 border border-amber-600/60 dark:border-amber-400/50 cursor-not-allowed tracking-wider"
             >
               {t("coupon.in_progress", { defaultValue: "EN COURS" })}
             </Button>
