@@ -36,6 +36,7 @@ type Coupon = {
   id: string; coupon_type: CouponType | null; title: string;
   description: string | null; price_xaf: number; image_url: string | null;
   video_url: string | null; start_date: string | null; end_date: string | null;
+  event_date: string | null;
   sales_count: number; status: "draft" | "published" | "archived";
 };
 
@@ -72,6 +73,9 @@ function Header() {
         </Link>
         <div className="hidden md:flex items-center gap-8 text-sm">
           <a href="#coupons" className="hover:text-primary transition-colors">{t("nav.coupons")}</a>
+          <Link to="/coupons-valides" className="hover:text-primary transition-colors text-gold font-semibold">
+            {t("validated.nav", { defaultValue: "Coupons validés" })}
+          </Link>
           <a href="#why" className="hover:text-primary transition-colors">{t("nav.why")}</a>
           <a href="#contact" className="hover:text-primary transition-colors">{t("nav.contact")}</a>
         </div>
@@ -378,23 +382,28 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
   const meta = coupon.coupon_type ? TYPE_META[coupon.coupon_type] : TYPE_META.cote_10;
   const Icon = meta.icon;
 
-  // Bascule automatique vers « TERMINÉ » sans reload : on planifie un timeout précis
-  // à l'instant exact de end_date, plus un filet de sécurité toutes les 30 s.
+  // Bascule automatique vers « TERMINÉ » / « EN COURS » sans reload.
   useEffect(() => {
     const tick = () => setNow(new Date());
     const interval = window.setInterval(tick, 30_000);
-    let timeout: number | undefined;
-    if (coupon.end_date) {
-      const ms = new Date(coupon.end_date).getTime() - Date.now();
-      if (ms > 0 && ms < 2_147_483_647) timeout = window.setTimeout(tick, ms + 250);
-    }
+    const timeouts: number[] = [];
+    const schedule = (iso: string | null) => {
+      if (!iso) return;
+      const ms = new Date(iso).getTime() - Date.now();
+      if (ms > 0 && ms < 2_147_483_647) timeouts.push(window.setTimeout(tick, ms + 250));
+    };
+    schedule(coupon.event_date);
+    schedule(coupon.end_date);
     return () => {
       window.clearInterval(interval);
-      if (timeout !== undefined) window.clearTimeout(timeout);
+      timeouts.forEach((t) => window.clearTimeout(t));
     };
-  }, [coupon.end_date]);
+  }, [coupon.end_date, coupon.event_date]);
 
   const ended = !!coupon.end_date && new Date(coupon.end_date).getTime() <= now.getTime();
+  const inProgress = !ended && !!coupon.event_date && new Date(coupon.event_date).getTime() <= now.getTime();
+  // Acheteurs existants conservent l'accès intégral même quand l'événement a démarré.
+  const lockedForPurchase = ended || (inProgress && !paid);
 
   const dateLabel = coupon.start_date
     ? new Date(coupon.start_date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })
@@ -413,6 +422,10 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
   const handleBuy = () => {
     if (ended) {
       toast.info(t("coupon.expired_blocked", { defaultValue: "Ce coupon est terminé et n'est plus disponible à l'achat." }));
+      return;
+    }
+    if (inProgress && !paid) {
+      toast.info(t("coupon.in_progress_blocked", { defaultValue: "Les matchs ont commencé, achat verrouillé." }));
       return;
     }
     if (!session) {
@@ -486,6 +499,11 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
         {ended && !paid ? (
           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-extrabold bg-zinc-500/15 border border-zinc-400/50 text-zinc-200 tracking-wider">
             {t("coupon.expired", { defaultValue: "TERMINÉ" })}
+          </span>
+        ) : inProgress ? (
+          <span className="live-pulse inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-extrabold border border-amber-400/70 bg-amber-500/10 text-amber-300 tracking-wider">
+            <span className="live-dot inline-block w-1.5 h-1.5 rounded-full bg-amber-300" />
+            {t("coupon.in_progress", { defaultValue: "EN COURS" })}
           </span>
         ) : paid ? (
           <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold badge-unlocked">
@@ -584,6 +602,16 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
                 ? t(`coupon.fallback_desc_${coupon.coupon_type}`, { defaultValue: t("coupon.fallback_desc") })
                 : t("coupon.fallback_desc"))}
           </p>
+          {inProgress && (
+            <div
+              className="live-pulse mt-2 rounded-md px-2.5 py-1.5 text-[11px] font-bold tracking-wide flex items-center gap-2 border border-amber-400/60 bg-amber-500/10 text-amber-300"
+              role="status"
+              aria-live="polite"
+            >
+              <span className="live-dot inline-block w-1.5 h-1.5 rounded-full bg-amber-300" />
+              {t("coupon.in_progress_banner", { defaultValue: "En cours sur ce coupon" })}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
@@ -634,6 +662,15 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
               className="rounded-full px-5 h-9 font-semibold bg-zinc-600/30 text-zinc-200 border border-zinc-400/30 cursor-not-allowed"
             >
               {t("coupon.expired", { defaultValue: "TERMINÉ" })}
+            </Button>
+          ) : inProgress ? (
+            <Button
+              size="sm"
+              disabled
+              aria-disabled="true"
+              className="live-pulse rounded-full px-5 h-9 font-semibold bg-amber-500/15 text-amber-200 border border-amber-400/50 cursor-not-allowed"
+            >
+              {t("coupon.in_progress", { defaultValue: "EN COURS" })}
             </Button>
           ) : (
             <Button

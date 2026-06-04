@@ -6,6 +6,27 @@ export type CouponLifecycleInfo = {
   nextStatus: CouponLifecycleStatus | null;
 };
 
+/**
+ * Returns true when the event has started but the coupon isn't archived yet.
+ * Used to lock the purchase button and show the "EN COURS" banner.
+ */
+export function isCouponInProgress(
+  eventDate: string | null | undefined,
+  endDate: string | null | undefined,
+  now: Date = new Date(),
+): boolean {
+  if (!eventDate) return false;
+  const ev = new Date(eventDate).getTime();
+  if (Number.isNaN(ev)) return false;
+  const nowMs = now.getTime();
+  if (nowMs < ev) return false;
+  if (endDate) {
+    const e = new Date(endDate).getTime();
+    if (!Number.isNaN(e) && nowMs >= e) return false;
+  }
+  return true;
+}
+
 /** Compute the auto-status of a coupon given its start/end dates, matching the DB logic. */
 export function computeCouponLifecycle(
   startIso: string | null | undefined,

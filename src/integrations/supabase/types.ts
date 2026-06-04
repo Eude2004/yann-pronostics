@@ -431,6 +431,54 @@ export type Database = {
         }
         Relationships: []
       }
+      validated_coupons: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          display_end: string | null
+          display_start: string | null
+          id: string
+          media_type: string
+          media_url: string | null
+          published_at: string
+          sort_order: number
+          status: Database["public"]["Enums"]["validated_coupon_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_end?: string | null
+          display_start?: string | null
+          id?: string
+          media_type?: string
+          media_url?: string | null
+          published_at?: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["validated_coupon_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_end?: string | null
+          display_start?: string | null
+          id?: string
+          media_type?: string
+          media_url?: string | null
+          published_at?: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["validated_coupon_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -458,6 +506,7 @@ export type Database = {
       subscription_status: "active" | "inactive" | "expired" | "cancelled"
       transaction_kind: "coupon" | "subscription"
       transaction_status: "pending" | "completed" | "failed" | "refunded"
+      validated_coupon_status: "draft" | "published" | "archived"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -592,6 +641,7 @@ export const Constants = {
       subscription_status: ["active", "inactive", "expired", "cancelled"],
       transaction_kind: ["coupon", "subscription"],
       transaction_status: ["pending", "completed", "failed", "refunded"],
+      validated_coupon_status: ["draft", "published", "archived"],
     },
   },
 } as const

@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as CouponsValidesRouteImport } from './routes/coupons-valides'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -22,6 +23,11 @@ import { Route as ApiPublicCinetpayNotifyRouteImport } from './routes/api/public
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CouponsValidesRoute = CouponsValidesRouteImport.update({
+  id: '/coupons-valides',
+  path: '/coupons-valides',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -69,6 +75,7 @@ const ApiPublicCinetpayNotifyRoute = ApiPublicCinetpayNotifyRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/coupons-valides': typeof CouponsValidesRoute
   '/reset-password': typeof ResetPasswordRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -79,6 +86,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/coupons-valides': typeof CouponsValidesRoute
   '/reset-password': typeof ResetPasswordRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -91,6 +99,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/coupons-valides': typeof CouponsValidesRoute
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
@@ -103,6 +112,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/coupons-valides'
     | '/reset-password'
     | '/admin'
     | '/dashboard'
@@ -113,6 +123,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/coupons-valides'
     | '/reset-password'
     | '/admin'
     | '/dashboard'
@@ -124,6 +135,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/coupons-valides'
     | '/reset-password'
     | '/_authenticated/admin'
     | '/_authenticated/dashboard'
@@ -136,6 +148,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  CouponsValidesRoute: typeof CouponsValidesRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   ApiPublicCinetpayNotifyRoute: typeof ApiPublicCinetpayNotifyRoute
   ApiPublicHooksExpirePendingPaymentsRoute: typeof ApiPublicHooksExpirePendingPaymentsRoute
@@ -148,6 +161,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/coupons-valides': {
+      id: '/coupons-valides'
+      path: '/coupons-valides'
+      fullPath: '/coupons-valides'
+      preLoaderRoute: typeof CouponsValidesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -228,6 +248,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  CouponsValidesRoute: CouponsValidesRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   ApiPublicCinetpayNotifyRoute: ApiPublicCinetpayNotifyRoute,
   ApiPublicHooksExpirePendingPaymentsRoute:
