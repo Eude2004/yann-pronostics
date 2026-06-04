@@ -708,6 +708,25 @@ function CouponsAdmin() {
                 </span>
               </span>
             </label>
+            <div className="rounded-md border border-border/60 p-3 bg-card/40">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs uppercase tracking-wide text-muted-foreground">Statut du coupon</span>
+                {form.disable_purchase_action ? (
+                  <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/50">
+                    Achat bloqué
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-emerald-600 border-emerald-500/40 dark:text-emerald-300">
+                    Achat actif
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {form.disable_purchase_action
+                  ? "Impact : visiteurs voient le coupon et le bouton « Acheter » de manière normale, mais aucun clic ne déclenche d'achat. Toute tentative directe sur l'endpoint est rejetée côté serveur et journalisée."
+                  : "Impact : le bouton « Acheter » fonctionne normalement et redirige vers le paiement Mobile Money."}
+              </p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
