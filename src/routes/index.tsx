@@ -424,6 +424,10 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
       toast.info(t("coupon.expired_blocked", { defaultValue: "Ce coupon est terminé et n'est plus disponible à l'achat." }));
       return;
     }
+    if (inProgress && !paid) {
+      toast.info(t("coupon.in_progress_blocked", { defaultValue: "Les matchs ont commencé, achat verrouillé." }));
+      return;
+    }
     if (!session) {
       toast.info("Connectez-vous pour acheter un coupon.");
       navigate({ to: "/auth", search: { redirect: "/" } as any });
