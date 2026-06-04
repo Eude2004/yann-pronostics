@@ -305,6 +305,7 @@ const emptyCouponForm = {
   description: "", image_url: "", video_url: "",
   start_date: "", end_date: "", event_date: "",
   status: "draft" as PublishStatus, is_featured: false,
+  disable_purchase_action: false,
 };
 
 const TZ_OPTIONS = [
