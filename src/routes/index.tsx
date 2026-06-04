@@ -255,7 +255,7 @@ function CouponsSection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id]);
 
-  const purchasedCount = paidIds.size;
+  // purchase count intentionally hidden from UI (confidentiality)
 
   // Règle stricte des 4 coupons : 1 carte par catégorie, dans un ordre fixe.
   // Si aucune carte publiée pour la catégorie, on rend un emplacement « bientôt disponible »
