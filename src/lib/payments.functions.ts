@@ -93,9 +93,22 @@ export const initiatePayment = createServerFn({ method: "POST" })
     if (error || !c) throw new Error("Coupon introuvable.");
     if (c.status !== "published") throw new Error("Coupon non disponible.");
     // Garde-fou serveur : si l'admin a désactivé l'action d'achat, on bloque
-    // silencieusement toute tentative directe (le front ne déclenche rien non plus).
+    // toute tentative (y compris les appels directs à l'endpoint qui
+    // contourneraient le bouton). On log l'événement pour l'admin.
     if ((c as any).disable_purchase_action === true) {
-      throw new Error("Action indisponible.");
+      try {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        await supabaseAdmin.from("admin_audit_log").insert({
+          actor_id: context.userId,
+          action: "purchase_attempt_blocked",
+          entity_type: "coupon",
+          entity_id: data.couponId,
+          details: { reason: "disable_purchase_action", title: c.title },
+        });
+      } catch {
+        // ne pas faire échouer la réponse à cause du log
+      }
+      throw new Error("Achat indisponible pour ce coupon.");
     }
     // Garde-fou serveur : un coupon dont la date de fin est passée ne peut plus
     // être acheté, même si un appel direct contourne le bouton désactivé du front.

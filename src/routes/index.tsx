@@ -38,7 +38,8 @@ type Coupon = {
   video_url: string | null; start_date: string | null; end_date: string | null;
   event_date: string | null;
   sales_count: number; status: "draft" | "published" | "archived";
-  disable_purchase_action: boolean;
+  // disable_purchase_action est volontairement absent : champ admin-only.
+  // L'enforcement est entièrement server-side (initiatePayment).
 };
 
 const TYPE_META: Record<CouponType, { icon: any; gradient: string; hot: boolean }> = {
@@ -178,7 +179,7 @@ function CouponsSection() {
     // reste affiché tant qu'aucun nouveau coupon de sa catégorie ne le remplace.
     const { data } = await supabase
       .from("coupons")
-      .select("id, title, slug, description, sport, category_id, price_xaf, odds, image_url, preview_content, status, is_featured, created_by, created_at, updated_at, coupon_type, video_url, start_date, end_date, sales_count, event_date, disable_purchase_action")
+      .select("id, title, slug, description, sport, category_id, price_xaf, odds, image_url, preview_content, status, is_featured, created_by, created_at, updated_at, coupon_type, video_url, start_date, end_date, sales_count, event_date")
       .eq("status", "published")
       .order("coupon_type");
     setCoupons((data as Coupon[]) ?? []);
@@ -421,10 +422,9 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
   }, [paid, url, getAccess, coupon.id]);
 
   const handleBuy = () => {
-    // Silent block: admin-controlled flag. Visual unchanged, click does nothing.
-    if (coupon.disable_purchase_action && !paid) {
-      return;
-    }
+    // L'enforcement de `disable_purchase_action` est entièrement server-side
+    // (le champ n'est pas exposé au public). Si l'admin l'a activé, l'appel
+    // à `initiatePayment` retourne une erreur claire affichée dans la modale.
     if (ended) {
       toast.info(t("coupon.expired_blocked", { defaultValue: "Ce coupon est terminé et n'est plus disponible à l'achat." }));
       return;
