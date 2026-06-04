@@ -291,11 +291,6 @@ function CouponsSection() {
             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border border-amber-400/60 bg-amber-500/5 text-amber-300 shadow-[inset_0_0_10px_rgba(212,175,55,0.15)]">
               {activeCount} / 4 coupons disponibles
             </span>
-            {session && purchasedCount > 0 && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border border-sky-400/60 bg-sky-500/5 text-sky-300 shadow-[inset_0_0_10px_rgba(56,189,248,0.18)]">
-                <CheckCircle2 className="w-3 h-3 mr-1" /> {purchasedCount} acheté{purchasedCount > 1 ? "s" : ""}
-              </span>
-            )}
           </div>
         </div>
         {loading ? (
