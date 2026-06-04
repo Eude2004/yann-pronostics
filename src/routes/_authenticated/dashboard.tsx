@@ -414,7 +414,11 @@ function UserCouponCard({
     }
   };
 
-  const onBuy = () => setPayOpen(true);
+  const onBuy = () => {
+    // Kill-switch admin : clic 100% silencieux quand l'achat est désactivé.
+    if (coupon.disable_purchase_action === true) return;
+    setPayOpen(true);
+  };
 
   const onDownload = async () => {
     try {
