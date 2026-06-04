@@ -7,7 +7,9 @@ import { Loader2, ShieldCheck, Smartphone, CheckCircle2, Play, AlertTriangle, Ro
 import { useServerFn } from "@tanstack/react-start";
 import { initiatePayment, simulatePaymentCompletion } from "@/lib/payments.functions";
 import { getCouponVideoAccess } from "@/lib/coupon-access.functions";
+import { EventCountdown } from "@/components/EventCountdown";
 import { toast } from "sonner";
+
 
 type Method = "mtn" | "orange" | "moov";
 
@@ -25,7 +27,7 @@ export function PaymentModal({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  coupon: { id: string; title: string; price_xaf: number };
+  coupon: { id: string; title: string; price_xaf: number; event_date?: string | null };
   customer?: { name?: string; email?: string };
 }) {
   const initiate = useServerFn(initiatePayment);
@@ -167,7 +169,14 @@ export function PaymentModal({
               </DialogDescription>
             </DialogHeader>
 
+            {coupon.event_date && (
+              <div className="px-6 pb-2">
+                <EventCountdown eventDate={coupon.event_date} />
+              </div>
+            )}
+
             <div className="px-6 pb-4 space-y-2">
+
               {METHODS.map((m) => {
                 const selected = method === m.id;
                 return (
