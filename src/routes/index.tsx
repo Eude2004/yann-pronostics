@@ -371,75 +371,36 @@ const COUPON_TYPE_LABEL: Record<CouponType, string> = {
   pair_corner: "Coupon Total Pair Corner",
 };
 
-function formatCountdown(ms: number): string {
-  if (ms <= 0) return "0s";
-  const s = Math.floor(ms / 1000);
-  const d = Math.floor(s / 86400);
-  const h = Math.floor((s % 86400) / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  if (d > 0) return `${d}j ${pad(h)}h ${pad(m)}m ${pad(sec)}s`;
-  return `${pad(h)}h ${pad(m)}m ${pad(sec)}s`;
-}
-
-function EventCountdown({ eventDate }: { eventDate: string }) {
-  const target = new Date(eventDate).getTime();
-  const [remaining, setRemaining] = useState(() => target - Date.now());
-  useEffect(() => {
-    const id = window.setInterval(() => setRemaining(target - Date.now()), 1000);
-    return () => window.clearInterval(id);
-  }, [target]);
-  if (remaining <= 0) return null;
-  return (
-    <div
-      className="mt-2 rounded-md px-2.5 py-1.5 text-[11px] font-semibold tracking-wide flex items-center gap-2 border border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-      role="status"
-      aria-live="polite"
-    >
-      <Calendar className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-      <span>Les événements de ce coupon débuteront dans <span className="font-mono tabular-nums">{formatCountdown(remaining)}</span></span>
-    </div>
-  );
-}
-
-
-
 function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
   const { t } = useTranslation();
   const { session } = useAuth();
   const navigate = useNavigate();
   const getAccess = useServerFn(getCouponVideoAccess);
+  const offsetMs = useServerTimeOffset();
   const [payOpen, setPayOpen] = useState(false);
   const [url, setUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [now, setNow] = useState(() => new Date());
+  const [now, setNow] = useState(() => new Date(Date.now() + offsetMs));
   const meta = coupon.coupon_type ? TYPE_META[coupon.coupon_type] : TYPE_META.cote_10;
   const Icon = meta.icon;
 
-  // Bascule automatique vers « TERMINÉ » / « EN COURS » sans reload.
+  // Bascule automatique vers « TERMINÉ » / « EN COURS » sans reload, alignée
+  // sur l'horloge serveur (anti dérive du device). Tick 1s pour un flip
+  // instantané à la seconde près sans dépendre des setTimeout longs.
   useEffect(() => {
-    const tick = () => setNow(new Date());
-    const interval = window.setInterval(tick, 30_000);
-    const timeouts: number[] = [];
-    const schedule = (iso: string | null) => {
-      if (!iso) return;
-      const ms = new Date(iso).getTime() - Date.now();
-      if (ms > 0 && ms < 2_147_483_647) timeouts.push(window.setTimeout(tick, ms + 250));
-    };
-    schedule(coupon.event_date);
-    schedule(coupon.end_date);
-    return () => {
-      window.clearInterval(interval);
-      timeouts.forEach((t) => window.clearTimeout(t));
-    };
-  }, [coupon.end_date, coupon.event_date]);
+    const tick = () => setNow(new Date(Date.now() + offsetMs));
+    tick();
+    const interval = window.setInterval(tick, 1000);
+    return () => window.clearInterval(interval);
+  }, [offsetMs]);
 
   const ended = !!coupon.end_date && new Date(coupon.end_date).getTime() <= now.getTime();
   const inProgress = !ended && !!coupon.event_date && new Date(coupon.event_date).getTime() <= now.getTime();
   // Acheteurs existants conservent l'accès intégral même quand l'événement a démarré.
   const lockedForPurchase = ended || (inProgress && !paid);
+
+
 
   const dateLabel = coupon.start_date
     ? new Date(coupon.start_date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", timeZone: "Africa/Lagos" })
