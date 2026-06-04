@@ -102,6 +102,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          disable_purchase_action: boolean
           end_date: string | null
           event_date: string | null
           id: string
@@ -126,6 +127,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          disable_purchase_action?: boolean
           end_date?: string | null
           event_date?: string | null
           id?: string
@@ -150,6 +152,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          disable_purchase_action?: boolean
           end_date?: string | null
           event_date?: string | null
           id?: string
