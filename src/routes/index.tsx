@@ -602,6 +602,16 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
                 ? t(`coupon.fallback_desc_${coupon.coupon_type}`, { defaultValue: t("coupon.fallback_desc") })
                 : t("coupon.fallback_desc"))}
           </p>
+          {inProgress && (
+            <div
+              className="live-pulse mt-2 rounded-md px-2.5 py-1.5 text-[11px] font-bold tracking-wide flex items-center gap-2 border border-amber-400/60 bg-amber-500/10 text-amber-300"
+              role="status"
+              aria-live="polite"
+            >
+              <span className="live-dot inline-block w-1.5 h-1.5 rounded-full bg-amber-300" />
+              {t("coupon.in_progress_banner", { defaultValue: "En cours sur ce coupon" })}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
