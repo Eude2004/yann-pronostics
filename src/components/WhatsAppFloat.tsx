@@ -1,12 +1,26 @@
 import { MessageCircle } from "lucide-react";
 import { useRouterState } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { useSettings, whatsappLink } from "@/hooks/use-settings";
 
 export function WhatsAppFloat() {
+  const [mounted, setMounted] = useState(false);
   const { settings } = useSettings();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  // Hide on admin space (request: remove floating announcement at bottom)
-  if (pathname.startsWith("/admin")) return null;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+  if (
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/reset-password")
+  ) {
+    return null;
+  }
+
   const href = whatsappLink(
     settings.whatsapp_number,
     "Bonjour YANN PRONOSTICS, j'ai besoin d'aide.",
