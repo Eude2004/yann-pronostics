@@ -421,8 +421,14 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
   }, [paid, url, getAccess, coupon.id]);
 
   const handleBuy = () => {
-    // L'enforcement de `disable_purchase_action` est entièrement server-side
-    // (le champ n'est pas exposé au public). Si l'admin l'a activé, l'appel
+    // Kill-switch admin : si `disable_purchase_action` est activé, le clic
+    // doit être totalement silencieux — pas de modale, pas de toast, pas de
+    // navigation. L'utilisateur a l'impression que rien ne s'est passé.
+    if (coupon.disable_purchase_action === true) {
+      return;
+    }
+    // L'enforcement de `disable_purchase_action` reste aussi server-side
+    // (le client peut être contourné). Si l'admin l'a activé, l'appel
     // à `initiatePayment` retourne une erreur claire affichée dans la modale.
     if (ended) {
       toast.info(t("coupon.expired_blocked", { defaultValue: "Ce coupon est terminé et n'est plus disponible à l'achat." }));
