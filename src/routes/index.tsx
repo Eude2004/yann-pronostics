@@ -382,23 +382,28 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
   const meta = coupon.coupon_type ? TYPE_META[coupon.coupon_type] : TYPE_META.cote_10;
   const Icon = meta.icon;
 
-  // Bascule automatique vers « TERMINÉ » sans reload : on planifie un timeout précis
-  // à l'instant exact de end_date, plus un filet de sécurité toutes les 30 s.
+  // Bascule automatique vers « TERMINÉ » / « EN COURS » sans reload.
   useEffect(() => {
     const tick = () => setNow(new Date());
     const interval = window.setInterval(tick, 30_000);
-    let timeout: number | undefined;
-    if (coupon.end_date) {
-      const ms = new Date(coupon.end_date).getTime() - Date.now();
-      if (ms > 0 && ms < 2_147_483_647) timeout = window.setTimeout(tick, ms + 250);
-    }
+    const timeouts: number[] = [];
+    const schedule = (iso: string | null) => {
+      if (!iso) return;
+      const ms = new Date(iso).getTime() - Date.now();
+      if (ms > 0 && ms < 2_147_483_647) timeouts.push(window.setTimeout(tick, ms + 250));
+    };
+    schedule(coupon.event_date);
+    schedule(coupon.end_date);
     return () => {
       window.clearInterval(interval);
-      if (timeout !== undefined) window.clearTimeout(timeout);
+      timeouts.forEach((t) => window.clearTimeout(t));
     };
-  }, [coupon.end_date]);
+  }, [coupon.end_date, coupon.event_date]);
 
   const ended = !!coupon.end_date && new Date(coupon.end_date).getTime() <= now.getTime();
+  const inProgress = !ended && !!coupon.event_date && new Date(coupon.event_date).getTime() <= now.getTime();
+  // Acheteurs existants conservent l'accès intégral même quand l'événement a démarré.
+  const lockedForPurchase = ended || (inProgress && !paid);
 
   const dateLabel = coupon.start_date
     ? new Date(coupon.start_date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })
