@@ -41,8 +41,9 @@ type Coupon = {
   video_url: string | null; start_date: string | null; end_date: string | null;
   event_date: string | null;
   sales_count: number; status: "draft" | "published" | "archived";
-  // disable_purchase_action est volontairement absent : champ admin-only.
-  // L'enforcement est entièrement server-side (initiatePayment).
+  // Exposé en lecture seule pour permettre un blocage 100% silencieux côté client.
+  // L'enforcement reste server-side dans `initiatePayment` comme filet de sécurité.
+  disable_purchase_action?: boolean | null;
 };
 
 const TYPE_META: Record<CouponType, { icon: any; gradient: string; hot: boolean }> = {
