@@ -89,6 +89,7 @@ export const fr = {
     empty: "Aucun coupon validé pour le moment.",
     published_on: "Publié le",
     badge: "GAGNANT",
+  },
   dashboard: {
     welcome: "Bienvenue",
     hello: "Bonjour,",
