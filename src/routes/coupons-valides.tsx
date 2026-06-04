@@ -115,7 +115,8 @@ function ValidatedCouponsPage() {
 }
 
 function ValidatedCard({ item, index }: { item: ValidatedCoupon; index: number }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === "en" ? "en-US" : "fr-FR";
   return (
     <article
       className="group relative rounded-2xl overflow-hidden glass-card fade-in-up unlocked-border transition-all duration-300 hover:-translate-y-1 hover:shadow-gold"
