@@ -599,11 +599,11 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
           </p>
           {inProgress && (
             <div
-              className="live-pulse mt-2 rounded-md px-2.5 py-1.5 text-[11px] font-bold tracking-wide flex items-center gap-2 border border-amber-400/60 bg-amber-500/10 text-amber-300"
+              className="live-banner mt-2 rounded-md px-2.5 py-1.5 text-[11px] tracking-wide flex items-center gap-2"
               role="status"
               aria-live="polite"
             >
-              <span className="live-dot inline-block w-1.5 h-1.5 rounded-full bg-amber-300" />
+              <span className="live-dot inline-block w-1.5 h-1.5 rounded-full" />
               {t("coupon.in_progress_banner", { defaultValue: "En cours sur ce coupon" })}
             </div>
           )}
