@@ -36,6 +36,7 @@ function ValidatedCouponsPage() {
   const { t } = useTranslation();
   const [items, setItems] = useState<ValidatedCoupon[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lightbox, setLightbox] = useState<ValidatedCoupon | null>(null);
 
   const load = async () => {
     const { data } = await supabase
