@@ -448,6 +448,7 @@ function CouponsAdmin() {
       event_date: zonedInputToIso(form.event_date, timezone) ?? defaultEventDateIso(),
       status: form.status,
       is_featured: form.is_featured,
+      disable_purchase_action: form.disable_purchase_action,
     };
     const slug = form.coupon_type + "-" + Date.now();
     const insertPayload = { ...basePayload, slug };
