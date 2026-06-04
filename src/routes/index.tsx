@@ -38,6 +38,7 @@ type Coupon = {
   video_url: string | null; start_date: string | null; end_date: string | null;
   event_date: string | null;
   sales_count: number; status: "draft" | "published" | "archived";
+  disable_purchase_action: boolean;
 };
 
 const TYPE_META: Record<CouponType, { icon: any; gradient: string; hot: boolean }> = {
