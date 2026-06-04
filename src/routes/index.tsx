@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import logo from "@/assets/yann-logo.png";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Lock, TrendingUp, Trophy, Zap, ShieldCheck, Star, Flame, ArrowRight, MessageCircle, LayoutDashboard, Calendar, ShoppingCart, Loader2, Play, Download } from "lucide-react";
+import { Lock, TrendingUp, Trophy, Zap, ShieldCheck, Star, Flame, ArrowRight, MessageCircle, LayoutDashboard, Calendar, Loader2, Play, Download } from "lucide-react";
 import { CouponStatusBadge } from "@/components/CouponStatusBadge";
 import { getCouponVideoAccess } from "@/lib/coupon-access.functions";
 import { refreshAndGetNextTransition } from "@/lib/coupon-schedule.functions";
