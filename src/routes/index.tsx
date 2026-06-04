@@ -421,6 +421,10 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
   }, [paid, url, getAccess, coupon.id]);
 
   const handleBuy = () => {
+    // Silent block: admin-controlled flag. Visual unchanged, click does nothing.
+    if (coupon.disable_purchase_action && !paid) {
+      return;
+    }
     if (ended) {
       toast.info(t("coupon.expired_blocked", { defaultValue: "Ce coupon est terminé et n'est plus disponible à l'achat." }));
       return;
