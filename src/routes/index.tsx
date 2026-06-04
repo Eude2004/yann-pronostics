@@ -500,6 +500,11 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-extrabold bg-zinc-500/15 border border-zinc-400/50 text-zinc-200 tracking-wider">
             {t("coupon.expired", { defaultValue: "TERMINÉ" })}
           </span>
+        ) : inProgress ? (
+          <span className="live-pulse inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-extrabold border border-amber-400/70 bg-amber-500/10 text-amber-300 tracking-wider">
+            <span className="live-dot inline-block w-1.5 h-1.5 rounded-full bg-amber-300" />
+            {t("coupon.in_progress", { defaultValue: "EN COURS" })}
+          </span>
         ) : paid ? (
           <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold badge-unlocked">
             DÉBLOQUÉ
