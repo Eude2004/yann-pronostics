@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageToggle } from "@/components/LanguageToggle";
-import { ArrowLeft, Trophy, CheckCircle2, Calendar } from "lucide-react";
+import { ArrowLeft, Trophy, CheckCircle2, Calendar, X } from "lucide-react";
 import logo from "@/assets/yann-logo.png";
 
 export const Route = createFileRoute("/coupons-valides")({
