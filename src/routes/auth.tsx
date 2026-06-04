@@ -46,6 +46,10 @@ function AuthPage() {
     }
   }, [session, loading, isAdmin, navigate]);
 
+  useEffect(() => {
+    setTab(search.tab);
+  }, [search.tab]);
+
   const handleSignedUp = async (email: string, password: string) => {
     // Auto-confirm activé : Supabase crée une session automatiquement.
     // On la révoque pour forcer l'utilisateur à valider en cliquant "Se connecter".
@@ -57,11 +61,11 @@ function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden">
+    <div className="min-h-screen flex items-start justify-center px-4 py-6 sm:py-12 relative overflow-x-hidden overflow-y-auto">
       <div className="absolute inset-0 -z-10">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-primary/10 blur-[120px]" />
       </div>
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-md my-auto pb-[max(env(safe-area-inset-bottom),1rem)]">
         <Link to="/" className="flex flex-col items-center mb-8 gap-3">
           <img src={logo} alt="YANN PRONOSTICS" className="h-20 w-20 object-contain" />
           <span className="font-display tracking-wider text-gold text-xl">YANN PRONOSTICS</span>
@@ -73,7 +77,7 @@ function AuthPage() {
               <TabsTrigger value="login">Connexion</TabsTrigger>
               <TabsTrigger value="signup">Inscription</TabsTrigger>
             </TabsList>
-            <TabsContent value="login">
+            <TabsContent value="login" forceMount hidden={tab !== "login"} className={tab !== "login" ? "hidden" : undefined}>
               {justSignedUp && (
                 <div className="mb-4 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-xs text-primary">
                   Compte créé avec succès. Vos identifiants sont pré-remplis — cliquez sur « Se connecter ».
@@ -86,7 +90,9 @@ function AuthPage() {
                 setPassword={setLoginPassword}
               />
             </TabsContent>
-            <TabsContent value="signup"><SignupForm onSignedUp={handleSignedUp} /></TabsContent>
+            <TabsContent value="signup" forceMount hidden={tab !== "signup"} className={tab !== "signup" ? "hidden" : undefined}>
+              <SignupForm onSignedUp={handleSignedUp} />
+            </TabsContent>
           </Tabs>
 
           <div className="relative my-6">
