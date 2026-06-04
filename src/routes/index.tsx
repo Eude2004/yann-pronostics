@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import logo from "@/assets/yann-logo.png";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Lock, TrendingUp, Trophy, Zap, ShieldCheck, Star, Flame, ArrowRight, MessageCircle, LayoutDashboard, Calendar, ShoppingCart, Loader2, Play, CheckCircle2, Download } from "lucide-react";
+import { Lock, TrendingUp, Trophy, Zap, ShieldCheck, Star, Flame, ArrowRight, MessageCircle, LayoutDashboard, Calendar, ShoppingCart, Loader2, Play, Download } from "lucide-react";
 import { CouponStatusBadge } from "@/components/CouponStatusBadge";
 import { getCouponVideoAccess } from "@/lib/coupon-access.functions";
 import { refreshAndGetNextTransition } from "@/lib/coupon-schedule.functions";
@@ -255,7 +255,7 @@ function CouponsSection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id]);
 
-  const purchasedCount = paidIds.size;
+  // purchase count intentionally hidden from UI (confidentiality)
 
   // Règle stricte des 4 coupons : 1 carte par catégorie, dans un ordre fixe.
   // Si aucune carte publiée pour la catégorie, on rend un emplacement « bientôt disponible »
@@ -291,11 +291,6 @@ function CouponsSection() {
             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border border-amber-400/60 bg-amber-500/5 text-amber-300 shadow-[inset_0_0_10px_rgba(212,175,55,0.15)]">
               {activeCount} / 4 coupons disponibles
             </span>
-            {session && purchasedCount > 0 && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border border-sky-400/60 bg-sky-500/5 text-sky-300 shadow-[inset_0_0_10px_rgba(56,189,248,0.18)]">
-                <CheckCircle2 className="w-3 h-3 mr-1" /> {purchasedCount} acheté{purchasedCount > 1 ? "s" : ""}
-              </span>
-            )}
           </div>
         </div>
         {loading ? (
@@ -604,11 +599,11 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
           </p>
           {inProgress && (
             <div
-              className="live-pulse mt-2 rounded-md px-2.5 py-1.5 text-[11px] font-bold tracking-wide flex items-center gap-2 border border-amber-400/60 bg-amber-500/10 text-amber-300"
+              className="live-banner mt-2 rounded-md px-2.5 py-1.5 text-[11px] tracking-wide flex items-center gap-2"
               role="status"
               aria-live="polite"
             >
-              <span className="live-dot inline-block w-1.5 h-1.5 rounded-full bg-amber-300" />
+              <span className="live-dot inline-block w-1.5 h-1.5 rounded-full" />
               {t("coupon.in_progress_banner", { defaultValue: "En cours sur ce coupon" })}
             </div>
           )}
