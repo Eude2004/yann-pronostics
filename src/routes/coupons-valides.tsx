@@ -50,7 +50,7 @@ function ValidatedCouponsPage() {
   useEffect(() => {
     load();
     const ch = supabase
-      .channel("validated-coupons-public")
+      .channel(`validated-coupons-public-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "validated_coupons" }, load)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
