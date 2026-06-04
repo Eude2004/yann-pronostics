@@ -27,7 +27,7 @@ export function PaymentModal({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  coupon: { id: string; title: string; price_xaf: number };
+  coupon: { id: string; title: string; price_xaf: number; event_date?: string | null };
   customer?: { name?: string; email?: string };
 }) {
   const initiate = useServerFn(initiatePayment);
