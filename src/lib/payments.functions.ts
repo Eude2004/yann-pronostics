@@ -115,11 +115,6 @@ export const initiatePayment = createServerFn({ method: "POST" })
     if (c.end_date && new Date(c.end_date).getTime() <= Date.now()) {
       throw new Error("Ce coupon est terminé et n'est plus disponible à l'achat.");
     }
-    // Garde-fou serveur : un coupon dont la date de fin est passée ne peut plus
-    // être acheté, même si un appel direct contourne le bouton désactivé du front.
-    if (c.end_date && new Date(c.end_date).getTime() <= Date.now()) {
-      throw new Error("Ce coupon est terminé et n'est plus disponible à l'achat.");
-    }
     // Verrouillage à l'heure de début de l'événement : aucune nouvelle vente
     // possible dès que les matchs ont commencé. Les acheteurs existants
     // conservent leur accès (la transaction completed est intacte).
