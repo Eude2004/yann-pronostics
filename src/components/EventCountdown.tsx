@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Calendar } from "lucide-react";
 import { useServerTimeOffset, serverNow } from "@/hooks/use-server-time-offset";
 import { getBrowserTimezone } from "@/lib/coupon-status";
+import { useAdminTimezone } from "@/hooks/use-admin-timezone";
 
 function formatCountdown(ms: number): string {
   if (ms <= 0) return "0s";
