@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.archive_expired_validated_coupons() FROM PUBLIC, anon, authenticated;
