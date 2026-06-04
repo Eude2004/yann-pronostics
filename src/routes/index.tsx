@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import logo from "@/assets/yann-logo.png";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Lock, TrendingUp, Trophy, Zap, ShieldCheck, Star, Flame, ArrowRight, MessageCircle, LayoutDashboard, Calendar, ShoppingCart, Loader2, Play, Download } from "lucide-react";
+import { Lock, TrendingUp, Trophy, Zap, ShieldCheck, Star, Flame, ArrowRight, MessageCircle, LayoutDashboard, Calendar, Loader2, Play, Download } from "lucide-react";
 import { CouponStatusBadge } from "@/components/CouponStatusBadge";
 import { getCouponVideoAccess } from "@/lib/coupon-access.functions";
 import { refreshAndGetNextTransition } from "@/lib/coupon-schedule.functions";
@@ -496,8 +496,13 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
             {t("coupon.expired", { defaultValue: "TERMINÉ" })}
           </span>
         ) : inProgress ? (
-          <span className="live-pulse inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-extrabold border border-amber-400/70 bg-amber-500/10 text-amber-300 tracking-wider">
-            <span className="live-dot inline-block w-1.5 h-1.5 rounded-full bg-amber-300" />
+          <span
+            role="status"
+            aria-live="polite"
+            aria-label={t("coupon.in_progress_aria", { defaultValue: "Coupon en cours, achat verrouillé" })}
+            className="live-pulse inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-extrabold border border-amber-500/70 bg-amber-500/15 text-amber-700 dark:text-amber-200 tracking-wider"
+          >
+            <span aria-hidden="true" className="live-dot inline-block w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-300" />
             {t("coupon.in_progress", { defaultValue: "EN COURS" })}
           </span>
         ) : paid ? (
@@ -599,12 +604,13 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
           </p>
           {inProgress && (
             <div
-              className="live-banner mt-2 rounded-md px-2.5 py-1.5 text-[11px] tracking-wide flex items-center gap-2"
+              className="live-banner mt-2 rounded-md px-2.5 py-1.5 text-[11px] font-semibold tracking-wide flex items-center gap-2"
               role="status"
               aria-live="polite"
+              aria-label={t("coupon.in_progress_aria", { defaultValue: "Coupon en cours, achat verrouillé" })}
             >
-              <span className="live-dot inline-block w-1.5 h-1.5 rounded-full" />
-              {t("coupon.in_progress_banner", { defaultValue: "En cours sur ce coupon" })}
+              <span aria-hidden="true" className="live-dot inline-block w-1.5 h-1.5 rounded-full" />
+              <span>{t("coupon.in_progress_banner", { defaultValue: "Coupon en cours" })}</span>
             </div>
           )}
         </div>
@@ -614,9 +620,7 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
             <Calendar className="w-3.5 h-3.5" />
             {dateLabel}
           </span>
-          <span className="inline-flex items-center gap-1.5">
-            <ShoppingCart className="w-3 h-3" /> {coupon.sales_count}
-          </span>
+          {/* Sales/purchase volume intentionally hidden from client UI (confidentiality) */}
         </div>
 
         <div className="flex items-end justify-between gap-3 pt-1">

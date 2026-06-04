@@ -115,7 +115,8 @@ function ValidatedCouponsPage() {
 }
 
 function ValidatedCard({ item, index }: { item: ValidatedCoupon; index: number }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === "en" ? "en-US" : "fr-FR";
   return (
     <article
       className="group relative rounded-2xl overflow-hidden glass-card fade-in-up unlocked-border transition-all duration-300 hover:-translate-y-1 hover:shadow-gold"
@@ -160,7 +161,7 @@ function ValidatedCard({ item, index }: { item: ValidatedCoupon; index: number }
           <Calendar className="w-3.5 h-3.5" />
           <span>
             {t("validated.published_on", { defaultValue: "Publié le" })}{" "}
-            {new Date(item.published_at).toLocaleDateString("fr-FR", {
+            {new Date(item.published_at).toLocaleDateString(locale, {
               day: "2-digit", month: "short", year: "numeric", timeZone: "Africa/Lagos",
             })}
           </span>
