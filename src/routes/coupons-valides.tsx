@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageToggle } from "@/components/LanguageToggle";
-import { ArrowLeft, Trophy, CheckCircle2, Calendar } from "lucide-react";
+import { ArrowLeft, Trophy, CheckCircle2, Calendar, X } from "lucide-react";
 import logo from "@/assets/yann-logo.png";
 
 export const Route = createFileRoute("/coupons-valides")({
@@ -36,6 +36,7 @@ function ValidatedCouponsPage() {
   const { t } = useTranslation();
   const [items, setItems] = useState<ValidatedCoupon[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lightbox, setLightbox] = useState<ValidatedCoupon | null>(null);
 
   const load = async () => {
     const { data } = await supabase
@@ -104,17 +105,41 @@ function ValidatedCouponsPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {items.map((c, i) => (
-                <ValidatedCard key={c.id} item={c} index={i} />
+                <ValidatedCard key={c.id} item={c} index={i} onOpen={() => setLightbox(c)} />
               ))}
             </div>
           )}
         </div>
       </section>
+
+      {lightbox && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setLightbox(null)}
+          className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+        >
+          <button
+            onClick={() => setLightbox(null)}
+            aria-label="Fermer"
+            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <div className="max-w-6xl max-h-[90vh] w-full flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+            {lightbox.media_url && lightbox.media_type === "video" ? (
+              <video src={lightbox.media_url} controls autoPlay className="max-h-[90vh] max-w-full rounded-lg" />
+            ) : lightbox.media_url ? (
+              <img src={lightbox.media_url} alt={lightbox.title} className="max-h-[90vh] max-w-full object-contain rounded-lg" />
+            ) : null}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function ValidatedCard({ item, index }: { item: ValidatedCoupon; index: number }) {
+function ValidatedCard({ item, index, onOpen }: { item: ValidatedCoupon; index: number; onOpen: () => void }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language === "en" ? "en-US" : "fr-FR";
   return (
@@ -127,25 +152,33 @@ function ValidatedCard({ item, index }: { item: ValidatedCoupon; index: number }
           <CheckCircle2 className="w-3 h-3" /> {t("validated.badge", { defaultValue: "GAGNANT" })}
         </span>
       </div>
-      <div className="aspect-video bg-chart-dark relative overflow-hidden gold-shimmer-overlay">
+      <div className="bg-black/5 dark:bg-black/40 relative overflow-hidden gold-shimmer-overlay">
         {item.media_url ? (
           item.media_type === "video" ? (
             <video
               src={item.media_url}
               controls
               preload="metadata"
-              className="absolute inset-0 w-full h-full object-cover bg-black"
+              className="w-full max-h-[600px] object-contain bg-black cursor-zoom-in"
+              onClick={onOpen}
             />
           ) : (
-            <img
-              src={item.media_url}
-              alt={item.title}
-              loading="lazy"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
+            <button
+              type="button"
+              onClick={onOpen}
+              aria-label={t("validated.expand", { defaultValue: "Agrandir l'image" })}
+              className="block w-full cursor-zoom-in"
+            >
+              <img
+                src={item.media_url}
+                alt={item.title}
+                loading="lazy"
+                className="w-full h-auto max-h-[600px] object-contain"
+              />
+            </button>
           )
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+          <div className="aspect-video flex items-center justify-center text-muted-foreground">
             <Trophy className="w-12 h-12 opacity-30" />
           </div>
         )}
