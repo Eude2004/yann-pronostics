@@ -169,7 +169,7 @@ function RealtimeIndicator() {
 
   useEffect(() => {
     const channel = supabase
-      .channel("admin-realtime-indicator")
+      .channel(`admin-realtime-indicator-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "transactions" }, () => setLastSync(new Date()))
       .on("postgres_changes", { event: "*", schema: "public", table: "coupons" }, () => setLastSync(new Date()))
       
@@ -387,7 +387,7 @@ function CouponsAdmin() {
   useEffect(() => {
     load();
     const channel = supabase
-      .channel("admin-coupons")
+      .channel(`admin-coupons-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "coupons" }, load)
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -758,7 +758,7 @@ function TransactionsAdmin() {
     };
     loadAnon();
     const channel = supabase
-      .channel("admin-tx-anon-mode")
+      .channel(`admin-tx-anon-mode-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "app_settings", filter: "key=eq.anonymous_mode" }, loadAnon)
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -1103,7 +1103,7 @@ function StatsAdmin() {
   useEffect(() => {
     reload();
     const channel = supabase
-      .channel("admin-stats")
+      .channel(`admin-stats-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "transactions" }, reload)
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, reload)
       .on("postgres_changes", { event: "*", schema: "public", table: "coupons" }, reload)
@@ -1686,7 +1686,7 @@ function AuditAdmin() {
   useEffect(() => {
     load();
     const channel = supabase
-      .channel("admin-audit")
+      .channel(`admin-audit-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "admin_audit_log" }, load)
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -1786,7 +1786,7 @@ function ValidatedCouponsAdmin() {
   useEffect(() => {
     load();
     const ch = supabase
-      .channel("admin-validated-coupons")
+      .channel(`admin-validated-coupons-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "validated_coupons" }, load)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
