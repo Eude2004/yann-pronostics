@@ -172,7 +172,7 @@ function Dashboard() {
     if (!user || isAdmin) return;
     loadAll();
     const channel = supabase
-      .channel(`user-tx-${user.id}`)
+      .channel(`user-tx-${user.id}-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         {

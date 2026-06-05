@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -18,40 +18,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<string[]>([]);
   const [sessionChecked, setSessionChecked] = useState(false);
   const [rolesChecked, setRolesChecked] = useState(false);
+  const rolesRequestId = useRef(0);
 
   const loadRoles = async (userId: string | null) => {
+    const requestId = ++rolesRequestId.current;
     if (!userId) {
+      if (rolesRequestId.current !== requestId) return;
       setRoles([]);
       setRolesChecked(true);
       return;
     }
-    const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
-    setRoles((data ?? []).map((r) => r.role));
-    setRolesChecked(true);
+    try {
+      const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+      if (rolesRequestId.current !== requestId) return;
+      if (error) {
+        setRoles([]);
+      } else {
+        setRoles((data ?? []).map((r) => r.role));
+      }
+    } finally {
+      if (rolesRequestId.current === requestId) {
+        setRolesChecked(true);
+      }
+    }
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+    let mounted = true;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+      if (!mounted) return;
       setSession(s);
-      setRolesChecked(false);
-      // defer to avoid recursion
-      setTimeout(() => loadRoles(s?.user?.id ?? null), 0);
+
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
+        setRolesChecked(false);
+        window.setTimeout(() => {
+          if (!mounted) return;
+          void loadRoles(s?.user?.id ?? null);
+        }, 0);
+      }
     });
 
     supabase.auth.getSession().then(({ data }) => {
+      if (!mounted) return;
       setSession(data.session);
       setSessionChecked(true);
-      loadRoles(data.session?.user?.id ?? null);
+      void loadRoles(data.session?.user?.id ?? null);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      rolesRequestId.current += 1;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    if (typeof window !== "undefined") {
-      window.location.assign("/");
-    }
   };
 
   // loading = true until we've checked the session AND (if signed in) loaded the roles

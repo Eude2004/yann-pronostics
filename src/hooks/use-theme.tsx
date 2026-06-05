@@ -219,7 +219,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("offline", onOffline);
       window.clearInterval(interval);
     };
-  }, [user]);
+  }, [user?.id]);
 
   // ---- Initial remote sync + realtime cross-device updates ----
   useEffect(() => {
@@ -267,7 +267,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       supabase.removeChannel(channel);
     };
-  }, [user, fallbackTheme]);
+  }, [user?.id, fallbackTheme]);
 
   const applyRemote = (remoteTheme: Theme, remoteRM: boolean, remoteTs: string) => {
     const validTheme = (["system", "light", "dark"] as const).includes(remoteTheme) ? remoteTheme : "system";

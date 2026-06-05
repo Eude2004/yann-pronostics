@@ -148,6 +148,22 @@
   @supports (min-height: 100dvh) {
     .min-h-screen { min-height: 100dvh; }
   }
+  .auth-shell {
+    min-height: 100svh;
+    align-items: flex-start;
+  }
+  .auth-card-wrap {
+    min-height: auto;
+  }
+  .auth-panel {
+    transform: translateZ(0);
+    will-change: auto;
+  }
+  @supports (min-height: 100dvh) {
+    .auth-shell {
+      min-height: 100dvh;
+    }
+  }
   h1, h2, h3, .font-display { font-family: var(--font-display); letter-spacing: 0.02em; }
 
   /* Smooth color/background transition only when explicitly armed during a theme switch */
@@ -174,6 +190,16 @@
       animation-iteration-count: 1 !important;
       transition-duration: 0.001ms !important;
       scroll-behavior: auto !important;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .auth-shell {
+      padding-top: max(env(safe-area-inset-top), 0.75rem);
+      padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
+    }
+    .auth-panel {
+      min-height: 0;
     }
   }
 }
