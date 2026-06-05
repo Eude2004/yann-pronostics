@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -36,25 +36,35 @@ function ValidatedCouponsPage() {
   const { t } = useTranslation();
   const [items, setItems] = useState<ValidatedCoupon[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<ValidatedCoupon | null>(null);
 
-  const load = async () => {
-    const { data } = await supabase
-      .from("validated_coupons")
-      .select("id, title, description, media_url, media_type, published_at, display_start, display_end")
-      .order("published_at", { ascending: false });
-    setItems((data as ValidatedCoupon[]) ?? []);
-    setLoading(false);
-  };
+  const load = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from("validated_coupons")
+        .select("id, title, description, media_url, media_type, published_at, display_start, display_end")
+        .order("published_at", { ascending: false });
+      if (error) throw error;
+      setItems((data as ValidatedCoupon[]) ?? []);
+      setLoadError(null);
+    } catch {
+      setLoadError(t("common.loading", { defaultValue: "Chargement impossible pour le moment." }));
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
 
   useEffect(() => {
-    load();
+    void load();
     const ch = supabase
       .channel(`validated-coupons-public-${Math.random().toString(36).slice(2)}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "validated_coupons" }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "validated_coupons" }, () => {
+        void load();
+      })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, []);
+  }, [load]);
 
   return (
     <div className="min-h-screen">
@@ -96,6 +106,11 @@ function ValidatedCouponsPage() {
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="rounded-2xl glass-card aspect-[4/5] skeleton-shimmer" />
               ))}
+            </div>
+          ) : loadError ? (
+            <div className="text-center py-16 text-muted-foreground">
+              <Trophy className="w-12 h-12 mx-auto opacity-30 mb-3" />
+              <p>{loadError}</p>
             </div>
           ) : items.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground">
