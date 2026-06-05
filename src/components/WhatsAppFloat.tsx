@@ -5,7 +5,6 @@ import { useSettings, whatsappLink } from "@/hooks/use-settings";
 
 export function WhatsAppFloat() {
   const [mounted, setMounted] = useState(false);
-  const { settings } = useSettings();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
@@ -16,10 +15,17 @@ export function WhatsAppFloat() {
   if (
     pathname.startsWith("/admin") ||
     pathname.startsWith("/auth") ||
+    pathname.startsWith("/dashboard") ||
     pathname.startsWith("/reset-password")
   ) {
     return null;
   }
+
+  return <WhatsAppFloatInner />;
+}
+
+function WhatsAppFloatInner() {
+  const { settings } = useSettings();
 
   const href = whatsappLink(
     settings.whatsapp_number,

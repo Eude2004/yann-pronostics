@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import logo from "@/assets/yann-logo.png";
@@ -35,15 +35,21 @@ function AuthPage() {
   const { session, loading, isAdmin } = useAuth();
   const navigate = useNavigate();
   const search = Route.useSearch();
+  const redirectedRef = useRef(false);
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [justSignedUp, setJustSignedUp] = useState(false);
+  const redirectTo = useMemo(() => (isAdmin ? "/admin" : "/dashboard"), [isAdmin]);
 
   useEffect(() => {
-    if (!loading && session) {
-      navigate({ to: isAdmin ? "/admin" : "/dashboard", replace: true });
+    if (!loading && session && !redirectedRef.current) {
+      redirectedRef.current = true;
+      navigate({ to: redirectTo, replace: true });
     }
-  }, [session, loading, isAdmin, navigate]);
+    if (!session) {
+      redirectedRef.current = false;
+    }
+  }, [session, loading, redirectTo, navigate]);
 
   const tab = search.tab;
 
@@ -62,17 +68,17 @@ function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-start justify-center px-4 py-6 sm:py-12 relative overflow-x-hidden overflow-y-auto">
+    <div className="min-h-screen flex items-start justify-center px-4 py-4 sm:py-10 relative overflow-x-hidden overflow-y-auto overscroll-contain auth-shell">
       <div className="absolute inset-0 -z-10">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-primary/10 blur-[120px]" />
       </div>
-      <div className="w-full max-w-md my-auto pb-[max(env(safe-area-inset-bottom),1rem)]">
+      <div className="w-full max-w-md mx-auto pb-[max(env(safe-area-inset-bottom),1rem)] pt-2 sm:pt-4 auth-card-wrap">
         <Link to="/" className="flex flex-col items-center mb-8 gap-3">
           <img src={logo} alt="YANN PRONOSTICS" className="h-20 w-20 object-contain" />
           <span className="font-display tracking-wider text-gold text-xl">YANN PRONOSTICS</span>
         </Link>
 
-        <div className="rounded-2xl border border-border/60 bg-card p-6 sm:p-8 shadow-glow">
+        <div className="rounded-2xl border border-border/60 bg-card p-5 sm:p-8 shadow-glow auth-panel">
           <Tabs value={tab} onValueChange={(v) => setTab(v as "login" | "signup")}>
             <TabsList className="w-full grid grid-cols-2 mb-6">
               <TabsTrigger value="login">Connexion</TabsTrigger>
