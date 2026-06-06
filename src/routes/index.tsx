@@ -24,25 +24,6 @@ export const Route = createFileRoute("/")({
   component: Home,
 });
 
-type CouponType = "cote_10" | "cote_30" | "cote_50" | "pair_corner";
-
-type Coupon = {
-  id: string; coupon_type: CouponType | null; title: string;
-  description: string | null; price_xaf: number; image_url: string | null;
-  video_url: string | null; start_date: string | null; end_date: string | null;
-  event_date: string | null;
-  sales_count: number; status: "draft" | "published" | "archived";
-  // Exposé en lecture seule pour permettre un blocage 100% silencieux côté client.
-  // L'enforcement reste server-side dans `initiatePayment` comme filet de sécurité.
-  disable_purchase_action?: boolean | null;
-};
-
-const TYPE_META: Record<CouponType, { icon: any; gradient: string; hot: boolean }> = {
-  cote_10: { icon: TrendingUp, gradient: "from-blue-500/20 to-primary/20", hot: false },
-  cote_30: { icon: Zap, gradient: "from-orange-500/20 to-primary/20", hot: true },
-  cote_50: { icon: Flame, gradient: "from-red-500/20 to-primary/20", hot: true },
-  pair_corner: { icon: Trophy, gradient: "from-purple-500/20 to-primary/20", hot: false },
-};
 
 function Home() {
   return (
