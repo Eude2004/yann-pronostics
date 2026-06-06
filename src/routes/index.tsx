@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import logo from "@/assets/yann-logo.png";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, Trophy, Zap, ShieldCheck, Star, ArrowRight, MessageCircle, LayoutDashboard, Calendar } from "lucide-react";
+import { Trophy, Zap, ShieldCheck, Star, ArrowRight, MessageCircle, LayoutDashboard, Calendar } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useSettings, whatsappLink } from "@/hooks/use-settings";
 import { ThemeToggle } from "@/components/ThemeToggle";
