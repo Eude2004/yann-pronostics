@@ -1,24 +1,15 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import logo from "@/assets/yann-logo.png";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Lock, TrendingUp, Trophy, Zap, ShieldCheck, Star, Flame, ArrowRight, MessageCircle, LayoutDashboard, Calendar, Loader2, Play, Download } from "lucide-react";
-import { CouponStatusBadge } from "@/components/CouponStatusBadge";
-import { EventCountdown } from "@/components/EventCountdown";
-import { useServerTimeOffset } from "@/hooks/use-server-time-offset";
-
-import { getCouponVideoAccess } from "@/lib/coupon-access.functions";
-import { refreshAndGetNextTransition } from "@/lib/coupon-schedule.functions";
+import { TrendingUp, Trophy, Zap, ShieldCheck, Star, ArrowRight, MessageCircle, LayoutDashboard, Calendar } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
 import { useSettings, whatsappLink } from "@/hooks/use-settings";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageToggle } from "@/components/LanguageToggle";
-import { PaymentModal } from "@/components/PaymentModal";
-import { toast } from "sonner";
+import { CouponsGrid } from "@/components/CouponsGrid";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
