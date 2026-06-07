@@ -27,6 +27,7 @@ export const en = {
     subtitle:
       "4 exclusive coupons every day: Odds 10+, 30+, 50+ and Total Pair Corner. Instant unlock after secure payment.",
     cta_see: "See today's coupons",
+    cta_validated: "Validated coupons",
     cta_how: "How it works",
     stats: {
       sold: "Coupons sold",
@@ -35,8 +36,8 @@ export const en = {
       support: "WhatsApp support",
     },
     coupons_badge: "Today's coupons",
-    coupons_title_1: "Pick your",
-    coupons_title_2: "premium coupon",
+    coupons_title_1: "Today's",
+    coupons_title_2: "VIP Coupons",
     coupons_subtitle:
       "4 exclusive coupons every day. Video locked until payment, instant unlock.",
     why_title_1: "Why",
@@ -56,6 +57,7 @@ export const en = {
     cta_title_2: "Reach out",
     cta_subtitle: "Exclusive chats via WhatsApp — fast support 7 days a week.",
     footer_support: "WhatsApp support",
+    footer_rights: "© {{year}} YANN PRONOSTICS",
   },
   coupon: {
     price: "Price",
