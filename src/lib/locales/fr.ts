@@ -27,6 +27,7 @@ export const fr = {
     subtitle:
       "4 coupons exclusifs chaque jour : Cote 10+, 30+, 50+ et Total Pair Corner. Déblocage instantané après paiement sécurisé.",
     cta_see: "Voir les coupons du jour",
+    cta_validated: "Coupons validés",
     cta_how: "Comment ça marche",
     stats: {
       sold: "Coupons vendus",
@@ -35,8 +36,8 @@ export const fr = {
       support: "Support WhatsApp",
     },
     coupons_badge: "Coupons du jour",
-    coupons_title_1: "Choisissez votre",
-    coupons_title_2: "coupon premium",
+    coupons_title_1: "Coupons",
+    coupons_title_2: "VIP du Jour",
     coupons_subtitle:
       "4 coupons exclusifs chaque jour. Vidéo verrouillée jusqu'au paiement, déblocage instantané.",
     why_title_1: "Pourquoi",
@@ -56,6 +57,7 @@ export const fr = {
     cta_title_2: "Écrivez-nous",
     cta_subtitle: "Échanges exclusifs via WhatsApp — support réactif 7j/7.",
     footer_support: "Support WhatsApp",
+    footer_rights: "© {{year}} YANN PRONOSTICS",
   },
   coupon: {
     price: "Prix",
