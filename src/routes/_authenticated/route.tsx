@@ -10,21 +10,23 @@ export const Route = createFileRoute("/_authenticated")({
     return { user: data.user };
   },
   component: () => <Outlet />,
-  pendingComponent: ProtectedRouteScreen,
-  errorComponent: ProtectedRouteScreen,
+  // Pas de pendingComponent : la vérification se fait en arrière-plan,
+  // sans écran intermédiaire lors des rafraîchissements ou navigations.
+  errorComponent: SessionErrorScreen,
 });
 
-function ProtectedRouteScreen() {
+function SessionErrorScreen() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-md rounded-2xl border border-border/60 bg-card p-6 text-center shadow-glow">
-        <h1 className="text-2xl font-display">Vérification de session</h1>
+        <h1 className="text-2xl font-display">Session expirée</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Nous validons votre session avant d’ouvrir cette page protégée.
+          Votre session n’a pas pu être vérifiée. Veuillez vous reconnecter
+          à votre compte pour continuer.
         </p>
         <div className="mt-5 flex justify-center">
           <Button asChild>
-            <a href="/auth">Retour à la connexion</a>
+            <a href="/auth">Se reconnecter</a>
           </Button>
         </div>
       </div>
