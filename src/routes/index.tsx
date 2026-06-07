@@ -82,6 +82,7 @@ function Header() {
 
 
 function Hero() {
+  const { t } = useTranslation();
   return (
     <section className="relative overflow-hidden pt-16 pb-24 sm:pt-24 sm:pb-32">
       <div className="absolute inset-0 -z-10">
@@ -90,29 +91,28 @@ function Hero() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
         <img src={logo} alt="Logo YANN PRONOSTICS" className="mx-auto h-32 sm:h-44 w-auto object-contain glow-pulse rounded-2xl" />
         <Badge className="mt-8 bg-primary/10 text-primary border border-primary/30 hover:bg-primary/15">
-          <ShieldCheck className="w-3.5 h-3.5 mr-1" /> Plateforme premium certifiée
+          <ShieldCheck className="w-3.5 h-3.5 mr-1" /> {t("home.badge")}
         </Badge>
         <h1 className="mt-6 font-display text-5xl sm:text-7xl lg:text-8xl leading-[0.95]">
-          L'<span className="text-gold">EXPERTISE</span><br/>SPORTIVE PREMIUM
+          {t("home.title_1")}<span className="text-gold">{t("home.title_2")}</span><br/>{t("home.title_3")}
         </h1>
         <p className="mt-6 max-w-2xl mx-auto text-base sm:text-lg text-muted-foreground">
-          4 coupons exclusifs chaque jour : Cote 10+, 30+, 50+ et Total Pair Corner.
-          Déblocage instantané après paiement sécurisé.
+          {t("home.subtitle")}
         </p>
         <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
           <a href="#coupons">
             <Button size="lg" className="bg-gold-gradient text-primary-foreground hover:opacity-90 font-bold shadow-gold text-base h-12 px-8">
-              Voir les coupons du jour <ArrowRight className="ml-2 w-4 h-4" />
+              {t("home.cta_see")} <ArrowRight className="ml-2 w-4 h-4" />
             </Button>
           </a>
           <Link to="/coupons-valides">
             <Button size="lg" variant="outline" className="border-primary/40 hover:bg-primary/10 h-12 px-8 font-semibold">
-              <Trophy className="mr-2 w-4 h-4" /> Coupons validés
+              <Trophy className="mr-2 w-4 h-4" /> {t("home.cta_validated")}
             </Button>
           </Link>
           <a href="#why">
             <Button size="lg" variant="outline" className="border-primary/40 hover:bg-primary/10 h-12 px-8">
-              Comment ça marche
+              {t("home.cta_how")}
             </Button>
           </a>
         </div>
@@ -122,11 +122,12 @@ function Hero() {
 }
 
 function Stats() {
+  const { t } = useTranslation();
   const stats = [
-    { v: "12 580+", l: "Coupons vendus" },
-    { v: "92%", l: "Taux de réussite" },
-    { v: "5 200+", l: "Clients satisfaits" },
-    { v: "24/7", l: "Support WhatsApp" },
+    { v: "12 580+", l: t("home.stats.sold") },
+    { v: "92%", l: t("home.stats.success") },
+    { v: "5 200+", l: t("home.stats.clients") },
+    { v: "24/7", l: t("home.stats.support") },
   ];
   return (
     <section className="border-y border-border/50 bg-card/40">
@@ -151,13 +152,13 @@ function CouponsSection() {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
         <div className="text-center mb-12">
           <Badge className="bg-primary/10 text-primary border border-primary/30">
-            <Calendar className="w-3.5 h-3.5 mr-1" /> {t("home.coupons_badge", { defaultValue: "Coupons du jour" })}
+            <Calendar className="w-3.5 h-3.5 mr-1" /> {t("home.coupons_badge")}
           </Badge>
           <h2 className="mt-4 font-serif text-4xl sm:text-5xl tracking-wide">
-            Coupons <span className="text-gold">VIP du Jour</span>
+            {t("home.coupons_title_1")} <span className="text-gold">{t("home.coupons_title_2")}</span>
           </h2>
           <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
-            4 coupons exclusifs chaque jour. Vidéo verrouillée jusqu'au paiement, déblocage instantané.
+            {t("home.coupons_subtitle")}
           </p>
         </div>
         <CouponsGrid />
@@ -167,23 +168,24 @@ function CouponsSection() {
 }
 
 function Why() {
+  const { t } = useTranslation();
   const items = [
-    { icon: ShieldCheck, t: "Paiement sécurisé", d: "MTN, Orange Money, Campay, cartes bancaires via CinetPay." },
-    { icon: Zap, t: "Déblocage instantané", d: "Accès immédiat après confirmation du paiement." },
-    { icon: Trophy, t: "Expertise reconnue", d: "Analyses approfondies par des spécialistes du sport." },
-    { icon: Star, t: "Vente à l'unité", d: "Aucun abonnement, payez uniquement les coupons qui vous intéressent." },
+    { icon: ShieldCheck, title: t("home.why_items.secure_t"), d: t("home.why_items.secure_d") },
+    { icon: Zap, title: t("home.why_items.instant_t"), d: t("home.why_items.instant_d") },
+    { icon: Trophy, title: t("home.why_items.experts_t"), d: t("home.why_items.experts_d") },
+    { icon: Star, title: t("home.why_items.unit_t"), d: t("home.why_items.unit_d") },
   ];
   return (
     <section id="why" className="py-20 sm:py-28 bg-card/40 border-y border-border/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="text-center mb-12">
-          <h2 className="font-display text-4xl sm:text-5xl">Pourquoi <span className="text-gold">YANN PRONOSTICS</span></h2>
+          <h2 className="font-display text-4xl sm:text-5xl">{t("home.why_title_1")} <span className="text-gold">{t("home.why_title_2")}</span></h2>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {items.map(({ icon: Icon, t, d }) => (
-            <div key={t} className="rounded-2xl border border-border/60 bg-background p-6 hover:border-primary/40 transition">
+          {items.map(({ icon: Icon, title, d }) => (
+            <div key={title} className="rounded-2xl border border-border/60 bg-background p-6 hover:border-primary/40 transition">
               <Icon className="w-8 h-8 text-primary" />
-              <h3 className="mt-4 font-display text-xl">{t}</h3>
+              <h3 className="mt-4 font-display text-xl">{title}</h3>
               <p className="mt-2 text-sm text-muted-foreground">{d}</p>
             </div>
           ))}
@@ -194,6 +196,7 @@ function Why() {
 }
 
 function CTA() {
+  const { t } = useTranslation();
   const { settings } = useSettings();
   const phone = settings.whatsapp_number;
   const href = whatsappLink(phone, "Bonjour YANN PRONOSTICS, j'ai une question.");
@@ -205,9 +208,9 @@ function CTA() {
           <div className="absolute inset-0 -z-10 opacity-30">
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full bg-primary/30 blur-3xl" />
           </div>
-          <Badge className="bg-primary/10 text-primary border border-primary/30">Contact direct</Badge>
-          <h2 className="mt-4 font-display text-4xl sm:text-5xl">Une question ? <span className="text-gold">Écrivez-nous</span></h2>
-          <p className="mt-4 text-muted-foreground">Échanges exclusifs via WhatsApp — support réactif 7j/7.</p>
+          <Badge className="bg-primary/10 text-primary border border-primary/30">{t("home.cta_badge")}</Badge>
+          <h2 className="mt-4 font-display text-4xl sm:text-5xl">{t("home.cta_title_1")} <span className="text-gold">{t("home.cta_title_2")}</span></h2>
+          <p className="mt-4 text-muted-foreground">{t("home.cta_subtitle")}</p>
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
             <a href={href} target="_blank" rel="noreferrer">
               <Button size="lg" className="bg-gold-gradient text-primary-foreground hover:opacity-90 font-bold shadow-gold h-12 px-8">
@@ -222,6 +225,7 @@ function CTA() {
 }
 
 function Footer() {
+  const { t } = useTranslation();
   const { settings } = useSettings();
   const phone = settings.whatsapp_number;
   const href = whatsappLink(phone);
@@ -233,9 +237,9 @@ function Footer() {
           <span className="font-display tracking-wider text-gold">YANN PRONOSTICS</span>
         </div>
         <a href={href} target="_blank" rel="noreferrer" className="text-sm text-muted-foreground hover:text-primary inline-flex items-center gap-1">
-          <MessageCircle className="w-4 h-4" /> Support WhatsApp : +237 {phone}
+          <MessageCircle className="w-4 h-4" /> {t("home.footer_support")} : +237 {phone}
         </a>
-        <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} YANN PRONOSTICS</p>
+        <p className="text-xs text-muted-foreground">{t("home.footer_rights", { year: new Date().getFullYear() })}</p>
       </div>
     </footer>
   );
