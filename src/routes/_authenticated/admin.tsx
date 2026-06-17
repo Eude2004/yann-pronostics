@@ -437,6 +437,17 @@ function CouponsAdmin() {
   const save = async () => {
     const meta = COUPON_TYPES.find(t => t.value === form.coupon_type)!;
     const description = form.description.trim() || defaultDescriptionFor(form.coupon_type);
+    const startIso = zonedInputToIso(form.start_date, timezone);
+    const endIso = zonedInputToIso(form.end_date, timezone);
+    const eventIso = zonedInputToIso(form.event_date, timezone) ?? defaultEventDateIso();
+    if (endIso && eventIso && new Date(eventIso).getTime() >= new Date(endIso).getTime()) {
+      return toast.error(
+        "La date de début des événements doit être strictement antérieure à la date de fin (archivage). Veuillez ajuster l'heure de début des matchs.",
+      );
+    }
+    if (endIso && startIso && new Date(startIso).getTime() >= new Date(endIso).getTime()) {
+      return toast.error("La date de début doit être strictement antérieure à la date de fin (archivage).");
+    }
     const basePayload = {
       coupon_type: form.coupon_type,
       title: meta.label,
@@ -444,9 +455,10 @@ function CouponsAdmin() {
       description,
       image_url: form.image_url || null,
       video_url: form.video_url || null,
-      start_date: zonedInputToIso(form.start_date, timezone),
-      end_date: zonedInputToIso(form.end_date, timezone),
-      event_date: zonedInputToIso(form.event_date, timezone) ?? defaultEventDateIso(),
+      start_date: startIso,
+      end_date: endIso,
+      event_date: eventIso,
+
       status: form.status,
       is_featured: form.is_featured,
       disable_purchase_action: form.disable_purchase_action,
