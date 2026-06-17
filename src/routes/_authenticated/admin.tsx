@@ -437,6 +437,17 @@ function CouponsAdmin() {
   const save = async () => {
     const meta = COUPON_TYPES.find(t => t.value === form.coupon_type)!;
     const description = form.description.trim() || defaultDescriptionFor(form.coupon_type);
+    const startIso = zonedInputToIso(form.start_date, timezone);
+    const endIso = zonedInputToIso(form.end_date, timezone);
+    const eventIso = zonedInputToIso(form.event_date, timezone) ?? defaultEventDateIso();
+    if (endIso && eventIso && new Date(eventIso).getTime() >= new Date(endIso).getTime()) {
+      return toast.error(
+        "La date de début des événements doit être strictement antérieure à la date de fin (archivage). Veuillez ajuster l'heure de début des matchs.",
+      );
+    }
+    if (endIso && startIso && new Date(startIso).getTime() >= new Date(endIso).getTime()) {
+      return toast.error("La date de début doit être strictement antérieure à la date de fin (archivage).");
+    }
     const basePayload = {
       coupon_type: form.coupon_type,
       title: meta.label,
@@ -444,9 +455,10 @@ function CouponsAdmin() {
       description,
       image_url: form.image_url || null,
       video_url: form.video_url || null,
-      start_date: zonedInputToIso(form.start_date, timezone),
-      end_date: zonedInputToIso(form.end_date, timezone),
-      event_date: zonedInputToIso(form.event_date, timezone) ?? defaultEventDateIso(),
+      start_date: startIso,
+      end_date: endIso,
+      event_date: eventIso,
+
       status: form.status,
       is_featured: form.is_featured,
       disable_purchase_action: form.disable_purchase_action,
@@ -652,17 +664,24 @@ function CouponsAdmin() {
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Date de début</Label><Input type="datetime-local" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} /></div>
+              <div><Label>Date de début</Label><Input type="datetime-local" max={form.end_date || undefined} value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} /></div>
               <div><Label>Date de fin</Label><Input type="datetime-local" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} /></div>
             </div>
             <div>
-              <Label>Heure de début de l'événement <span className="text-xs text-muted-foreground font-normal">(matchs — verrouille l'achat dès cet horaire ; défaut : 15:00 aujourd'hui si vide)</span></Label>
+              <Label>Heure de début de l'événement <span className="text-xs text-muted-foreground font-normal">(matchs — verrouille l'achat dès cet horaire ; doit être strictement avant la date de fin ; défaut : 15:00 aujourd'hui si vide)</span></Label>
               <Input
                 type="datetime-local"
+                max={form.end_date || undefined}
                 value={form.event_date}
                 onChange={(e) => setForm({ ...form, event_date: e.target.value })}
               />
+              {form.end_date && form.event_date && form.event_date >= form.end_date && (
+                <p className="mt-1 text-[11px] font-medium text-destructive">
+                  L'heure de début des événements doit être strictement antérieure à la date de fin (archivage).
+                </p>
+              )}
             </div>
+
             <div className="rounded-md border border-border/60 bg-muted/30 p-3 flex items-center justify-between gap-3">
               <div>
                 <div className="text-xs text-muted-foreground">Statut calculé automatiquement</div>
