@@ -18,7 +18,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedPaymentReturnRouteImport } from './routes/_authenticated/payment.return'
 import { Route as ApiPublicHooksExpirePendingPaymentsRouteImport } from './routes/api/public/hooks/expire-pending-payments'
-import { Route as ApiPublicCinetpayNotifyRouteImport } from './routes/api/public/cinetpay/notify'
+import { Route as ApiPublicGeniuspayNotifyRouteImport } from './routes/api/public/geniuspay/notify'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
@@ -66,11 +66,12 @@ const ApiPublicHooksExpirePendingPaymentsRoute =
     path: '/api/public/hooks/expire-pending-payments',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicCinetpayNotifyRoute = ApiPublicCinetpayNotifyRouteImport.update({
-  id: '/api/public/cinetpay/notify',
-  path: '/api/public/cinetpay/notify',
-  getParentRoute: () => rootRouteImport,
-} as any)
+const ApiPublicGeniuspayNotifyRoute =
+  ApiPublicGeniuspayNotifyRouteImport.update({
+    id: '/api/public/geniuspay/notify',
+    path: '/api/public/geniuspay/notify',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -80,7 +81,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/payment/return': typeof AuthenticatedPaymentReturnRoute
-  '/api/public/cinetpay/notify': typeof ApiPublicCinetpayNotifyRoute
+  '/api/public/geniuspay/notify': typeof ApiPublicGeniuspayNotifyRoute
   '/api/public/hooks/expire-pending-payments': typeof ApiPublicHooksExpirePendingPaymentsRoute
 }
 export interface FileRoutesByTo {
@@ -91,7 +92,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/payment/return': typeof AuthenticatedPaymentReturnRoute
-  '/api/public/cinetpay/notify': typeof ApiPublicCinetpayNotifyRoute
+  '/api/public/geniuspay/notify': typeof ApiPublicGeniuspayNotifyRoute
   '/api/public/hooks/expire-pending-payments': typeof ApiPublicHooksExpirePendingPaymentsRoute
 }
 export interface FileRoutesById {
@@ -104,7 +105,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/payment/return': typeof AuthenticatedPaymentReturnRoute
-  '/api/public/cinetpay/notify': typeof ApiPublicCinetpayNotifyRoute
+  '/api/public/geniuspay/notify': typeof ApiPublicGeniuspayNotifyRoute
   '/api/public/hooks/expire-pending-payments': typeof ApiPublicHooksExpirePendingPaymentsRoute
 }
 export interface FileRouteTypes {
@@ -117,7 +118,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/payment/return'
-    | '/api/public/cinetpay/notify'
+    | '/api/public/geniuspay/notify'
     | '/api/public/hooks/expire-pending-payments'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -128,7 +129,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/payment/return'
-    | '/api/public/cinetpay/notify'
+    | '/api/public/geniuspay/notify'
     | '/api/public/hooks/expire-pending-payments'
   id:
     | '__root__'
@@ -140,7 +141,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/dashboard'
     | '/_authenticated/payment/return'
-    | '/api/public/cinetpay/notify'
+    | '/api/public/geniuspay/notify'
     | '/api/public/hooks/expire-pending-payments'
   fileRoutesById: FileRoutesById
 }
@@ -150,7 +151,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CouponsValidesRoute: typeof CouponsValidesRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
-  ApiPublicCinetpayNotifyRoute: typeof ApiPublicCinetpayNotifyRoute
+  ApiPublicGeniuspayNotifyRoute: typeof ApiPublicGeniuspayNotifyRoute
   ApiPublicHooksExpirePendingPaymentsRoute: typeof ApiPublicHooksExpirePendingPaymentsRoute
 }
 
@@ -219,11 +220,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksExpirePendingPaymentsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/cinetpay/notify': {
-      id: '/api/public/cinetpay/notify'
-      path: '/api/public/cinetpay/notify'
-      fullPath: '/api/public/cinetpay/notify'
-      preLoaderRoute: typeof ApiPublicCinetpayNotifyRouteImport
+    '/api/public/geniuspay/notify': {
+      id: '/api/public/geniuspay/notify'
+      path: '/api/public/geniuspay/notify'
+      fullPath: '/api/public/geniuspay/notify'
+      preLoaderRoute: typeof ApiPublicGeniuspayNotifyRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -250,7 +251,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CouponsValidesRoute: CouponsValidesRoute,
   ResetPasswordRoute: ResetPasswordRoute,
-  ApiPublicCinetpayNotifyRoute: ApiPublicCinetpayNotifyRoute,
+  ApiPublicGeniuspayNotifyRoute: ApiPublicGeniuspayNotifyRoute,
   ApiPublicHooksExpirePendingPaymentsRoute:
     ApiPublicHooksExpirePendingPaymentsRoute,
 }

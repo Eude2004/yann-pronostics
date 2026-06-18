@@ -1,23 +1,12 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Loader2, ShieldCheck, Smartphone, CheckCircle2, Play, AlertTriangle, RotateCw } from "lucide-react";
+import { Loader2, ShieldCheck, CheckCircle2, Play, AlertTriangle, RotateCw, CreditCard } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { initiatePayment, simulatePaymentCompletion } from "@/lib/payments.functions";
 import { getCouponVideoAccess } from "@/lib/coupon-access.functions";
 import { EventCountdown } from "@/components/EventCountdown";
 import { toast } from "sonner";
-
-
-type Method = "mtn" | "orange" | "moov";
-
-const METHODS: { id: Method; name: string; sub: string; color: string; letter: string }[] = [
-  { id: "mtn", name: "MTN Money", sub: "Numéros 67 / 65", color: "bg-yellow-400 text-black", letter: "M" },
-  { id: "orange", name: "Orange Money", sub: "Numéros 69 / 65", color: "bg-orange-500 text-white", letter: "O" },
-  { id: "moov", name: "Moov Money", sub: "Numéros 65", color: "bg-blue-500 text-white", letter: "M" },
-];
 
 export function PaymentModal({
   open,
@@ -34,8 +23,6 @@ export function PaymentModal({
   const simulate = useServerFn(simulatePaymentCompletion);
   const getVideo = useServerFn(getCouponVideoAccess);
 
-  const [method, setMethod] = useState<Method>("mtn");
-  const [phone, setPhone] = useState("");
   const [step, setStep] = useState<"form" | "processing" | "success" | "error">("form");
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -45,17 +32,12 @@ export function PaymentModal({
       setStep("form");
       setVideoUrl(null);
       setErrorMsg(null);
-      // Conserver phone/method si l'utilisateur réessaye après échec
     }
   }, [open]);
 
   const formattedPrice = `${coupon.price_xaf.toLocaleString("fr-FR")} FCFA`;
 
   const onPay = async () => {
-    if (!/^\+?\d{7,15}$/.test(phone.replace(/\s/g, ""))) {
-      toast.error("Numéro mobile money invalide.");
-      return;
-    }
     setStep("processing");
     setErrorMsg(null);
     try {
@@ -64,12 +46,11 @@ export function PaymentModal({
           kind: "coupon",
           couponId: coupon.id,
           returnOrigin: window.location.origin,
-          customer: { ...customer, phone },
+          customer,
         },
       });
 
       if (res.mode === "test") {
-        // Simulate immediate confirmation
         await simulate({ data: { transactionId: res.transactionId, outcome: "completed" } });
         try {
           const v = await getVideo({ data: { couponId: coupon.id } });
@@ -77,9 +58,8 @@ export function PaymentModal({
         } catch {}
         setStep("success");
         toast.success("Paiement confirmé ! Coupon débloqué.", { duration: Infinity });
-        // Le modal reste ouvert : l'utilisateur le ferme manuellement.
       } else {
-        // Live mode → mémoriser la transaction pour réouvrir l'état au retour
+        // Live mode → redirection vers la page de checkout hébergée GeniusPay
         try {
           sessionStorage.setItem(
             "yp:pending-payment",
@@ -100,7 +80,6 @@ export function PaymentModal({
     setErrorMsg(null);
     setStep("form");
   };
-
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -143,8 +122,8 @@ export function PaymentModal({
             </DialogHeader>
             <div className="mt-4 rounded-lg border border-border bg-background/40 p-3 text-xs text-muted-foreground space-y-1">
               <p>• Vérifiez votre connexion internet.</p>
-              <p>• Confirmez que votre numéro mobile money est correct et a un solde suffisant.</p>
-              <p>• Vos informations sont conservées : un seul clic suffit pour réessayer.</p>
+              <p>• Réessayez dans quelques instants.</p>
+              <p>• Si le problème persiste, contactez le support.</p>
             </div>
             <div className="mt-4 flex gap-2">
               <Button
@@ -161,74 +140,35 @@ export function PaymentModal({
         ) : (
           <>
             <DialogHeader className="px-6 pt-6">
-              <DialogTitle className="font-display tracking-wide uppercase text-sm text-muted-foreground">
-                Méthode de paiement
+              <DialogTitle className="font-display text-xl">
+                Acheter « {coupon.title} »
               </DialogTitle>
-              <DialogDescription className="sr-only">
-                Choisissez un mode de paiement mobile money pour acheter le coupon {coupon.title}.
+              <DialogDescription>
+                Paiement sécurisé via GeniusPay. Choisissez votre moyen de paiement (Wave, Orange Money, MTN, Moov ou carte bancaire) sur la page suivante.
               </DialogDescription>
             </DialogHeader>
 
             {coupon.event_date && (
-              <div className="px-6 pb-2">
+              <div className="px-6 pt-3">
                 <EventCountdown eventDate={coupon.event_date} />
               </div>
             )}
 
-            <div className="px-6 pb-4 space-y-2">
-
-              {METHODS.map((m) => {
-                const selected = method === m.id;
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => setMethod(m.id)}
-                    disabled={step === "processing"}
-                    className={`w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-all ${
-                      selected
-                        ? "border-primary bg-primary/5 shadow-gold"
-                        : "border-border hover:border-primary/40"
-                    }`}
-                  >
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${m.color}`}>
-                      {m.letter}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold">{m.name}</div>
-                      <div className="text-xs text-muted-foreground">{m.sub}</div>
-                    </div>
-                    <div
-                      className={`w-5 h-5 rounded-full border-2 ${
-                        selected ? "border-primary bg-primary" : "border-muted-foreground/40"
-                      }`}
-                    />
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="px-6 pb-4">
-              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                Numéro mobile money
-              </Label>
-              <div className="mt-1 relative">
-                <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  inputMode="tel"
-                  placeholder="+225 07 00 00 00 00"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  disabled={step === "processing"}
-                  className="pl-9"
-                />
+            <div className="px-6 pt-4">
+              <div className="rounded-xl border border-border bg-background/40 p-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
+                  <CreditCard className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1 text-sm">
+                  <div className="font-semibold">Wave · Orange · MTN · Moov · Carte</div>
+                  <div className="text-xs text-muted-foreground">
+                    Choix du moyen de paiement sur la page sécurisée GeniusPay.
+                  </div>
+                </div>
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Un code de confirmation sera envoyé sur ce numéro.
-              </p>
             </div>
 
-            <div className="border-t border-border px-6 py-4 flex items-center justify-between">
+            <div className="border-t border-border mt-4 px-6 py-4 flex items-center justify-between">
               <div>
                 <div className="text-xs text-muted-foreground">Total à payer</div>
                 <div className="font-display text-2xl text-gold">{formattedPrice}</div>
@@ -238,19 +178,19 @@ export function PaymentModal({
             <div className="px-6 pb-6">
               <Button
                 onClick={onPay}
-                disabled={step === "processing" || !phone}
+                disabled={step === "processing"}
                 className="w-full h-12 bg-gold-gradient text-primary-foreground font-bold shadow-gold text-base"
               >
                 {step === "processing" ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Confirmation en cours…
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Redirection vers le paiement…
                   </>
                 ) : (
                   <>Payer {formattedPrice}</>
                 )}
               </Button>
               <div className="mt-3 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                <ShieldCheck className="w-3 h-3" /> Paiement sécurisé · Accès immédiat après confirmation
+                <ShieldCheck className="w-3 h-3" /> Paiement sécurisé GeniusPay · Accès immédiat après confirmation
               </div>
             </div>
           </>

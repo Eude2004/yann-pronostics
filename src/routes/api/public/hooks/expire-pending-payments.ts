@@ -2,9 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 
 /**
  * Cron : pour toutes les transactions restées en `pending`,
- *   - si CinetPay est configuré et qu'on a une référence non MOCK → on
- *     interroge /v2/payment/check et on bascule le statut en `completed`
- *     ou `failed` selon le retour.
+ *   - si GeniusPay est configuré et qu'on a une référence non MOCK → on
+ *     interroge GET /payments/{reference} et on bascule le statut en
+ *     `completed` ou `failed` selon le retour.
  *   - si la transaction est en pending depuis plus de PENDING_EXPIRY_MIN
  *     minutes → on la force en `failed` (paiement abandonné).
  *
@@ -39,28 +39,34 @@ export const Route = createFileRoute("/api/public/hooks/expire-pending-payments"
           });
         }
 
-        const apiKey = process.env.CINETPAY_API_KEY;
-        const siteId = process.env.CINETPAY_SITE_ID;
+        const apiKey = process.env.GENIUSPAY_API_KEY;
+        const apiSecret = process.env.GENIUSPAY_API_SECRET;
         let completed = 0, failed = 0, expired = 0, stillPending = 0;
 
         for (const tx of pendings ?? []) {
           const isMock = !tx.reference || tx.reference.startsWith("MOCK-");
           let finalized = false;
 
-          // 1) Re-check CinetPay en mode live
-          if (!isMock && apiKey && siteId) {
+          // 1) Re-check GeniusPay en mode live
+          if (!isMock && apiKey && apiSecret && tx.reference) {
             try {
-              const res = await fetch("https://api-checkout.cinetpay.com/v2/payment/check", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ apikey: apiKey, site_id: siteId, transaction_id: tx.reference }),
-              });
+              const res = await fetch(
+                `https://geniuspay.ci/api/v1/merchant/payments/${encodeURIComponent(tx.reference)}`,
+                {
+                  method: "GET",
+                  headers: {
+                    "X-API-Key": apiKey,
+                    "X-API-Secret": apiSecret,
+                    Accept: "application/json",
+                  },
+                },
+              );
               const json = (await res.json()) as { data?: { status?: string } };
-              const cp = json.data?.status;
-              if (cp === "ACCEPTED") {
+              const gp = json.data?.status;
+              if (gp === "completed") {
                 await supabaseAdmin
                   .from("transactions")
-                  .update({ status: "completed", notes: "Cron recheck: ACCEPTED" })
+                  .update({ status: "completed", notes: "Cron recheck: completed" })
                   .eq("id", tx.id).eq("status", "pending");
                 if (tx.kind === "coupon" && tx.coupon_id) {
                   const { data: cur } = await supabaseAdmin
@@ -71,10 +77,10 @@ export const Route = createFileRoute("/api/public/hooks/expire-pending-payments"
                     .eq("id", tx.coupon_id);
                 }
                 completed++; finalized = true;
-              } else if (cp && cp !== "PENDING" && cp !== "WAITING_CUSTOMER_PAYMENT") {
+              } else if (gp === "failed" || gp === "expired" || gp === "cancelled") {
                 await supabaseAdmin
                   .from("transactions")
-                  .update({ status: "failed", notes: `Cron recheck: ${cp}` })
+                  .update({ status: "failed", notes: `Cron recheck: ${gp}` })
                   .eq("id", tx.id).eq("status", "pending");
                 failed++; finalized = true;
               }
