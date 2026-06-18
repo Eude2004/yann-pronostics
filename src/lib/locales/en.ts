@@ -44,7 +44,7 @@ export const en = {
     why_title_2: "YANN PRONOSTICS",
     why_items: {
       secure_t: "Secure payment",
-      secure_d: "MTN, Orange Money, Campay, bank cards via CinetPay.",
+      secure_d: "Wave, Orange Money, MTN, Moov, bank cards via GeniusPay.",
       instant_t: "Instant unlock",
       instant_d: "Immediate access after payment confirmation.",
       experts_t: "Recognized expertise",

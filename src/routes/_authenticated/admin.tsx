@@ -1057,7 +1057,7 @@ function SettingsAdmin() {
               <p className="font-medium">Simulation d'achat pour l'administrateur</p>
               <p className="text-xs text-muted-foreground mt-1">
                 Activé, l'admin peut acheter et débloquer un coupon en simulation,
-                sans appel à CinetPay. Désactivez avant la production.
+                sans appel à GeniusPay. Désactivez avant la production.
               </p>
             </div>
             <Switch checked={testPay} onCheckedChange={onToggleTestPay} />

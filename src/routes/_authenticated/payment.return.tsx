@@ -95,7 +95,7 @@ function PaymentReturn() {
     })();
   }, [isMock, status, simulating, simulate, tx, query, t]);
 
-  // Mode live : re-check périodique auprès de CinetPay (filet de sécurité si
+  // Mode live : re-check périodique auprès de GeniusPay (filet de sécurité si
   // le webhook notify n'arrive pas). S'arrête dès que ce n'est plus pending.
   useEffect(() => {
     if (isMock || status !== "pending") return;
