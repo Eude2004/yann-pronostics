@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
 import {
   getTransactionStatus,
   simulatePaymentCompletion,
-  recheckCinetPayStatus,
+  recheckGeniusPayStatus,
 } from "@/lib/payments.functions";
 import { getCouponVideoAccess } from "@/lib/coupon-access.functions";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,7 +39,7 @@ function PaymentReturn() {
   const { tx } = useSearch({ from: "/_authenticated/payment/return" });
   const fetchStatus = useServerFn(getTransactionStatus);
   const simulate = useServerFn(simulatePaymentCompletion);
-  const recheck = useServerFn(recheckCinetPayStatus);
+  const recheck = useServerFn(recheckGeniusPayStatus);
   const getVideo = useServerFn(getCouponVideoAccess);
   const [simulating, setSimulating] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
