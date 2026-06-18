@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-// Allowlist of trusted origins for building CinetPay notify_url / return_url.
+// Allowlist of trusted origins for building success_url / error_url.
 // Prevents client-controlled returnOrigin from redirecting payments to an
 // attacker-controlled domain (open redirect / webhook hijacking).
 const ALLOWED_ORIGIN_HOSTS = [
@@ -29,15 +29,19 @@ function safeOrigin(candidate: string | undefined): string {
   }
 }
 
+const GENIUSPAY_BASE = "https://geniuspay.ci/api/v1/merchant";
 
 /**
- * CinetPay payment orchestration — coupons uniquement (pas d'abonnement).
+ * GeniusPay payment orchestration — coupons uniquement.
  *
- * Test mode : si `CINETPAY_API_KEY`/`CINETPAY_SITE_ID` manquent, OU si le
- * réglage admin `test_pay_mode = 'true'` est actif, on crée une transaction
- * pending et on renvoie une URL locale vers /payment/return pour simulation.
+ * Live : POST /payments sans `payment_method` → checkout_url hébergé GeniusPay
+ * (Wave / Orange / MTN / Moov / carte). Webhook signé HMAC-SHA256 sur
+ * /api/public/geniuspay/notify. Filet de sécurité côté retour via
+ * `recheckGeniusPayStatus` (GET /payments/{reference}).
  *
- * Live mode : appel CinetPay v2 et redirection vers le payment_url hébergé.
+ * Test : si les clés GeniusPay manquent OU si l'admin a activé
+ * `test_pay_mode = 'true'`, on renvoie une URL locale vers /payment/return
+ * pour simulation.
  */
 export const initiatePayment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -60,9 +64,9 @@ export const initiatePayment = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    // Lecture du réglage Mode Test Pay via le client admin :
-    // la policy RLS app_settings restreint la lecture aux admins, mais le mode test
-    // doit aussi s'appliquer aux utilisateurs réguliers lorsqu'il est activé.
+    // Lecture du Mode Test Pay : la policy RLS app_settings restreint la
+    // lecture aux admins, mais le mode test doit aussi s'appliquer aux
+    // utilisateurs réguliers lorsqu'il est activé.
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: testRow } = await supabaseAdmin
       .from("app_settings")
@@ -71,7 +75,6 @@ export const initiatePayment = createServerFn({ method: "POST" })
       .maybeSingle();
     const testPayMode = testRow?.value === "true";
 
-    // Détection rôle admin (les admins ne peuvent acheter que si Mode Test Pay est ON)
     const { data: roles } = await supabase
       .from("user_roles")
       .select("role")
@@ -84,7 +87,6 @@ export const initiatePayment = createServerFn({ method: "POST" })
       );
     }
 
-    // Résolution du coupon
     const { data: c, error } = await supabase
       .from("coupons")
       .select("id, title, price_xaf, status, end_date, event_date, disable_purchase_action")
@@ -92,12 +94,8 @@ export const initiatePayment = createServerFn({ method: "POST" })
       .maybeSingle();
     if (error || !c) throw new Error("Coupon introuvable.");
     if (c.status !== "published") throw new Error("Coupon non disponible.");
-    // Garde-fou serveur : si l'admin a désactivé l'action d'achat, on bloque
-    // toute tentative (y compris les appels directs à l'endpoint qui
-    // contourneraient le bouton). On log l'événement pour l'admin.
     if ((c as any).disable_purchase_action === true) {
       try {
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         await supabaseAdmin.from("admin_audit_log").insert({
           actor_id: context.userId,
           action: "purchase_attempt_blocked",
@@ -105,28 +103,19 @@ export const initiatePayment = createServerFn({ method: "POST" })
           entity_id: data.couponId,
           details: { reason: "disable_purchase_action", title: c.title },
         });
-      } catch {
-        // ne pas faire échouer la réponse à cause du log
-      }
+      } catch {}
       throw new Error("Achat indisponible pour ce coupon.");
     }
-    // Garde-fou serveur : un coupon dont la date de fin est passée ne peut plus
-    // être acheté, même si un appel direct contourne le bouton désactivé du front.
     if (c.end_date && new Date(c.end_date).getTime() <= Date.now()) {
       throw new Error("Ce coupon est terminé et n'est plus disponible à l'achat.");
     }
-    // Verrouillage à l'heure de début de l'événement : aucune nouvelle vente
-    // possible dès que les matchs ont commencé. Les acheteurs existants
-    // conservent leur accès (la transaction completed est intacte).
     if (c.event_date && new Date(c.event_date).getTime() <= Date.now()) {
       throw new Error("Les matchs ont commencé, ce coupon n'est plus disponible à l'achat.");
     }
     const amountXaf = c.price_xaf;
     const description = `Coupon: ${c.title}`;
 
-    // Idempotence : une seule transaction par (user_id, coupon_id).
-    // - completed → déjà payé, rien à faire
-    // - pending/failed/refunded → on RÉUTILISE la même ligne et on remet en pending
+    // Idempotence : une transaction par (user_id, coupon_id).
     const { data: existing } = await supabase
       .from("transactions")
       .select("id, status")
@@ -139,8 +128,7 @@ export const initiatePayment = createServerFn({ method: "POST" })
       throw new Error("Vous avez déjà acheté ce coupon.");
     }
 
-    // ⚠️ MODE TEST GLOBAL : toute nouvelle transaction est créée comme "completed"
-    // pour débloquer immédiatement la vidéo. À retirer avant la mise en production.
+    // ⚠️ MODE TEST GLOBAL : à retirer avant la mise en production.
     const TEST_AUTO_COMPLETE = true;
     const initialStatus = TEST_AUTO_COMPLETE ? "completed" : "pending";
 
@@ -151,7 +139,7 @@ export const initiatePayment = createServerFn({ method: "POST" })
         .update({
           status: initialStatus,
           amount_xaf: amountXaf,
-          payment_method: "cinetpay",
+          payment_method: "geniuspay",
           notes: TEST_AUTO_COMPLETE ? "Auto-validé (mode test)" : "Nouvelle tentative",
         })
         .eq("id", existing.id)
@@ -169,7 +157,7 @@ export const initiatePayment = createServerFn({ method: "POST" })
           coupon_id: data.couponId,
           amount_xaf: amountXaf,
           status: initialStatus,
-          payment_method: "cinetpay",
+          payment_method: "geniuspay",
           notes: TEST_AUTO_COMPLETE ? "Auto-validé (mode test)" : null,
         })
         .select("id")
@@ -178,14 +166,14 @@ export const initiatePayment = createServerFn({ method: "POST" })
       tx = ins;
     }
 
-    const apiKey = process.env.CINETPAY_API_KEY;
-    const siteId = process.env.CINETPAY_SITE_ID;
+    const apiKey = process.env.GENIUSPAY_API_KEY;
+    const apiSecret = process.env.GENIUSPAY_API_SECRET;
     const origin = safeOrigin(data.returnOrigin);
-    const notifyUrl = `${origin}/api/public/cinetpay/notify`;
-    const returnUrl = `${origin}/payment/return?tx=${tx.id}`;
+    const successUrl = `${origin}/payment/return?tx=${tx.id}`;
+    const errorUrl = `${origin}/payment/return?tx=${tx.id}`;
 
     // Mode test : auto-complete, pas de clés OU Mode Test Pay activé
-    if (TEST_AUTO_COMPLETE || !apiKey || !siteId || testPayMode) {
+    if (TEST_AUTO_COMPLETE || !apiKey || !apiSecret || testPayMode) {
       const ref = `MOCK-${tx.id.slice(0, 8)}`;
       await supabase
         .from("transactions")
@@ -193,16 +181,16 @@ export const initiatePayment = createServerFn({ method: "POST" })
           reference: ref,
           notes: TEST_AUTO_COMPLETE
             ? "Auto-validé (mode test global)"
-            : testPayMode ? "Mode Test Pay (admin)" : "Mode test (CinetPay non configuré)",
+            : testPayMode
+              ? "Mode Test Pay (admin)"
+              : "Mode test (GeniusPay non configuré)",
         })
         .eq("id", tx.id);
 
-      // Incrémente sales_count si on a auto-validé une nouvelle vente
       if (TEST_AUTO_COMPLETE && !existing) {
-        const { supabaseAdmin: sa2 } = await import("@/integrations/supabase/client.server");
-        const { data: cur } = await sa2
+        const { data: cur } = await supabaseAdmin
           .from("coupons").select("sales_count").eq("id", data.couponId).maybeSingle();
-        await sa2
+        await supabaseAdmin
           .from("coupons")
           .update({ sales_count: (cur?.sales_count ?? 0) + 1 })
           .eq("id", data.couponId);
@@ -211,46 +199,51 @@ export const initiatePayment = createServerFn({ method: "POST" })
       return {
         mode: "test" as const,
         transactionId: tx.id,
-        paymentUrl: returnUrl,
+        paymentUrl: successUrl,
         reference: ref,
       };
     }
 
-    // Live mode
-    const reference = `YP-${tx.id.slice(0, 8).toUpperCase()}-${Date.now().toString().slice(-5)}`;
+    // Live mode — GeniusPay hosted checkout (no payment_method)
     const payload = {
-      apikey: apiKey,
-      site_id: siteId,
-      transaction_id: reference,
       amount: amountXaf,
-      currency: "XAF",
-      description: description.slice(0, 250),
-      notify_url: notifyUrl,
-      return_url: returnUrl,
-      channels: "ALL",
-      customer_name: data.customer?.name?.slice(0, 60) ?? "Client",
-      customer_email: data.customer?.email ?? "",
-      customer_phone_number: data.customer?.phone ?? "",
-      metadata: tx.id,
+      currency: "XOF",
+      description: description.slice(0, 500),
+      customer: {
+        name: data.customer?.name?.slice(0, 120) ?? "Client",
+        email: data.customer?.email ?? undefined,
+        phone: data.customer?.phone ?? undefined,
+      },
+      success_url: successUrl,
+      error_url: errorUrl,
+      metadata: { tx_id: tx.id, coupon_id: data.couponId },
     };
 
     let paymentUrl: string | null = null;
+    let reference: string | null = null;
     let providerError: string | null = null;
     try {
-      const res = await fetch("https://api-checkout.cinetpay.com/v2/payment", {
+      const res = await fetch(`${GENIUSPAY_BASE}/payments`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "X-API-Key": apiKey,
+          "X-API-Secret": apiSecret,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
         body: JSON.stringify(payload),
       });
       const json = (await res.json()) as {
-        code?: string;
+        success?: boolean;
+        data?: { reference?: string; checkout_url?: string; payment_url?: string };
+        error?: { message?: string };
         message?: string;
-        data?: { payment_url?: string };
       };
-      if (json.code === "201" && json.data?.payment_url) {
-        paymentUrl = json.data.payment_url;
+      if (res.ok && json.success && json.data?.reference) {
+        reference = json.data.reference;
+        paymentUrl = json.data.checkout_url ?? json.data.payment_url ?? null;
       } else {
-        providerError = json.message ?? `CinetPay code ${json.code}`;
+        providerError = json.error?.message ?? json.message ?? `GeniusPay HTTP ${res.status}`;
       }
     } catch (e) {
       providerError = e instanceof Error ? e.message : "Network error";
@@ -259,8 +252,8 @@ export const initiatePayment = createServerFn({ method: "POST" })
     await supabase
       .from("transactions")
       .update({
-        reference,
-        notes: providerError ?? "CinetPay init OK",
+        reference: reference ?? `GP-${tx.id.slice(0, 8).toUpperCase()}`,
+        notes: providerError ?? "GeniusPay init OK",
         status: providerError ? "failed" : "pending",
       })
       .eq("id", tx.id);
@@ -273,7 +266,7 @@ export const initiatePayment = createServerFn({ method: "POST" })
       mode: "live" as const,
       transactionId: tx.id,
       paymentUrl,
-      reference,
+      reference: reference!,
     };
   });
 
@@ -299,20 +292,20 @@ export const getTransactionStatus = createServerFn({ method: "GET" })
   });
 
 /**
- * Re-vérifie auprès de CinetPay le statut d'une transaction restée en pending,
+ * Re-vérifie auprès de GeniusPay le statut d'une transaction restée en pending,
  * et met à jour la base si le paiement a été accepté ou refusé entre-temps.
- * Utilisé par la page /payment/return (cas où le webhook notify n'est pas
- * arrivé) et par le cron d'expiration.
+ * Utilisé par la page /payment/return en filet de sécurité quand le webhook
+ * n'est pas arrivé.
  */
-export const recheckCinetPayStatus = createServerFn({ method: "POST" })
+export const recheckGeniusPayStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
     z.object({ transactionId: z.string().uuid() }).parse(input),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const apiKey = process.env.CINETPAY_API_KEY;
-    const siteId = process.env.CINETPAY_SITE_ID;
+    const apiKey = process.env.GENIUSPAY_API_KEY;
+    const apiSecret = process.env.GENIUSPAY_API_SECRET;
 
     const { data: tx } = await supabase
       .from("transactions")
@@ -322,23 +315,32 @@ export const recheckCinetPayStatus = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!tx) throw new Error("Transaction introuvable.");
     if (tx.status !== "pending") return { status: tx.status, changed: false };
-    if (!apiKey || !siteId || !tx.reference || tx.reference.startsWith("MOCK-")) {
+    if (!apiKey || !apiSecret || !tx.reference || tx.reference.startsWith("MOCK-")) {
       return { status: tx.status, changed: false };
     }
 
     try {
-      const res = await fetch("https://api-checkout.cinetpay.com/v2/payment/check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ apikey: apiKey, site_id: siteId, transaction_id: tx.reference }),
-      });
-      const json = (await res.json()) as { data?: { status?: string } };
-      const cpStatus = json.data?.status;
-      if (cpStatus === "ACCEPTED") {
+      const res = await fetch(
+        `${GENIUSPAY_BASE}/payments/${encodeURIComponent(tx.reference)}`,
+        {
+          method: "GET",
+          headers: {
+            "X-API-Key": apiKey,
+            "X-API-Secret": apiSecret,
+            Accept: "application/json",
+          },
+        },
+      );
+      const json = (await res.json()) as {
+        success?: boolean;
+        data?: { status?: string };
+      };
+      const gpStatus = json.data?.status;
+      if (gpStatus === "completed") {
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         await supabaseAdmin
           .from("transactions")
-          .update({ status: "completed", notes: "Recheck CinetPay: ACCEPTED" })
+          .update({ status: "completed", notes: "Recheck GeniusPay: completed" })
           .eq("id", tx.id)
           .eq("status", "pending");
         if (tx.kind === "coupon" && tx.coupon_id) {
@@ -351,11 +353,11 @@ export const recheckCinetPayStatus = createServerFn({ method: "POST" })
         }
         return { status: "completed" as const, changed: true };
       }
-      if (cpStatus && cpStatus !== "PENDING" && cpStatus !== "WAITING_CUSTOMER_PAYMENT") {
+      if (gpStatus === "failed" || gpStatus === "expired" || gpStatus === "cancelled") {
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         await supabaseAdmin
           .from("transactions")
-          .update({ status: "failed", notes: `Recheck CinetPay: ${cpStatus}` })
+          .update({ status: "failed", notes: `Recheck GeniusPay: ${gpStatus}` })
           .eq("id", tx.id)
           .eq("status", "pending");
         return { status: "failed" as const, changed: true };
@@ -368,7 +370,7 @@ export const recheckCinetPayStatus = createServerFn({ method: "POST" })
 
 /**
  * Simulation manuelle d'un paiement (mode test).
- * Autorisée si CinetPay n'est pas configuré, OU si Mode Test Pay est actif.
+ * Autorisée si GeniusPay n'est pas configuré, OU si Mode Test Pay est actif.
  */
 export const simulatePaymentCompletion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -382,8 +384,8 @@ export const simulatePaymentCompletion = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const cinetpayConfigured = !!(process.env.CINETPAY_API_KEY && process.env.CINETPAY_SITE_ID);
-    const mode = cinetpayConfigured ? "live" : "test";
+    const geniuspayConfigured = !!(process.env.GENIUSPAY_API_KEY && process.env.GENIUSPAY_API_SECRET);
+    const mode = geniuspayConfigured ? "live" : "test";
     const logCtx = {
       step: "simulatePaymentCompletion",
       transaction_id: data.transactionId,
@@ -393,7 +395,7 @@ export const simulatePaymentCompletion = createServerFn({ method: "POST" })
     };
     console.log("[payments]", JSON.stringify({ ...logCtx, event: "start" }));
 
-    if (cinetpayConfigured) {
+    if (geniuspayConfigured) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data: testRow } = await supabaseAdmin
         .from("app_settings")
@@ -402,11 +404,10 @@ export const simulatePaymentCompletion = createServerFn({ method: "POST" })
         .maybeSingle();
       if (testRow?.value !== "true") {
         console.warn("[payments]", JSON.stringify({ ...logCtx, event: "blocked_live_mode" }));
-        throw new Error("Simulation indisponible : CinetPay est configuré et le Mode Test Pay est désactivé.");
+        throw new Error("Simulation indisponible : GeniusPay est configuré et le Mode Test Pay est désactivé.");
       }
     }
 
-    // Idempotent: vérifier d'abord l'état actuel
     const { data: pre } = await supabase
       .from("transactions")
       .select("id, status")
@@ -436,7 +437,6 @@ export const simulatePaymentCompletion = createServerFn({ method: "POST" })
       throw new Error(error.message);
     }
     if (!tx) {
-      // Race: a été finalisée entre les deux requêtes — renvoyer l'état courant
       const { data: existing } = await supabase
         .from("transactions")
         .select("id, status")
