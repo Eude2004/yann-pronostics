@@ -18,8 +18,13 @@ export const getCouponVideoAccess = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    // 1. Fetch the coupon (RLS allows reading published rows, admins see all)
-    const { data: coupon, error: cErr } = await supabase
+    // 1. Fetch the coupon via admin client. The user-scoped RLS on `coupons`
+    //    only exposes `published` rows, so once a coupon is archived (its
+    //    end_date passed and the cron flipped it), legitimate paying users
+    //    would lose access to the very video they paid for. Access here is
+    //    still gated below by has_paid_coupon / has_active_vip / admin role.
+    const { supabaseAdmin: sa } = await import("@/integrations/supabase/client.server");
+    const { data: coupon, error: cErr } = await sa
       .from("coupons")
       .select("id, video_url, status")
       .eq("id", data.couponId)
@@ -32,7 +37,6 @@ export const getCouponVideoAccess = createServerFn({ method: "POST" })
     }
 
     // 2. Check access: active VIP OR paid for this coupon (OR admin)
-    const { supabaseAdmin: sa } = await import("@/integrations/supabase/client.server");
     const [{ data: vip }, { data: paid }, { data: rolesRow }] = await Promise.all([
       sa.rpc("has_active_vip", { _user_id: userId }),
       sa.rpc("has_paid_coupon", { _user_id: userId, _coupon_id: coupon.id }),
