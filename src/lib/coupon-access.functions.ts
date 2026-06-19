@@ -55,8 +55,7 @@ export const getCouponVideoAccess = createServerFn({ method: "POST" })
     }
 
     // 4. Otherwise treat as storage path inside `coupon-videos`.
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: signed, error: sErr } = await supabaseAdmin
+    const { data: signed, error: sErr } = await sa
       .storage.from("coupon-videos")
       .createSignedUrl(coupon.video_url, 60 * 60);
 
