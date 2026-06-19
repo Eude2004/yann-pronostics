@@ -129,7 +129,7 @@ export const initiatePayment = createServerFn({ method: "POST" })
     }
 
     // ⚠️ MODE TEST GLOBAL : à retirer avant la mise en production.
-    const TEST_AUTO_COMPLETE = true;
+    const TEST_AUTO_COMPLETE = false;
     const initialStatus = TEST_AUTO_COMPLETE ? "completed" : "pending";
 
     let tx: { id: string };
