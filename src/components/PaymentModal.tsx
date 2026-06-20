@@ -55,7 +55,9 @@ export function PaymentModal({
         try {
           const v = await getVideo({ data: { couponId: coupon.id } });
           setVideoUrl(v.url);
-        } catch {}
+        } catch (err) {
+          console.error("[PaymentModal] getCouponVideoAccess failed", err);
+        }
         setStep("success");
         toast.success("Paiement confirmé ! Coupon débloqué.", { duration: Infinity });
       } else {
