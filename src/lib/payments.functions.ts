@@ -395,8 +395,9 @@ export const simulatePaymentCompletion = createServerFn({ method: "POST" })
     };
     console.log("[payments]", JSON.stringify({ ...logCtx, event: "start" }));
 
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
     if (geniuspayConfigured) {
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data: testRow } = await supabaseAdmin
         .from("app_settings")
         .select("value")
@@ -408,9 +409,10 @@ export const simulatePaymentCompletion = createServerFn({ method: "POST" })
       }
     }
 
+    // Ownership check via user-scoped client (RLS allows users to read their own tx).
     const { data: pre } = await supabase
       .from("transactions")
-      .select("id, status")
+      .select("id, status, user_id, coupon_id, kind")
       .eq("id", data.transactionId)
       .eq("user_id", userId)
       .maybeSingle();
@@ -421,10 +423,14 @@ export const simulatePaymentCompletion = createServerFn({ method: "POST" })
     }
     if (pre.status !== "pending") {
       console.log("[payments]", JSON.stringify({ ...logCtx, event: "already_finalized", current_status: pre.status }));
-      return pre;
+      return { id: pre.id, status: pre.status };
     }
 
-    const { data: tx, error } = await supabase
+    // Update via admin client: the `transactions` RLS policy restricts UPDATE
+    // to admins, but in test/simulation mode regular users must be able to
+    // finalize their OWN pending transaction. We've already verified ownership
+    // above, so bypassing RLS here is safe and required.
+    const { data: tx, error } = await supabaseAdmin
       .from("transactions")
       .update({ status: data.outcome, notes: `Simulé (${data.outcome})` })
       .eq("id", data.transactionId)
@@ -437,19 +443,20 @@ export const simulatePaymentCompletion = createServerFn({ method: "POST" })
       throw new Error(error.message);
     }
     if (!tx) {
-      const { data: existing } = await supabase
-        .from("transactions")
-        .select("id, status")
-        .eq("id", data.transactionId)
-        .eq("user_id", userId)
-        .maybeSingle();
-      if (existing) {
-        console.log("[payments]", JSON.stringify({ ...logCtx, event: "race_resolved", current_status: existing.status }));
-        return existing;
-      }
       console.warn("[payments]", JSON.stringify({ ...logCtx, event: "vanished" }));
       throw new Error("Transaction introuvable.");
     }
+
+    // Bump sales_count on first successful coupon purchase (mirrors webhook).
+    if (data.outcome === "completed" && pre.kind === "coupon" && pre.coupon_id) {
+      const { data: cur } = await supabaseAdmin
+        .from("coupons").select("sales_count").eq("id", pre.coupon_id).maybeSingle();
+      await supabaseAdmin
+        .from("coupons")
+        .update({ sales_count: (cur?.sales_count ?? 0) + 1 })
+        .eq("id", pre.coupon_id);
+    }
+
     console.log("[payments]", JSON.stringify({ ...logCtx, event: "finalized", status: tx.status }));
     return tx;
   });
