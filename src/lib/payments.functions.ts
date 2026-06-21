@@ -249,7 +249,10 @@ export const initiatePayment = createServerFn({ method: "POST" })
       providerError = e instanceof Error ? e.message : "Network error";
     }
 
-    await supabase
+    // Use admin client: `transactions` UPDATE is restricted to admins by RLS,
+    // so the user-scoped client would silently fail and we'd lose the GeniusPay
+    // reference (breaking webhook reconciliation and recheck).
+    await supabaseAdmin
       .from("transactions")
       .update({
         reference: reference ?? `GP-${tx.id.slice(0, 8).toUpperCase()}`,
