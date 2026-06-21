@@ -134,7 +134,10 @@ export const initiatePayment = createServerFn({ method: "POST" })
 
     let tx: { id: string };
     if (existing) {
-      const { data: upd, error: updErr } = await supabase
+      // Admin client: UPDATE on `transactions` is restricted to admins by RLS,
+      // but a regular user must be able to retry their own pending tx.
+      // Ownership is verified via the `eq("user_id", userId)` filter.
+      const { data: upd, error: updErr } = await supabaseAdmin
         .from("transactions")
         .update({
           status: initialStatus,
@@ -175,7 +178,8 @@ export const initiatePayment = createServerFn({ method: "POST" })
     // Mode test : auto-complete, pas de clés OU Mode Test Pay activé
     if (TEST_AUTO_COMPLETE || !apiKey || !apiSecret || testPayMode) {
       const ref = `MOCK-${tx.id.slice(0, 8)}`;
-      await supabase
+      // Admin client: see RLS note above.
+      await supabaseAdmin
         .from("transactions")
         .update({
           reference: ref,
@@ -249,7 +253,10 @@ export const initiatePayment = createServerFn({ method: "POST" })
       providerError = e instanceof Error ? e.message : "Network error";
     }
 
-    await supabase
+    // Use admin client: `transactions` UPDATE is restricted to admins by RLS,
+    // so the user-scoped client would silently fail and we'd lose the GeniusPay
+    // reference (breaking webhook reconciliation and recheck).
+    await supabaseAdmin
       .from("transactions")
       .update({
         reference: reference ?? `GP-${tx.id.slice(0, 8).toUpperCase()}`,
