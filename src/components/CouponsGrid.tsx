@@ -247,7 +247,8 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
     })();
   }, [paid, url, getAccess, coupon.id]);
 
-  const handleBuy = () => {
+  const handleBuy = async () => {
+    if (paying) return;
     if (coupon.disable_purchase_action === true) return;
     if (ended) {
       toast.info(t("coupon.expired_blocked", { defaultValue: "Ce coupon est terminé et n'est plus disponible à l'achat." }));
@@ -266,7 +267,43 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
       toast.error("Ce coupon n'est pas encore enregistré côté admin.");
       return;
     }
-    setPayOpen(true);
+
+    setPaying(true);
+    try {
+      const res = await initiate({
+        data: {
+          kind: "coupon",
+          couponId: coupon.id,
+          returnOrigin: window.location.origin,
+          customer: {
+            name: session.user.user_metadata?.full_name ?? undefined,
+            email: session.user.email ?? undefined,
+          },
+        },
+      });
+
+      if (res.mode === "test") {
+        await simulate({ data: { transactionId: res.transactionId, outcome: "completed" } });
+        toast.success("Paiement confirmé ! Coupon débloqué.");
+        try {
+          const v = await getAccess({ data: { couponId: coupon.id } });
+          if (v.url) setUrl(v.url);
+        } catch {}
+        setPaying(false);
+        return;
+      }
+
+      try {
+        sessionStorage.setItem(
+          "yp:pending-payment",
+          JSON.stringify({ txId: res.transactionId, couponId: coupon.id, ts: Date.now() }),
+        );
+      } catch {}
+      window.location.href = res.paymentUrl;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Échec du paiement.");
+      setPaying(false);
+    }
   };
 
   const handlePlay = async () => {
