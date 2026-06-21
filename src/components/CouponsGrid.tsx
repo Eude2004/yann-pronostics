@@ -212,10 +212,12 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
   const { session } = useAuth();
   const navigate = useNavigate();
   const getAccess = useServerFn(getCouponVideoAccess);
+  const initiate = useServerFn(initiatePayment);
+  const simulate = useServerFn(simulatePaymentCompletion);
   const offsetMs = useServerTimeOffset();
-  const [payOpen, setPayOpen] = useState(false);
   const [url, setUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [paying, setPaying] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [now, setNow] = useState(() => new Date(Date.now() + offsetMs));
   const meta = coupon.coupon_type ? TYPE_META[coupon.coupon_type] : TYPE_META.cote_10;
