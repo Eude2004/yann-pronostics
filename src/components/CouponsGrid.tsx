@@ -532,25 +532,18 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
             <Button
               size="sm"
               onClick={handleBuy}
+              disabled={paying}
               className="btn-gold rounded-full px-5 h-9 font-semibold"
             >
-              {t("coupon.buy", { defaultValue: "Acheter" })}
+              {paying ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                t("coupon.buy", { defaultValue: "Acheter" })
+              )}
             </Button>
           )}
         </div>
       </div>
-
-      {session && (
-        <PaymentModal
-          open={payOpen}
-          onOpenChange={setPayOpen}
-          coupon={{ id: coupon.id, title: coupon.title, price_xaf: coupon.price_xaf, event_date: coupon.event_date }}
-          customer={{
-            name: session.user.user_metadata?.full_name ?? undefined,
-            email: session.user.email ?? undefined,
-          }}
-        />
-      )}
     </div>
   );
 }
