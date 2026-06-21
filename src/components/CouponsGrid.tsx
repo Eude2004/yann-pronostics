@@ -7,12 +7,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EventCountdown } from "@/components/EventCountdown";
-import { PaymentModal } from "@/components/PaymentModal";
 import { useAuth } from "@/hooks/use-auth";
 import { useServerTimeOffset } from "@/hooks/use-server-time-offset";
 import { supabase } from "@/integrations/supabase/client";
 import { getCouponVideoAccess } from "@/lib/coupon-access.functions";
 import { refreshAndGetNextTransition } from "@/lib/coupon-schedule.functions";
+import { initiatePayment, simulatePaymentCompletion } from "@/lib/payments.functions";
 import { toast } from "sonner";
 
 export type CouponType = "cote_10" | "cote_30" | "cote_50" | "pair_corner";
