@@ -7,12 +7,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EventCountdown } from "@/components/EventCountdown";
-import { PaymentModal } from "@/components/PaymentModal";
 import { useAuth } from "@/hooks/use-auth";
 import { useServerTimeOffset } from "@/hooks/use-server-time-offset";
 import { supabase } from "@/integrations/supabase/client";
 import { getCouponVideoAccess } from "@/lib/coupon-access.functions";
 import { refreshAndGetNextTransition } from "@/lib/coupon-schedule.functions";
+import { initiatePayment, simulatePaymentCompletion } from "@/lib/payments.functions";
 import { toast } from "sonner";
 
 export type CouponType = "cote_10" | "cote_30" | "cote_50" | "pair_corner";
@@ -212,10 +212,12 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
   const { session } = useAuth();
   const navigate = useNavigate();
   const getAccess = useServerFn(getCouponVideoAccess);
+  const initiate = useServerFn(initiatePayment);
+  const simulate = useServerFn(simulatePaymentCompletion);
   const offsetMs = useServerTimeOffset();
-  const [payOpen, setPayOpen] = useState(false);
   const [url, setUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [paying, setPaying] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [now, setNow] = useState(() => new Date(Date.now() + offsetMs));
   const meta = coupon.coupon_type ? TYPE_META[coupon.coupon_type] : TYPE_META.cote_10;
@@ -245,7 +247,8 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
     })();
   }, [paid, url, getAccess, coupon.id]);
 
-  const handleBuy = () => {
+  const handleBuy = async () => {
+    if (paying) return;
     if (coupon.disable_purchase_action === true) return;
     if (ended) {
       toast.info(t("coupon.expired_blocked", { defaultValue: "Ce coupon est terminé et n'est plus disponible à l'achat." }));
@@ -264,7 +267,43 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
       toast.error("Ce coupon n'est pas encore enregistré côté admin.");
       return;
     }
-    setPayOpen(true);
+
+    setPaying(true);
+    try {
+      const res = await initiate({
+        data: {
+          kind: "coupon",
+          couponId: coupon.id,
+          returnOrigin: window.location.origin,
+          customer: {
+            name: session.user.user_metadata?.full_name ?? undefined,
+            email: session.user.email ?? undefined,
+          },
+        },
+      });
+
+      if (res.mode === "test") {
+        await simulate({ data: { transactionId: res.transactionId, outcome: "completed" } });
+        toast.success("Paiement confirmé ! Coupon débloqué.");
+        try {
+          const v = await getAccess({ data: { couponId: coupon.id } });
+          if (v.url) setUrl(v.url);
+        } catch {}
+        setPaying(false);
+        return;
+      }
+
+      try {
+        sessionStorage.setItem(
+          "yp:pending-payment",
+          JSON.stringify({ txId: res.transactionId, couponId: coupon.id, ts: Date.now() }),
+        );
+      } catch {}
+      window.location.href = res.paymentUrl;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Échec du paiement.");
+      setPaying(false);
+    }
   };
 
   const handlePlay = async () => {
@@ -493,25 +532,18 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
             <Button
               size="sm"
               onClick={handleBuy}
+              disabled={paying}
               className="btn-gold rounded-full px-5 h-9 font-semibold"
             >
-              {t("coupon.buy", { defaultValue: "Acheter" })}
+              {paying ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                t("coupon.buy", { defaultValue: "Acheter" })
+              )}
             </Button>
           )}
         </div>
       </div>
-
-      {session && (
-        <PaymentModal
-          open={payOpen}
-          onOpenChange={setPayOpen}
-          coupon={{ id: coupon.id, title: coupon.title, price_xaf: coupon.price_xaf, event_date: coupon.event_date }}
-          customer={{
-            name: session.user.user_metadata?.full_name ?? undefined,
-            email: session.user.email ?? undefined,
-          }}
-        />
-      )}
     </div>
   );
 }
