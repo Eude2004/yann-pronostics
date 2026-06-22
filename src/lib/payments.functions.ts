@@ -209,10 +209,13 @@ export const initiatePayment = createServerFn({ method: "POST" })
     }
 
     // Live mode — GeniusPay hosted checkout (no payment_method)
+    const ourRef = `YP-${Date.now().toString().slice(-6)}`;
     const payload = {
       amount: amountXaf,
       currency: "XOF",
       description: description.slice(0, 500),
+      reference: ourRef,
+      external_reference: ourRef,
       customer: {
         name: data.customer?.name?.slice(0, 120) ?? "Client",
         email: data.customer?.email ?? undefined,
@@ -220,7 +223,7 @@ export const initiatePayment = createServerFn({ method: "POST" })
       },
       success_url: successUrl,
       error_url: errorUrl,
-      metadata: { tx_id: tx.id, coupon_id: data.couponId },
+      metadata: { tx_id: tx.id, coupon_id: data.couponId, our_ref: ourRef },
     };
 
     let paymentUrl: string | null = null;
