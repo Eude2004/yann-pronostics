@@ -573,7 +573,16 @@ function CouponsAdmin() {
             </div>
             <div>
               <Label>Description <span className="text-xs text-muted-foreground font-normal">(optionnel — générée automatiquement si vide selon le type)</span></Label>
-              <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Laissez vide pour utiliser la description par défaut du type de coupon" />
+              <Textarea
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                placeholder="Laissez vide : la description par défaut FR/EN sera appliquée automatiquement selon le type de coupon."
+              />
+              {!form.description.trim() && (
+                <p className="text-xs text-muted-foreground">
+                  ✓ Description par défaut bilingue (FR/EN) qui sera appliquée selon la langue du visiteur.
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Image du coupon <span className="text-xs text-muted-foreground font-normal">(optionnel)</span></Label>
