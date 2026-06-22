@@ -322,7 +322,7 @@ export const recheckGeniusPayStatus = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!tx) throw new Error("Transaction introuvable.");
     if (tx.status !== "pending") return { status: tx.status, changed: false };
-    if (!apiKey || !apiSecret || !tx.reference || tx.reference.startsWith("MOCK-")) {
+    if (!apiKey || !apiSecret || !tx.reference || tx.reference.startsWith("YP-T") || tx.reference.startsWith("MOCK-")) {
       return { status: tx.status, changed: false };
     }
 
