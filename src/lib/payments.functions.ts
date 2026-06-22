@@ -259,7 +259,7 @@ export const initiatePayment = createServerFn({ method: "POST" })
     await supabaseAdmin
       .from("transactions")
       .update({
-        reference: reference ?? `GP-${tx.id.slice(0, 8).toUpperCase()}`,
+        reference: reference ?? `YP-${Date.now().toString().slice(-6)}`,
         notes: providerError ?? "GeniusPay init OK",
         status: providerError ? "failed" : "pending",
       })
