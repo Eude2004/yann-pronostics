@@ -56,7 +56,15 @@ function PaymentReturn() {
   const reference = query.data?.reference ?? null;
   const couponId = query.data?.coupon_id ?? null;
   const createdAt = query.data?.created_at ? new Date(query.data.created_at).getTime() : null;
-  const isMock = !!reference?.startsWith("MOCK-");
+  const isMock = !!reference?.startsWith("MOCK-") || !!reference?.startsWith("YP-T");
+  // Affichage propre : on retire les préfixes techniques (SANDBOX_, TEST_)
+  // et on tronque les références trop longues sur mobile.
+  const displayReference = (() => {
+    if (!reference) return "—";
+    let r = reference.replace(/^(SANDBOX_|TEST_|sandbox_|test_)/i, "");
+    if (r.length > 16) r = "…" + r.slice(-10);
+    return r;
+  })();
   const expired =
     status === "pending" && createdAt !== null && Date.now() - createdAt > PENDING_EXPIRY_MS;
 
