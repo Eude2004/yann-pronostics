@@ -194,13 +194,18 @@ function PaymentReturn() {
                   <span className="text-foreground font-medium text-right">{couponTitle}</span>
                 </div>
               )}
-              <div className="flex justify-between gap-3">
+              <div className="flex justify-between gap-3 items-center">
                 <span className="text-muted-foreground">{t("payment.reference")}</span>
-                <span className="font-mono text-foreground text-xs">{reference ?? "—"}</span>
+                <span
+                  className="font-mono text-foreground text-xs tabular-nums truncate max-w-[60%] text-right"
+                  title={reference ?? undefined}
+                >
+                  {displayReference}
+                </span>
               </div>
-              <div className="flex justify-between gap-3">
+              <div className="flex justify-between gap-3 items-center">
                 <span className="text-muted-foreground">{t("payment.amount")}</span>
-                <span className="text-foreground">{query.data.amount_xaf.toLocaleString("fr-FR")} XAF</span>
+                <span className="text-foreground tabular-nums">{query.data.amount_xaf.toLocaleString("fr-FR")} XAF</span>
               </div>
               <div className="flex justify-between gap-3 items-center">
                 <span className="text-muted-foreground">Statut</span>
