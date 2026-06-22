@@ -44,7 +44,7 @@ export const Route = createFileRoute("/api/public/hooks/expire-pending-payments"
         let completed = 0, failed = 0, expired = 0, stillPending = 0;
 
         for (const tx of pendings ?? []) {
-          const isMock = !tx.reference || tx.reference.startsWith("MOCK-");
+          const isMock = !tx.reference || tx.reference.startsWith("MOCK-") || tx.reference.startsWith("YP-T");
           let finalized = false;
 
           // 1) Re-check GeniusPay en mode live

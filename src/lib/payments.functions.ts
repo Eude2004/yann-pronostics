@@ -177,7 +177,7 @@ export const initiatePayment = createServerFn({ method: "POST" })
 
     // Mode test : auto-complete, pas de clés OU Mode Test Pay activé
     if (TEST_AUTO_COMPLETE || !apiKey || !apiSecret || testPayMode) {
-      const ref = `MOCK-${tx.id.slice(0, 8)}`;
+      const ref = `YP-T${Date.now().toString().slice(-6)}`;
       // Admin client: see RLS note above.
       await supabaseAdmin
         .from("transactions")
@@ -209,10 +209,13 @@ export const initiatePayment = createServerFn({ method: "POST" })
     }
 
     // Live mode — GeniusPay hosted checkout (no payment_method)
+    const ourRef = `YP-${Date.now().toString().slice(-6)}`;
     const payload = {
       amount: amountXaf,
       currency: "XOF",
       description: description.slice(0, 500),
+      reference: ourRef,
+      external_reference: ourRef,
       customer: {
         name: data.customer?.name?.slice(0, 120) ?? "Client",
         email: data.customer?.email ?? undefined,
@@ -220,7 +223,7 @@ export const initiatePayment = createServerFn({ method: "POST" })
       },
       success_url: successUrl,
       error_url: errorUrl,
-      metadata: { tx_id: tx.id, coupon_id: data.couponId },
+      metadata: { tx_id: tx.id, coupon_id: data.couponId, our_ref: ourRef },
     };
 
     let paymentUrl: string | null = null;
@@ -259,7 +262,7 @@ export const initiatePayment = createServerFn({ method: "POST" })
     await supabaseAdmin
       .from("transactions")
       .update({
-        reference: reference ?? `GP-${tx.id.slice(0, 8).toUpperCase()}`,
+        reference: reference ?? `YP-${Date.now().toString().slice(-6)}`,
         notes: providerError ?? "GeniusPay init OK",
         status: providerError ? "failed" : "pending",
       })
@@ -322,7 +325,7 @@ export const recheckGeniusPayStatus = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!tx) throw new Error("Transaction introuvable.");
     if (tx.status !== "pending") return { status: tx.status, changed: false };
-    if (!apiKey || !apiSecret || !tx.reference || tx.reference.startsWith("MOCK-")) {
+    if (!apiKey || !apiSecret || !tx.reference || tx.reference.startsWith("YP-T") || tx.reference.startsWith("MOCK-")) {
       return { status: tx.status, changed: false };
     }
 

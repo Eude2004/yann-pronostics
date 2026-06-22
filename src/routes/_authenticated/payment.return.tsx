@@ -56,7 +56,15 @@ function PaymentReturn() {
   const reference = query.data?.reference ?? null;
   const couponId = query.data?.coupon_id ?? null;
   const createdAt = query.data?.created_at ? new Date(query.data.created_at).getTime() : null;
-  const isMock = !!reference?.startsWith("MOCK-");
+  const isMock = !!reference?.startsWith("MOCK-") || !!reference?.startsWith("YP-T");
+  // Affichage propre : on retire les préfixes techniques (SANDBOX_, TEST_)
+  // et on tronque les références trop longues sur mobile.
+  const displayReference = (() => {
+    if (!reference) return "—";
+    let r = reference.replace(/^(SANDBOX_|TEST_|sandbox_|test_)/i, "");
+    if (r.length > 16) r = "…" + r.slice(-10);
+    return r;
+  })();
   const expired =
     status === "pending" && createdAt !== null && Date.now() - createdAt > PENDING_EXPIRY_MS;
 
@@ -186,13 +194,18 @@ function PaymentReturn() {
                   <span className="text-foreground font-medium text-right">{couponTitle}</span>
                 </div>
               )}
-              <div className="flex justify-between gap-3">
+              <div className="flex justify-between gap-3 items-center">
                 <span className="text-muted-foreground">{t("payment.reference")}</span>
-                <span className="font-mono text-foreground text-xs">{reference ?? "—"}</span>
+                <span
+                  className="font-mono text-foreground text-xs tabular-nums truncate max-w-[60%] text-right"
+                  title={reference ?? undefined}
+                >
+                  {displayReference}
+                </span>
               </div>
-              <div className="flex justify-between gap-3">
+              <div className="flex justify-between gap-3 items-center">
                 <span className="text-muted-foreground">{t("payment.amount")}</span>
-                <span className="text-foreground">{query.data.amount_xaf.toLocaleString("fr-FR")} XAF</span>
+                <span className="text-foreground tabular-nums">{query.data.amount_xaf.toLocaleString("fr-FR")} XAF</span>
               </div>
               <div className="flex justify-between gap-3 items-center">
                 <span className="text-muted-foreground">Statut</span>
