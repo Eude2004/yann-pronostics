@@ -177,7 +177,7 @@ export const initiatePayment = createServerFn({ method: "POST" })
 
     // Mode test : auto-complete, pas de clés OU Mode Test Pay activé
     if (TEST_AUTO_COMPLETE || !apiKey || !apiSecret || testPayMode) {
-      const ref = `MOCK-${tx.id.slice(0, 8)}`;
+      const ref = `YP-${Date.now().toString().slice(-6)}`;
       // Admin client: see RLS note above.
       await supabaseAdmin
         .from("transactions")
