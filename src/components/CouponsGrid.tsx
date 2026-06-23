@@ -208,8 +208,10 @@ function ComingSoonCard({ type }: { type: CouponType }) {
 }
 
 function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { session } = useAuth();
+  const { settings } = useSettings();
+
   const navigate = useNavigate();
   const getAccess = useServerFn(getCouponVideoAccess);
   const initiate = useServerFn(initiatePayment);
