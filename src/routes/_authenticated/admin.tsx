@@ -1101,7 +1101,7 @@ function SettingsAdmin() {
   if (loading) return <div className="text-muted-foreground">Chargement…</div>;
 
   return (
-    <div className="max-w-xl space-y-6">
+    <div className="max-w-3xl space-y-6">
       <div>
         <h2 className="text-xl font-display mb-4">Paramètres de la plateforme</h2>
         <div className="rounded-xl border border-border/60 bg-card p-6 space-y-4">
