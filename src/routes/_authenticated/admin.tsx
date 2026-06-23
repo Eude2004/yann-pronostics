@@ -347,6 +347,8 @@ function CouponsAdmin() {
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("coupon_tz", timezone);
   }, [timezone]);
+  const { settings } = useSettings();
+
 
   const uploadVideo = async (file: File) => {
     if (!file) return;
@@ -407,12 +409,17 @@ function CouponsAdmin() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  const openNew = () => { setEditing(null); setForm({ ...emptyCouponForm }); setOpen(true); };
+  const openNew = () => {
+    setEditing(null);
+    setForm({ ...emptyCouponForm, description: resolveCouponDefault(settings, "fr", "cote_10") });
+    setOpen(true);
+  };
   const openEdit = (c: Coupon) => {
     setEditing(c);
+    const type = (c.coupon_type ?? "cote_10") as CouponType;
     setForm({
-      coupon_type: (c.coupon_type ?? "cote_10") as CouponType,
-      description: c.description ?? "",
+      coupon_type: type,
+      description: c.description ?? resolveCouponDefault(settings, "fr", type),
       image_url: c.image_url ?? "",
       video_url: c.video_url ?? "",
       start_date: isoToZonedInput(c.start_date, timezone),
@@ -423,6 +430,19 @@ function CouponsAdmin() {
     });
     setOpen(true);
   };
+
+  // When admin changes the ticket type and the description is still empty
+  // or equal to the previous type's default, auto-refill with the new type's
+  // FR default so it stays in sync with the global setting.
+  const onChangeCouponType = (next: CouponType) => {
+    const prev = form.coupon_type;
+    const prevDefault = resolveCouponDefault(settings, "fr", prev);
+    const nextDefault = resolveCouponDefault(settings, "fr", next);
+    const current = form.description.trim();
+    const shouldReplace = !current || current === prevDefault.trim();
+    setForm({ ...form, coupon_type: next, description: shouldReplace ? nextDefault : form.description });
+  };
+
 
   // Default event_date to today 15:00 in the chosen timezone when admin leaves it blank.
   const defaultEventDateIso = (): string => {
