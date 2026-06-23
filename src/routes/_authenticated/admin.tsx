@@ -1147,6 +1147,50 @@ function SettingsAdmin() {
 
       <div>
         <h2 className="text-xl font-display mb-4 flex items-center gap-2">
+          <FileText className="w-5 h-5 text-primary" /> Descriptions par défaut des coupons (FR / EN)
+        </h2>
+        <div className="rounded-xl border border-border/60 bg-card p-6 space-y-4">
+          <p className="text-xs text-muted-foreground">
+            Texte affiché automatiquement aux visiteurs selon leur langue, pour chaque type de coupon.
+            Pré-rempli dans le champ Description du formulaire de création.
+          </p>
+          {COUPON_DESC_TYPES.map((type) => {
+            const labelMap: Record<string, string> = {
+              cote_10: "Cote de 10+",
+              cote_30: "Cote de 30+",
+              cote_50: "Cote de 50+",
+              pair_corner: "Coupon Total Pair Corner",
+            };
+            return (
+              <div key={type} className="space-y-2 border-t border-border/40 pt-4 first:border-t-0 first:pt-0">
+                <p className="font-medium text-sm">{labelMap[type]}</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {COUPON_DESC_LANGS.map((lang) => {
+                    const key = `coupon_desc_${lang}_${type}`;
+                    return (
+                      <div key={key}>
+                        <Label className="text-xs uppercase tracking-wide">{lang === "fr" ? "Français" : "English"}</Label>
+                        <Textarea
+                          rows={3}
+                          value={descs[key] ?? ""}
+                          onChange={(e) => setDescs({ ...descs, [key]: e.target.value })}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+          <Button onClick={saveDescs} disabled={savingDescs} className="bg-gold-gradient text-primary-foreground">
+            <Save className="w-4 h-4 mr-2" /> {savingDescs ? "Enregistrement…" : "Enregistrer les descriptions"}
+          </Button>
+        </div>
+      </div>
+
+
+      <div>
+        <h2 className="text-xl font-display mb-4 flex items-center gap-2">
           <EyeOff className="w-5 h-5 text-primary" /> Confidentialité
         </h2>
         <div className="rounded-xl border border-border/60 bg-card p-6 space-y-3">
