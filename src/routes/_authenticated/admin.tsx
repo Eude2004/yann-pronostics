@@ -610,18 +610,33 @@ function CouponsAdmin() {
               </Select>
             </div>
             <div>
-              <Label>Description <span className="text-xs text-muted-foreground font-normal">(optionnel — générée automatiquement si vide selon le type)</span></Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label>Description <span className="text-xs text-muted-foreground font-normal">(pré-remplie avec la valeur par défaut FR)</span></Label>
+                <Button type="button" variant="ghost" size="sm" className="h-7 text-xs"
+                  onClick={() => setForm({ ...form, description: resolveCouponDefault(settings, "fr", form.coupon_type) })}>
+                  Restaurer le défaut
+                </Button>
+              </div>
               <Textarea
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="Laissez vide : la description par défaut FR/EN sera appliquée automatiquement selon le type de coupon."
+                placeholder="Description du coupon visible par les visiteurs."
+                rows={4}
               />
-              {!form.description.trim() && (
-                <p className="text-xs text-muted-foreground">
-                  ✓ Description par défaut bilingue (FR/EN) qui sera appliquée selon la langue du visiteur.
-                </p>
-              )}
+              {(() => {
+                const typed = form.description.trim();
+                const frDefault = resolveCouponDefault(settings, "fr", form.coupon_type).trim();
+                const usesDefault = !typed || typed === frDefault;
+                return (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {usesDefault
+                      ? "✓ Texte par défaut détecté — les visiteurs verront automatiquement la version FR ou EN selon leur langue."
+                      : "⚠️ Texte personnalisé — la traduction automatique FR/EN ne sera pas appliquée pour ce coupon."}
+                  </p>
+                );
+              })()}
             </div>
+
             <div className="space-y-2">
               <Label>Image du coupon <span className="text-xs text-muted-foreground font-normal">(optionnel)</span></Label>
               <div className="flex flex-wrap gap-2">
