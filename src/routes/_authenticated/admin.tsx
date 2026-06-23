@@ -1017,6 +1017,8 @@ function SettingsAdmin() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingAnon, setSavingAnon] = useState(false);
+  const [descs, setDescs] = useState<Record<string, string>>({});
+  const [savingDescs, setSavingDescs] = useState(false);
   const toggleTestPay = useServerFn(setTestPayModeFn);
 
   useEffect(() => {
@@ -1027,9 +1029,30 @@ function SettingsAdmin() {
       setSiteName(map.site_name ?? "YANN PRONOSTICS");
       setTestPay(map.test_pay_mode === "true");
       setAnonymous(map.anonymous_mode === "true");
+      const next: Record<string, string> = {};
+      for (const lang of COUPON_DESC_LANGS) {
+        for (const type of COUPON_DESC_TYPES) {
+          const key = `coupon_desc_${lang}_${type}`;
+          next[key] = map[key] ?? defaultCouponDesc(lang, type);
+        }
+      }
+      setDescs(next);
       setLoading(false);
     })();
   }, []);
+
+  const saveDescs = async () => {
+    setSavingDescs(true);
+    const payload = Object.entries(descs).map(([key, value]) => ({
+      key, value: (value ?? "").trim(), updated_at: new Date().toISOString(),
+    }));
+    const { error } = await supabase.from("app_settings").upsert(payload, { onConflict: "key" });
+    setSavingDescs(false);
+    if (error) return toast.error(error.message);
+    await logAdminAction("update_coupon_default_descriptions", "settings", null, { count: payload.length });
+    toast.success("Descriptions par défaut enregistrées");
+  };
+
 
   const save = async () => {
     setSaving(true);
