@@ -42,6 +42,20 @@ import {
 import { setTestPayMode as setTestPayModeFn } from "@/lib/payments.functions";
 import { listAdminUsers as listAdminUsersFn, setUserAdmin as setUserAdminFn, deleteAppUser as deleteAppUserFn, setUserDisabled as setUserDisabledFn } from "@/lib/admin-users.functions";
 import { logAdminAction } from "@/lib/audit";
+import { useSettings } from "@/hooks/use-settings";
+import { fr as frLocale } from "@/lib/locales/fr";
+import { en as enLocale } from "@/lib/locales/en";
+
+const COUPON_DESC_LANGS = ["fr", "en"] as const;
+const COUPON_DESC_TYPES = ["cote_10", "cote_30", "cote_50", "pair_corner"] as const;
+function defaultCouponDesc(lang: "fr" | "en", type: typeof COUPON_DESC_TYPES[number]): string {
+  const src = (lang === "fr" ? frLocale : enLocale) as any;
+  return src?.coupon?.[`fallback_desc_${type}`] ?? "";
+}
+function resolveCouponDefault(settings: Record<string, string>, lang: "fr" | "en", type: typeof COUPON_DESC_TYPES[number]): string {
+  return settings[`coupon_desc_${lang}_${type}`] || defaultCouponDesc(lang, type);
+}
+
 
 const ADMIN_VIEWS = ["stats", "coupons", "validated", "transactions", "users", "audit", "settings"] as const;
 type AdminViewKey = (typeof ADMIN_VIEWS)[number];
