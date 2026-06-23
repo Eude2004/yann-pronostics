@@ -42,6 +42,20 @@ import {
 import { setTestPayMode as setTestPayModeFn } from "@/lib/payments.functions";
 import { listAdminUsers as listAdminUsersFn, setUserAdmin as setUserAdminFn, deleteAppUser as deleteAppUserFn, setUserDisabled as setUserDisabledFn } from "@/lib/admin-users.functions";
 import { logAdminAction } from "@/lib/audit";
+import { useSettings } from "@/hooks/use-settings";
+import { fr as frLocale } from "@/lib/locales/fr";
+import { en as enLocale } from "@/lib/locales/en";
+
+const COUPON_DESC_LANGS = ["fr", "en"] as const;
+const COUPON_DESC_TYPES = ["cote_10", "cote_30", "cote_50", "pair_corner"] as const;
+function defaultCouponDesc(lang: "fr" | "en", type: typeof COUPON_DESC_TYPES[number]): string {
+  const src = (lang === "fr" ? frLocale : enLocale) as any;
+  return src?.coupon?.[`fallback_desc_${type}`] ?? "";
+}
+function resolveCouponDefault(settings: Record<string, string>, lang: "fr" | "en", type: typeof COUPON_DESC_TYPES[number]): string {
+  return settings[`coupon_desc_${lang}_${type}`] || defaultCouponDesc(lang, type);
+}
+
 
 const ADMIN_VIEWS = ["stats", "coupons", "validated", "transactions", "users", "audit", "settings"] as const;
 type AdminViewKey = (typeof ADMIN_VIEWS)[number];
@@ -333,6 +347,8 @@ function CouponsAdmin() {
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("coupon_tz", timezone);
   }, [timezone]);
+  const { settings } = useSettings();
+
 
   const uploadVideo = async (file: File) => {
     if (!file) return;
@@ -393,12 +409,17 @@ function CouponsAdmin() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  const openNew = () => { setEditing(null); setForm({ ...emptyCouponForm }); setOpen(true); };
+  const openNew = () => {
+    setEditing(null);
+    setForm({ ...emptyCouponForm, description: resolveCouponDefault(settings, "fr", "cote_10") });
+    setOpen(true);
+  };
   const openEdit = (c: Coupon) => {
     setEditing(c);
+    const type = (c.coupon_type ?? "cote_10") as CouponType;
     setForm({
-      coupon_type: (c.coupon_type ?? "cote_10") as CouponType,
-      description: c.description ?? "",
+      coupon_type: type,
+      description: c.description ?? resolveCouponDefault(settings, "fr", type),
       image_url: c.image_url ?? "",
       video_url: c.video_url ?? "",
       start_date: isoToZonedInput(c.start_date, timezone),
@@ -409,6 +430,19 @@ function CouponsAdmin() {
     });
     setOpen(true);
   };
+
+  // When admin changes the ticket type and the description is still empty
+  // or equal to the previous type's default, auto-refill with the new type's
+  // FR default so it stays in sync with the global setting.
+  const onChangeCouponType = (next: CouponType) => {
+    const prev = form.coupon_type;
+    const prevDefault = resolveCouponDefault(settings, "fr", prev);
+    const nextDefault = resolveCouponDefault(settings, "fr", next);
+    const current = form.description.trim();
+    const shouldReplace = !current || current === prevDefault.trim();
+    setForm({ ...form, coupon_type: next, description: shouldReplace ? nextDefault : form.description });
+  };
+
 
   // Default event_date to today 15:00 in the chosen timezone when admin leaves it blank.
   const defaultEventDateIso = (): string => {
@@ -426,7 +460,11 @@ function CouponsAdmin() {
   // cote_50, pair_corner) et la langue active de l'utilisateur.
   const save = async () => {
     const meta = COUPON_TYPES.find(t => t.value === form.coupon_type)!;
-    const description = form.description.trim() || null;
+    // If admin left the prefilled FR default unchanged, store null so the
+    // bilingual auto-translation (FR/EN, via app_settings + i18n) kicks in.
+    const typed = form.description.trim();
+    const frDefault = resolveCouponDefault(settings, "fr", form.coupon_type).trim();
+    const description = !typed || typed === frDefault ? null : typed;
     const startIso = zonedInputToIso(form.start_date, timezone);
     const endIso = zonedInputToIso(form.end_date, timezone);
     const eventIso = zonedInputToIso(form.event_date, timezone) ?? defaultEventDateIso();
@@ -560,7 +598,7 @@ function CouponsAdmin() {
           <div className="space-y-3">
             <div>
               <Label>Type de coupon (titre et prix imposés)</Label>
-              <Select value={form.coupon_type} onValueChange={(v) => setForm({ ...form, coupon_type: v as CouponType })}>
+              <Select value={form.coupon_type} onValueChange={(v) => onChangeCouponType(v as CouponType)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {COUPON_TYPES.map(t => (
@@ -572,18 +610,33 @@ function CouponsAdmin() {
               </Select>
             </div>
             <div>
-              <Label>Description <span className="text-xs text-muted-foreground font-normal">(optionnel — générée automatiquement si vide selon le type)</span></Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label>Description <span className="text-xs text-muted-foreground font-normal">(pré-remplie avec la valeur par défaut FR)</span></Label>
+                <Button type="button" variant="ghost" size="sm" className="h-7 text-xs"
+                  onClick={() => setForm({ ...form, description: resolveCouponDefault(settings, "fr", form.coupon_type) })}>
+                  Restaurer le défaut
+                </Button>
+              </div>
               <Textarea
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="Laissez vide : la description par défaut FR/EN sera appliquée automatiquement selon le type de coupon."
+                placeholder="Description du coupon visible par les visiteurs."
+                rows={4}
               />
-              {!form.description.trim() && (
-                <p className="text-xs text-muted-foreground">
-                  ✓ Description par défaut bilingue (FR/EN) qui sera appliquée selon la langue du visiteur.
-                </p>
-              )}
+              {(() => {
+                const typed = form.description.trim();
+                const frDefault = resolveCouponDefault(settings, "fr", form.coupon_type).trim();
+                const usesDefault = !typed || typed === frDefault;
+                return (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {usesDefault
+                      ? "✓ Texte par défaut détecté — les visiteurs verront automatiquement la version FR ou EN selon leur langue."
+                      : "⚠️ Texte personnalisé — la traduction automatique FR/EN ne sera pas appliquée pour ce coupon."}
+                  </p>
+                );
+              })()}
             </div>
+
             <div className="space-y-2">
               <Label>Image du coupon <span className="text-xs text-muted-foreground font-normal">(optionnel)</span></Label>
               <div className="flex flex-wrap gap-2">
@@ -964,6 +1017,8 @@ function SettingsAdmin() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingAnon, setSavingAnon] = useState(false);
+  const [descs, setDescs] = useState<Record<string, string>>({});
+  const [savingDescs, setSavingDescs] = useState(false);
   const toggleTestPay = useServerFn(setTestPayModeFn);
 
   useEffect(() => {
@@ -974,9 +1029,30 @@ function SettingsAdmin() {
       setSiteName(map.site_name ?? "YANN PRONOSTICS");
       setTestPay(map.test_pay_mode === "true");
       setAnonymous(map.anonymous_mode === "true");
+      const next: Record<string, string> = {};
+      for (const lang of COUPON_DESC_LANGS) {
+        for (const type of COUPON_DESC_TYPES) {
+          const key = `coupon_desc_${lang}_${type}`;
+          next[key] = map[key] ?? defaultCouponDesc(lang, type);
+        }
+      }
+      setDescs(next);
       setLoading(false);
     })();
   }, []);
+
+  const saveDescs = async () => {
+    setSavingDescs(true);
+    const payload = Object.entries(descs).map(([key, value]) => ({
+      key, value: (value ?? "").trim(), updated_at: new Date().toISOString(),
+    }));
+    const { error } = await supabase.from("app_settings").upsert(payload, { onConflict: "key" });
+    setSavingDescs(false);
+    if (error) return toast.error(error.message);
+    await logAdminAction("update_coupon_default_descriptions", "settings", null, { count: payload.length });
+    toast.success("Descriptions par défaut enregistrées");
+  };
+
 
   const save = async () => {
     setSaving(true);
@@ -1025,7 +1101,7 @@ function SettingsAdmin() {
   if (loading) return <div className="text-muted-foreground">Chargement…</div>;
 
   return (
-    <div className="max-w-xl space-y-6">
+    <div className="max-w-3xl space-y-6">
       <div>
         <h2 className="text-xl font-display mb-4">Paramètres de la plateforme</h2>
         <div className="rounded-xl border border-border/60 bg-card p-6 space-y-4">
@@ -1068,6 +1144,50 @@ function SettingsAdmin() {
           )}
         </div>
       </div>
+
+      <div>
+        <h2 className="text-xl font-display mb-4 flex items-center gap-2">
+          <FileText className="w-5 h-5 text-primary" /> Descriptions par défaut des coupons (FR / EN)
+        </h2>
+        <div className="rounded-xl border border-border/60 bg-card p-6 space-y-4">
+          <p className="text-xs text-muted-foreground">
+            Texte affiché automatiquement aux visiteurs selon leur langue, pour chaque type de coupon.
+            Pré-rempli dans le champ Description du formulaire de création.
+          </p>
+          {COUPON_DESC_TYPES.map((type) => {
+            const labelMap: Record<string, string> = {
+              cote_10: "Cote de 10+",
+              cote_30: "Cote de 30+",
+              cote_50: "Cote de 50+",
+              pair_corner: "Coupon Total Pair Corner",
+            };
+            return (
+              <div key={type} className="space-y-2 border-t border-border/40 pt-4 first:border-t-0 first:pt-0">
+                <p className="font-medium text-sm">{labelMap[type]}</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {COUPON_DESC_LANGS.map((lang) => {
+                    const key = `coupon_desc_${lang}_${type}`;
+                    return (
+                      <div key={key}>
+                        <Label className="text-xs uppercase tracking-wide">{lang === "fr" ? "Français" : "English"}</Label>
+                        <Textarea
+                          rows={3}
+                          value={descs[key] ?? ""}
+                          onChange={(e) => setDescs({ ...descs, [key]: e.target.value })}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+          <Button onClick={saveDescs} disabled={savingDescs} className="bg-gold-gradient text-primary-foreground">
+            <Save className="w-4 h-4 mr-2" /> {savingDescs ? "Enregistrement…" : "Enregistrer les descriptions"}
+          </Button>
+        </div>
+      </div>
+
 
       <div>
         <h2 className="text-xl font-display mb-4 flex items-center gap-2">

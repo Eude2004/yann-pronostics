@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { EventCountdown } from "@/components/EventCountdown";
 import { useAuth } from "@/hooks/use-auth";
+import { useSettings } from "@/hooks/use-settings";
 import { useServerTimeOffset } from "@/hooks/use-server-time-offset";
 import { supabase } from "@/integrations/supabase/client";
 import { getCouponVideoAccess } from "@/lib/coupon-access.functions";
@@ -208,8 +209,10 @@ function ComingSoonCard({ type }: { type: CouponType }) {
 }
 
 function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { session } = useAuth();
+  const { settings } = useSettings();
+
   const navigate = useNavigate();
   const getAccess = useServerFn(getCouponVideoAccess);
   const initiate = useServerFn(initiatePayment);
@@ -453,11 +456,19 @@ function CouponCard({ coupon, paid }: { coupon: Coupon; paid: boolean }) {
             {coupon.title}
           </h3>
           <p className="mt-1 text-xs text-muted-foreground line-clamp-2 min-h-[2rem]">
-            {coupon.description
-              || (coupon.coupon_type
-                ? t(`coupon.fallback_desc_${coupon.coupon_type}`, { defaultValue: t("coupon.fallback_desc") })
-                : t("coupon.fallback_desc"))}
+            {(() => {
+              if (coupon.description) return coupon.description;
+              const lang = (i18n.language || "fr").startsWith("en") ? "en" : "fr";
+              const type = coupon.coupon_type;
+              if (type) {
+                const override = settings[`coupon_desc_${lang}_${type}`];
+                if (override) return override;
+                return t(`coupon.fallback_desc_${type}`, { defaultValue: t("coupon.fallback_desc") });
+              }
+              return t("coupon.fallback_desc");
+            })()}
           </p>
+
           {!inProgress && !ended && coupon.event_date && (
             <EventCountdown eventDate={coupon.event_date} compact />
           )}
