@@ -460,7 +460,11 @@ function CouponsAdmin() {
   // cote_50, pair_corner) et la langue active de l'utilisateur.
   const save = async () => {
     const meta = COUPON_TYPES.find(t => t.value === form.coupon_type)!;
-    const description = form.description.trim() || null;
+    // If admin left the prefilled FR default unchanged, store null so the
+    // bilingual auto-translation (FR/EN, via app_settings + i18n) kicks in.
+    const typed = form.description.trim();
+    const frDefault = resolveCouponDefault(settings, "fr", form.coupon_type).trim();
+    const description = !typed || typed === frDefault ? null : typed;
     const startIso = zonedInputToIso(form.start_date, timezone);
     const endIso = zonedInputToIso(form.end_date, timezone);
     const eventIso = zonedInputToIso(form.event_date, timezone) ?? defaultEventDateIso();
@@ -594,7 +598,7 @@ function CouponsAdmin() {
           <div className="space-y-3">
             <div>
               <Label>Type de coupon (titre et prix imposés)</Label>
-              <Select value={form.coupon_type} onValueChange={(v) => setForm({ ...form, coupon_type: v as CouponType })}>
+              <Select value={form.coupon_type} onValueChange={(v) => onChangeCouponType(v as CouponType)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {COUPON_TYPES.map(t => (
