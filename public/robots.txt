@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /payment/
+Disallow: /reset-password
+Disallow: /api/
+
+Sitemap: https://yann-pronostics.lovable.app/sitemap.xml

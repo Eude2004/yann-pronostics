@@ -21,7 +21,7 @@ export type CouponType = "cote_10" | "cote_30" | "cote_50" | "pair_corner";
 export type Coupon = {
   id: string; coupon_type: CouponType | null; title: string;
   description: string | null; price_xaf: number; image_url: string | null;
-  video_url: string | null; start_date: string | null; end_date: string | null;
+  start_date: string | null; end_date: string | null;
   event_date: string | null;
   sales_count: number; status: "draft" | "published" | "archived";
   disable_purchase_action?: boolean | null;
@@ -52,7 +52,7 @@ export function CouponsGrid() {
   const load = async () => {
     const { data } = await supabase
       .from("coupons")
-      .select("id, title, slug, description, sport, category_id, price_xaf, odds, image_url, preview_content, status, is_featured, created_by, created_at, updated_at, coupon_type, video_url, start_date, end_date, sales_count, event_date, disable_purchase_action")
+      .select("id, title, slug, description, sport, category_id, price_xaf, odds, image_url, preview_content, status, is_featured, created_by, created_at, updated_at, coupon_type, start_date, end_date, sales_count, event_date, disable_purchase_action")
       .eq("status", "published")
       .order("coupon_type");
     setCoupons((data as Coupon[]) ?? []);

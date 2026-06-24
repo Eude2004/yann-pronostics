@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as CouponsValidesRouteImport } from './routes/coupons-valides'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -20,6 +21,11 @@ import { Route as AuthenticatedPaymentReturnRouteImport } from './routes/_authen
 import { Route as ApiPublicHooksExpirePendingPaymentsRouteImport } from './routes/api/public/hooks/expire-pending-payments'
 import { Route as ApiPublicGeniuspayNotifyRouteImport } from './routes/api/public/geniuspay/notify'
 
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
@@ -78,6 +84,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/coupons-valides': typeof CouponsValidesRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/payment/return': typeof AuthenticatedPaymentReturnRoute
@@ -89,6 +96,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/coupons-valides': typeof CouponsValidesRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/payment/return': typeof AuthenticatedPaymentReturnRoute
@@ -102,6 +110,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/coupons-valides': typeof CouponsValidesRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/payment/return': typeof AuthenticatedPaymentReturnRoute
@@ -115,6 +124,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/coupons-valides'
     | '/reset-password'
+    | '/sitemap.xml'
     | '/admin'
     | '/dashboard'
     | '/payment/return'
@@ -126,6 +136,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/coupons-valides'
     | '/reset-password'
+    | '/sitemap.xml'
     | '/admin'
     | '/dashboard'
     | '/payment/return'
@@ -138,6 +149,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/coupons-valides'
     | '/reset-password'
+    | '/sitemap.xml'
     | '/_authenticated/admin'
     | '/_authenticated/dashboard'
     | '/_authenticated/payment/return'
@@ -151,12 +163,20 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CouponsValidesRoute: typeof CouponsValidesRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ApiPublicGeniuspayNotifyRoute: typeof ApiPublicGeniuspayNotifyRoute
   ApiPublicHooksExpirePendingPaymentsRoute: typeof ApiPublicHooksExpirePendingPaymentsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reset-password': {
       id: '/reset-password'
       path: '/reset-password'
@@ -251,6 +271,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CouponsValidesRoute: CouponsValidesRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   ApiPublicGeniuspayNotifyRoute: ApiPublicGeniuspayNotifyRoute,
   ApiPublicHooksExpirePendingPaymentsRoute:
     ApiPublicHooksExpirePendingPaymentsRoute,
@@ -258,13 +279,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
