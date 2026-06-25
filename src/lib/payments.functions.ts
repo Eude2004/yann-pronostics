@@ -216,6 +216,81 @@ export const initiatePayment = createServerFn({ method: "POST" })
     }
 
     // Live mode — GeniusPay hosted checkout (no payment_method)
+    // ============================================================
+    // PROVIDER SELECTION — PawaPay sandbox prioritaire, sinon GeniusPay
+    // ============================================================
+    const pawapayToken = process.env.PAWAPAY_API_TOKEN_SANDBOX;
+
+    if (pawapayToken) {
+      // ----- PawaPay v2 Payment Page -----
+      const depositId = crypto.randomUUID();
+      const ppPayload = {
+        depositId,
+        returnUrl: successUrl,
+        statementDescription: pawapayStatementDesc(c.title),
+        amount: String(amountXaf),
+        currency: "XOF",
+        country: "CIV",
+        reason: description.slice(0, 22).replace(/[^a-zA-Z0-9 ]/g, "") || "Coupon",
+        metadata: [
+          { fieldName: "txId", fieldValue: tx.id },
+          { fieldName: "couponId", fieldValue: data.couponId },
+        ],
+      };
+
+      let paymentUrl: string | null = null;
+      let providerError: string | null = null;
+      try {
+        const res = await fetch(`${PAWAPAY_SANDBOX_BASE}/v2/paymentpage`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${pawapayToken}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(ppPayload),
+        });
+        const json = (await res.json()) as {
+          status?: string;
+          redirectUrl?: string;
+          failureReason?: { failureCode?: string; failureMessage?: string };
+          errorMessage?: string;
+        };
+        if (res.ok && json.redirectUrl) {
+          paymentUrl = json.redirectUrl;
+        } else {
+          providerError =
+            json.failureReason?.failureMessage ??
+            json.errorMessage ??
+            `PawaPay HTTP ${res.status}`;
+        }
+      } catch (e) {
+        providerError = e instanceof Error ? e.message : "Network error";
+      }
+
+      await supabaseAdmin
+        .from("transactions")
+        .update({
+          reference: depositId,
+          payment_method: "pawapay",
+          notes: providerError ?? "PawaPay sandbox init OK",
+          status: providerError ? "failed" : "pending",
+        })
+        .eq("id", tx.id);
+
+      if (!paymentUrl) {
+        throw new Error(`Initialisation paiement échouée: ${providerError ?? "raison inconnue"}`);
+      }
+
+      return {
+        mode: "live" as const,
+        transactionId: tx.id,
+        paymentUrl,
+        reference: depositId,
+      };
+    }
+
+    // ----- GeniusPay hosted checkout (fallback) -----
     const ourRef = `YP-${Date.now().toString().slice(-6)}`;
     const payload = {
       amount: amountXaf,
@@ -263,9 +338,6 @@ export const initiatePayment = createServerFn({ method: "POST" })
       providerError = e instanceof Error ? e.message : "Network error";
     }
 
-    // Use admin client: `transactions` UPDATE is restricted to admins by RLS,
-    // so the user-scoped client would silently fail and we'd lose the GeniusPay
-    // reference (breaking webhook reconciliation and recheck).
     await supabaseAdmin
       .from("transactions")
       .update({
