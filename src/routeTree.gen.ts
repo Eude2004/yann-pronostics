@@ -18,6 +18,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedPaymentReturnRouteImport } from './routes/_authenticated/payment.return'
+import { Route as ApiPublicPawapayCallbackRouteImport } from './routes/api/public/pawapay/callback'
 import { Route as ApiPublicHooksExpirePendingPaymentsRouteImport } from './routes/api/public/hooks/expire-pending-payments'
 import { Route as ApiPublicGeniuspayNotifyRouteImport } from './routes/api/public/geniuspay/notify'
 
@@ -66,6 +67,12 @@ const AuthenticatedPaymentReturnRoute =
     path: '/payment/return',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicPawapayCallbackRoute =
+  ApiPublicPawapayCallbackRouteImport.update({
+    id: '/api/public/pawapay/callback',
+    path: '/api/public/pawapay/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksExpirePendingPaymentsRoute =
   ApiPublicHooksExpirePendingPaymentsRouteImport.update({
     id: '/api/public/hooks/expire-pending-payments',
@@ -90,6 +97,7 @@ export interface FileRoutesByFullPath {
   '/payment/return': typeof AuthenticatedPaymentReturnRoute
   '/api/public/geniuspay/notify': typeof ApiPublicGeniuspayNotifyRoute
   '/api/public/hooks/expire-pending-payments': typeof ApiPublicHooksExpirePendingPaymentsRoute
+  '/api/public/pawapay/callback': typeof ApiPublicPawapayCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -102,6 +110,7 @@ export interface FileRoutesByTo {
   '/payment/return': typeof AuthenticatedPaymentReturnRoute
   '/api/public/geniuspay/notify': typeof ApiPublicGeniuspayNotifyRoute
   '/api/public/hooks/expire-pending-payments': typeof ApiPublicHooksExpirePendingPaymentsRoute
+  '/api/public/pawapay/callback': typeof ApiPublicPawapayCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -116,6 +125,7 @@ export interface FileRoutesById {
   '/_authenticated/payment/return': typeof AuthenticatedPaymentReturnRoute
   '/api/public/geniuspay/notify': typeof ApiPublicGeniuspayNotifyRoute
   '/api/public/hooks/expire-pending-payments': typeof ApiPublicHooksExpirePendingPaymentsRoute
+  '/api/public/pawapay/callback': typeof ApiPublicPawapayCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -130,6 +140,7 @@ export interface FileRouteTypes {
     | '/payment/return'
     | '/api/public/geniuspay/notify'
     | '/api/public/hooks/expire-pending-payments'
+    | '/api/public/pawapay/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -142,6 +153,7 @@ export interface FileRouteTypes {
     | '/payment/return'
     | '/api/public/geniuspay/notify'
     | '/api/public/hooks/expire-pending-payments'
+    | '/api/public/pawapay/callback'
   id:
     | '__root__'
     | '/'
@@ -155,6 +167,7 @@ export interface FileRouteTypes {
     | '/_authenticated/payment/return'
     | '/api/public/geniuspay/notify'
     | '/api/public/hooks/expire-pending-payments'
+    | '/api/public/pawapay/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -166,6 +179,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ApiPublicGeniuspayNotifyRoute: typeof ApiPublicGeniuspayNotifyRoute
   ApiPublicHooksExpirePendingPaymentsRoute: typeof ApiPublicHooksExpirePendingPaymentsRoute
+  ApiPublicPawapayCallbackRoute: typeof ApiPublicPawapayCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -233,6 +247,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPaymentReturnRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/pawapay/callback': {
+      id: '/api/public/pawapay/callback'
+      path: '/api/public/pawapay/callback'
+      fullPath: '/api/public/pawapay/callback'
+      preLoaderRoute: typeof ApiPublicPawapayCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/expire-pending-payments': {
       id: '/api/public/hooks/expire-pending-payments'
       path: '/api/public/hooks/expire-pending-payments'
@@ -275,6 +296,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicGeniuspayNotifyRoute: ApiPublicGeniuspayNotifyRoute,
   ApiPublicHooksExpirePendingPaymentsRoute:
     ApiPublicHooksExpirePendingPaymentsRoute,
+  ApiPublicPawapayCallbackRoute: ApiPublicPawapayCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
