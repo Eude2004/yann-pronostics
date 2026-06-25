@@ -393,62 +393,94 @@ export const recheckGeniusPayStatus = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const apiKey = process.env.GENIUSPAY_API_KEY;
-    const apiSecret = process.env.GENIUSPAY_API_SECRET;
 
     const { data: tx } = await supabase
       .from("transactions")
-      .select("id, status, reference, coupon_id, kind")
+      .select("id, status, reference, coupon_id, kind, payment_method")
       .eq("id", data.transactionId)
       .eq("user_id", userId)
       .maybeSingle();
     if (!tx) throw new Error("Transaction introuvable.");
     if (tx.status !== "pending") return { status: tx.status, changed: false };
-    if (!apiKey || !apiSecret || !tx.reference || tx.reference.startsWith("YP-T") || tx.reference.startsWith("MOCK-")) {
+    if (!tx.reference || tx.reference.startsWith("YP-T") || tx.reference.startsWith("MOCK-")) {
       return { status: tx.status, changed: false };
     }
+
+    const markCompleted = async (label: string) => {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin
+        .from("transactions")
+        .update({ status: "completed", notes: `Recheck ${label}: completed` })
+        .eq("id", tx.id)
+        .eq("status", "pending");
+      if (tx.kind === "coupon" && tx.coupon_id) {
+        const { data: cur } = await supabaseAdmin
+          .from("coupons").select("sales_count").eq("id", tx.coupon_id).maybeSingle();
+        await supabaseAdmin
+          .from("coupons")
+          .update({ sales_count: (cur?.sales_count ?? 0) + 1 })
+          .eq("id", tx.coupon_id);
+      }
+    };
+    const markFailed = async (label: string, status: string) => {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin
+        .from("transactions")
+        .update({ status: "failed", notes: `Recheck ${label}: ${status}` })
+        .eq("id", tx.id)
+        .eq("status", "pending");
+    };
+
+    // PawaPay branch
+    if (tx.payment_method === "pawapay") {
+      const ppToken = process.env.PAWAPAY_API_TOKEN_SANDBOX;
+      if (!ppToken) return { status: tx.status, changed: false };
+      try {
+        const res = await fetch(
+          `${PAWAPAY_SANDBOX_BASE}/v2/deposits/${encodeURIComponent(tx.reference)}`,
+          { headers: { Authorization: `Bearer ${ppToken}`, Accept: "application/json" } },
+        );
+        const json = (await res.json()) as {
+          status?: string;
+          data?: { status?: string };
+        };
+        // v2 returns either { status:"FOUND", data:{ status:"COMPLETED" } } or flat.
+        const ppStatus = (json.data?.status ?? json.status ?? "").toUpperCase();
+        if (ppStatus === "COMPLETED") {
+          await markCompleted("PawaPay");
+          return { status: "completed" as const, changed: true };
+        }
+        if (ppStatus === "FAILED" || ppStatus === "REJECTED" || ppStatus === "EXPIRED") {
+          await markFailed("PawaPay", ppStatus);
+          return { status: "failed" as const, changed: true };
+        }
+        return { status: "pending" as const, changed: false };
+      } catch (e) {
+        return { status: "pending" as const, changed: false, error: e instanceof Error ? e.message : "network" };
+      }
+    }
+
+    // GeniusPay branch (default)
+    const apiKey = process.env.GENIUSPAY_API_KEY;
+    const apiSecret = process.env.GENIUSPAY_API_SECRET;
+    if (!apiKey || !apiSecret) return { status: tx.status, changed: false };
 
     try {
       const res = await fetch(
         `${GENIUSPAY_BASE}/payments/${encodeURIComponent(tx.reference)}`,
         {
           method: "GET",
-          headers: {
-            "X-API-Key": apiKey,
-            "X-API-Secret": apiSecret,
-            Accept: "application/json",
-          },
+          headers: { "X-API-Key": apiKey, "X-API-Secret": apiSecret, Accept: "application/json" },
         },
       );
-      const json = (await res.json()) as {
-        success?: boolean;
-        data?: { status?: string };
-      };
+      const json = (await res.json()) as { success?: boolean; data?: { status?: string } };
       const gpStatus = json.data?.status;
       if (gpStatus === "completed") {
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        await supabaseAdmin
-          .from("transactions")
-          .update({ status: "completed", notes: "Recheck GeniusPay: completed" })
-          .eq("id", tx.id)
-          .eq("status", "pending");
-        if (tx.kind === "coupon" && tx.coupon_id) {
-          const { data: cur } = await supabaseAdmin
-            .from("coupons").select("sales_count").eq("id", tx.coupon_id).maybeSingle();
-          await supabaseAdmin
-            .from("coupons")
-            .update({ sales_count: (cur?.sales_count ?? 0) + 1 })
-            .eq("id", tx.coupon_id);
-        }
+        await markCompleted("GeniusPay");
         return { status: "completed" as const, changed: true };
       }
       if (gpStatus === "failed" || gpStatus === "expired" || gpStatus === "cancelled") {
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        await supabaseAdmin
-          .from("transactions")
-          .update({ status: "failed", notes: `Recheck GeniusPay: ${gpStatus}` })
-          .eq("id", tx.id)
-          .eq("status", "pending");
+        await markFailed("GeniusPay", gpStatus);
         return { status: "failed" as const, changed: true };
       }
       return { status: "pending" as const, changed: false };
