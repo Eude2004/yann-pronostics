@@ -227,7 +227,6 @@ export const initiatePayment = createServerFn({ method: "POST" })
       const ppPayload = {
         depositId,
         returnUrl: successUrl,
-        statementDescription: pawapayStatementDesc(c.title),
         amount: String(amountXaf),
         currency: "XOF",
         country: "CIV",
@@ -237,6 +236,7 @@ export const initiatePayment = createServerFn({ method: "POST" })
           { fieldName: "couponId", fieldValue: data.couponId },
         ],
       };
+
 
       let paymentUrl: string | null = null;
       let providerError: string | null = null;
