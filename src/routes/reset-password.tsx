@@ -28,10 +28,15 @@ function ResetPasswordPage() {
     }
     setBusy(true);
     const { error } = await supabase.auth.updateUser({ password });
+    if (error) {
+      setBusy(false);
+      return toast.error(error.message);
+    }
+    // Force re-login with the new password so the user verifies it works.
+    try { await supabase.auth.signOut(); } catch {}
     setBusy(false);
-    if (error) return toast.error(error.message);
-    toast.success("Mot de passe mis à jour.");
-    navigate({ to: "/dashboard" });
+    toast.success("Mot de passe mis à jour. Reconnectez-vous avec le nouveau mot de passe.");
+    navigate({ to: "/auth", search: { tab: "login" } });
   };
 
   return (
