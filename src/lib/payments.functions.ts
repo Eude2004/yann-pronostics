@@ -75,12 +75,14 @@ export const initiatePayment = createServerFn({ method: "POST" })
     // lecture aux admins, mais le mode test doit aussi s'appliquer aux
     // utilisateurs réguliers lorsqu'il est activé.
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: testRow } = await supabaseAdmin
+    const { data: settingsRows } = await supabaseAdmin
       .from("app_settings")
-      .select("value")
-      .eq("key", "test_pay_mode")
-      .maybeSingle();
-    const testPayMode = testRow?.value === "true";
+      .select("key, value")
+      .in("key", ["test_pay_mode", "payment_provider"]);
+    const settingsMap = Object.fromEntries((settingsRows ?? []).map((r) => [r.key, r.value]));
+    const testPayMode = settingsMap.test_pay_mode === "true";
+    const selectedProvider: "pawapay" | "geniuspay" =
+      settingsMap.payment_provider === "geniuspay" ? "geniuspay" : "pawapay";
 
     const { data: roles } = await supabase
       .from("user_roles")
