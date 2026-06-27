@@ -217,13 +217,13 @@ export const initiatePayment = createServerFn({ method: "POST" })
       };
     }
 
-    // Live mode — GeniusPay hosted checkout (no payment_method)
     // ============================================================
-    // PROVIDER SELECTION — PawaPay sandbox prioritaire, sinon GeniusPay
+    // PROVIDER SELECTION — choisi par l'admin (app_settings.payment_provider)
     // ============================================================
     const pawapayToken = process.env.PAWAPAY_API_TOKEN_SANDBOX;
+    const usePawapay = selectedProvider === "pawapay" && !!pawapayToken;
 
-    if (pawapayToken) {
+    if (usePawapay) {
       // ----- PawaPay v2 Payment Page -----
       const depositId = crypto.randomUUID();
       const ppPayload = {
