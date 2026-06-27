@@ -55,10 +55,13 @@ function PaymentReturn() {
   const status = query.data?.status;
   const reference = query.data?.reference ?? null;
   const couponId = query.data?.coupon_id ?? null;
+  const paymentMethod = (query.data as { payment_method?: string } | undefined)?.payment_method ?? null;
+  const providerLabel =
+    paymentMethod === "pawapay" ? "PawaPay"
+    : paymentMethod === "geniuspay" ? "GeniusPay"
+    : paymentMethod ? paymentMethod : "—";
   const createdAt = query.data?.created_at ? new Date(query.data.created_at).getTime() : null;
   const isMock = !!reference?.startsWith("MOCK-") || !!reference?.startsWith("YP-T");
-  // Affichage propre : on retire les préfixes techniques (SANDBOX_, TEST_)
-  // et on tronque les références trop longues sur mobile.
   const displayReference = (() => {
     if (!reference) return "—";
     let r = reference.replace(/^(SANDBOX_|TEST_|sandbox_|test_)/i, "");
@@ -206,6 +209,10 @@ function PaymentReturn() {
               <div className="flex justify-between gap-3 items-center">
                 <span className="text-muted-foreground">{t("payment.amount")}</span>
                 <span className="text-foreground tabular-nums">{query.data.amount_xaf.toLocaleString("fr-FR")} XAF</span>
+              </div>
+              <div className="flex justify-between gap-3 items-center">
+                <span className="text-muted-foreground">Fournisseur</span>
+                <Badge variant="outline" className="border-primary/40 text-primary">{providerLabel}</Badge>
               </div>
               <div className="flex justify-between gap-3 items-center">
                 <span className="text-muted-foreground">Statut</span>

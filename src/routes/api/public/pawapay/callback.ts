@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { createHmac, timingSafeEqual } from "node:crypto";
+
 
 /**
  * PawaPay deposit callback (sandbox + production).
@@ -24,16 +26,46 @@ export const Route = createFileRoute("/api/public/pawapay/callback")({
             return new Response("Callback not configured", { status: 503 });
           }
 
+          // Read raw body first (needed for optional signature verification).
+          const rawBody = await request.text();
+          if (!rawBody) return new Response("Empty body", { status: 400 });
+
+          // Optional HMAC signature verification — enabled when
+          // PAWAPAY_WEBHOOK_SECRET is set (production hardening). Sandbox
+          // callbacks aren't signed; we always re-fetch the deposit below as
+          // the authoritative source.
+          const webhookSecret = process.env.PAWAPAY_WEBHOOK_SECRET;
+          if (webhookSecret) {
+            const sigHeader =
+              request.headers.get("signature") ||
+              request.headers.get("x-pawapay-signature") ||
+              "";
+            if (!sigHeader) {
+              return new Response("Missing signature", { status: 401 });
+            }
+            const expected = createHmac("sha256", webhookSecret).update(rawBody).digest("hex");
+            try {
+              const a = Buffer.from(sigHeader.replace(/^sha256=/, ""), "hex");
+              const b = Buffer.from(expected, "hex");
+              if (a.length !== b.length || !timingSafeEqual(a, b)) {
+                return new Response("Invalid signature", { status: 401 });
+              }
+            } catch {
+              return new Response("Invalid signature", { status: 401 });
+            }
+          }
+
           let payload: {
             depositId?: string;
             status?: string;
             metadata?: Array<{ fieldName?: string; fieldValue?: string }>;
           };
           try {
-            payload = await request.json();
+            payload = JSON.parse(rawBody);
           } catch {
             return new Response("Invalid JSON", { status: 400 });
           }
+
 
           const depositId = payload.depositId;
           if (!depositId) {

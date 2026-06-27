@@ -185,6 +185,7 @@ function SignupForm({ onSignedUp }: { onSignedUp: (email: string, password: stri
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
+  const [accepted, setAccepted] = useState(false);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -197,6 +198,11 @@ function SignupForm({ onSignedUp }: { onSignedUp: (email: string, password: stri
       if (err instanceof z.ZodError) return toast.error(err.issues[0].message);
     }
     if (password !== confirm) return toast.error("Les mots de passe ne correspondent pas.");
+    if (!accepted) {
+      return toast.error(
+        "Vous devez accepter les conditions et certifier avoir l'âge légal.",
+      );
+    }
 
     setBusy(true);
     const { error } = await supabase.auth.signUp({
@@ -225,7 +231,27 @@ function SignupForm({ onSignedUp }: { onSignedUp: (email: string, password: stri
       <Field icon={Phone} label="Numéro WhatsApp" type="tel" value={whatsapp} onChange={setWhatsapp} placeholder="237 6XX XX XX XX" autoComplete="tel" />
       <Field icon={Lock} label="Mot de passe" type="password" value={password} onChange={setPassword} placeholder="Min. 8 caractères" autoComplete="new-password" />
       <Field icon={Lock} label="Confirmer le mot de passe" type="password" value={confirm} onChange={setConfirm} placeholder="Retapez votre mot de passe" autoComplete="new-password" />
-      <Button type="submit" disabled={busy} className="w-full bg-gold-gradient text-primary-foreground hover:opacity-90 font-bold shadow-gold h-11">
+
+      <label className="flex items-start gap-2 text-xs text-muted-foreground cursor-pointer leading-relaxed">
+        <Checkbox
+          checked={accepted}
+          onCheckedChange={(v) => setAccepted(!!v)}
+          className="mt-0.5"
+        />
+        <span>
+          Je certifie avoir <strong>18 ans révolus</strong>, avoir lu et accepté la{" "}
+          <Link
+            to="/politique-confidentialite"
+            target="_blank"
+            className="text-primary underline underline-offset-2"
+          >
+            politique de confidentialité et les conditions d'utilisation
+          </Link>{" "}
+          (y compris la politique de non-remboursement).
+        </span>
+      </label>
+
+      <Button type="submit" disabled={busy || !accepted} className="w-full bg-gold-gradient text-primary-foreground hover:opacity-90 font-bold shadow-gold h-11">
         {busy && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Créer mon compte
       </Button>
       <p className="text-xs text-muted-foreground text-center">Inscription instantanée — aucune confirmation email requise.</p>
