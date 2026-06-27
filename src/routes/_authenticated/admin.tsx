@@ -1168,8 +1168,37 @@ function SettingsAdmin() {
 
       <div>
         <h2 className="text-xl font-display mb-4 flex items-center gap-2">
+          <DollarSign className="w-5 h-5 text-primary" /> Fournisseur de paiement
+        </h2>
+        <div className="rounded-xl border border-border/60 bg-card p-6 space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Choisissez l'API utilisée pour traiter les paiements des coupons.
+            Le changement s'applique immédiatement à tous les nouveaux paiements.
+          </p>
+          <Select
+            value={provider}
+            onValueChange={(v) => onChangeProvider(v as "pawapay" | "geniuspay")}
+            disabled={savingProvider}
+          >
+            <SelectTrigger className="w-full sm:w-72">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pawapay">PawaPay (sandbox)</SelectItem>
+              <SelectItem value="geniuspay">GeniusPay</SelectItem>
+            </SelectContent>
+          </Select>
+          <Badge className="bg-primary/15 text-primary border border-primary/30">
+            Actif : {provider === "pawapay" ? "PawaPay" : "GeniusPay"}
+          </Badge>
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-xl font-display mb-4 flex items-center gap-2">
           <FileText className="w-5 h-5 text-primary" /> Descriptions par défaut des coupons (FR / EN)
         </h2>
+
         <div className="rounded-xl border border-border/60 bg-card p-6 space-y-4">
           <p className="text-xs text-muted-foreground">
             Texte affiché automatiquement aux visiteurs selon leur langue, pour chaque type de coupon.
