@@ -239,7 +239,12 @@ function Footer() {
         <a href={href} target="_blank" rel="noreferrer" className="text-sm text-muted-foreground hover:text-primary inline-flex items-center gap-1">
           <MessageCircle className="w-4 h-4" /> {t("home.footer_support")} : +237 {phone}
         </a>
-        <p className="text-xs text-muted-foreground">{t("home.footer_rights", { year: new Date().getFullYear() })}</p>
+        <div className="flex flex-col sm:items-end items-center gap-1 text-xs text-muted-foreground">
+          <p>{t("home.footer_rights", { year: new Date().getFullYear() })}</p>
+          <Link to="/politique-confidentialite" className="hover:text-primary underline underline-offset-2">
+            Politique de confidentialité & Conditions
+          </Link>
+        </div>
       </div>
     </footer>
   );
