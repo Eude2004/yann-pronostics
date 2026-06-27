@@ -373,7 +373,7 @@ export const getTransactionStatus = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const { data: tx, error } = await supabase
       .from("transactions")
-      .select("id, status, kind, amount_xaf, reference, coupon_id, notes, created_at")
+      .select("id, status, kind, amount_xaf, reference, coupon_id, notes, created_at, payment_method")
       .eq("id", data.transactionId)
       .eq("user_id", userId)
       .maybeSingle();
