@@ -185,6 +185,7 @@ function SignupForm({ onSignedUp }: { onSignedUp: (email: string, password: stri
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
+  const [accepted, setAccepted] = useState(false);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -197,6 +198,11 @@ function SignupForm({ onSignedUp }: { onSignedUp: (email: string, password: stri
       if (err instanceof z.ZodError) return toast.error(err.issues[0].message);
     }
     if (password !== confirm) return toast.error("Les mots de passe ne correspondent pas.");
+    if (!accepted) {
+      return toast.error(
+        "Vous devez accepter les conditions et certifier avoir l'âge légal.",
+      );
+    }
 
     setBusy(true);
     const { error } = await supabase.auth.signUp({
