@@ -1014,6 +1014,8 @@ function SettingsAdmin() {
   const [siteName, setSiteName] = useState("");
   const [testPay, setTestPay] = useState(false);
   const [anonymous, setAnonymous] = useState(false);
+  const [provider, setProvider] = useState<"pawapay" | "geniuspay">("pawapay");
+  const [savingProvider, setSavingProvider] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingAnon, setSavingAnon] = useState(false);
@@ -1029,6 +1031,7 @@ function SettingsAdmin() {
       setSiteName(map.site_name ?? "YANN PRONOSTICS");
       setTestPay(map.test_pay_mode === "true");
       setAnonymous(map.anonymous_mode === "true");
+      setProvider(map.payment_provider === "geniuspay" ? "geniuspay" : "pawapay");
       const next: Record<string, string> = {};
       for (const lang of COUPON_DESC_LANGS) {
         for (const type of COUPON_DESC_TYPES) {
@@ -1040,6 +1043,24 @@ function SettingsAdmin() {
       setLoading(false);
     })();
   }, []);
+
+  const onChangeProvider = async (next: "pawapay" | "geniuspay") => {
+    const prev = provider;
+    setProvider(next);
+    setSavingProvider(true);
+    const { error } = await supabase.from("app_settings").upsert(
+      { key: "payment_provider", value: next, updated_at: new Date().toISOString() },
+      { onConflict: "key" },
+    );
+    setSavingProvider(false);
+    if (error) {
+      setProvider(prev);
+      return toast.error(error.message);
+    }
+    await logAdminAction("update_payment_provider", "settings", null, { provider: next });
+    toast.success(`Fournisseur de paiement: ${next === "pawapay" ? "PawaPay" : "GeniusPay"}`);
+  };
+
 
   const saveDescs = async () => {
     setSavingDescs(true);
@@ -1147,8 +1168,37 @@ function SettingsAdmin() {
 
       <div>
         <h2 className="text-xl font-display mb-4 flex items-center gap-2">
+          <DollarSign className="w-5 h-5 text-primary" /> Fournisseur de paiement
+        </h2>
+        <div className="rounded-xl border border-border/60 bg-card p-6 space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Choisissez l'API utilisée pour traiter les paiements des coupons.
+            Le changement s'applique immédiatement à tous les nouveaux paiements.
+          </p>
+          <Select
+            value={provider}
+            onValueChange={(v) => onChangeProvider(v as "pawapay" | "geniuspay")}
+            disabled={savingProvider}
+          >
+            <SelectTrigger className="w-full sm:w-72">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pawapay">PawaPay (sandbox)</SelectItem>
+              <SelectItem value="geniuspay">GeniusPay</SelectItem>
+            </SelectContent>
+          </Select>
+          <Badge className="bg-primary/15 text-primary border border-primary/30">
+            Actif : {provider === "pawapay" ? "PawaPay" : "GeniusPay"}
+          </Badge>
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-xl font-display mb-4 flex items-center gap-2">
           <FileText className="w-5 h-5 text-primary" /> Descriptions par défaut des coupons (FR / EN)
         </h2>
+
         <div className="rounded-xl border border-border/60 bg-card p-6 space-y-4">
           <p className="text-xs text-muted-foreground">
             Texte affiché automatiquement aux visiteurs selon leur langue, pour chaque type de coupon.
