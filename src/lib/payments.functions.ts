@@ -152,7 +152,7 @@ export const initiatePayment = createServerFn({ method: "POST" })
           status: initialStatus,
           amount_xaf: amountXaf,
           payment_method: "geniuspay",
-          gateway: "PaiementPro",
+          gateway: null,
           notes: TEST_AUTO_COMPLETE ? "Auto-validé (mode test)" : "Nouvelle tentative",
         })
         .eq("id", existing.id)
@@ -171,7 +171,6 @@ export const initiatePayment = createServerFn({ method: "POST" })
           amount_xaf: amountXaf,
           status: initialStatus,
           payment_method: "geniuspay",
-          gateway: "PaiementPro",
           notes: TEST_AUTO_COMPLETE ? "Auto-validé (mode test)" : null,
         })
         .select("id")
