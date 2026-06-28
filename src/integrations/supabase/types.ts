@@ -358,6 +358,7 @@ export type Database = {
           amount_xaf: number
           coupon_id: string | null
           created_at: string
+          gateway: string | null
           id: string
           kind: Database["public"]["Enums"]["transaction_kind"]
           notes: string | null
@@ -372,6 +373,7 @@ export type Database = {
           amount_xaf: number
           coupon_id?: string | null
           created_at?: string
+          gateway?: string | null
           id?: string
           kind: Database["public"]["Enums"]["transaction_kind"]
           notes?: string | null
@@ -386,6 +388,7 @@ export type Database = {
           amount_xaf?: number
           coupon_id?: string | null
           created_at?: string
+          gateway?: string | null
           id?: string
           kind?: Database["public"]["Enums"]["transaction_kind"]
           notes?: string | null
