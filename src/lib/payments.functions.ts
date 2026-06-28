@@ -152,7 +152,7 @@ export const initiatePayment = createServerFn({ method: "POST" })
           status: initialStatus,
           amount_xaf: amountXaf,
           payment_method: "geniuspay",
-          gateway: "PaiementPro",
+          gateway: null,
           notes: TEST_AUTO_COMPLETE ? "Auto-validé (mode test)" : "Nouvelle tentative",
         })
         .eq("id", existing.id)
@@ -171,7 +171,6 @@ export const initiatePayment = createServerFn({ method: "POST" })
           amount_xaf: amountXaf,
           status: initialStatus,
           payment_method: "geniuspay",
-          gateway: "PaiementPro",
           notes: TEST_AUTO_COMPLETE ? "Auto-validé (mode test)" : null,
         })
         .select("id")
@@ -296,13 +295,15 @@ export const initiatePayment = createServerFn({ method: "POST" })
 
     // ----- GeniusPay hosted checkout (fallback) -----
     const ourRef = `YP-${Date.now().toString().slice(-6)}`;
+    // Pas de `gateway` ni `payment_method` → checkout hébergé GeniusPay
+    // (Wave / Orange / MTN / Moov / carte). Forcer un gateway invalide
+    // (ex: "PaiementPro") fait échouer la validation côté GeniusPay.
     const payload = {
       amount: amountXaf,
       currency: "XOF",
       description: description.slice(0, 500),
       reference: ourRef,
       external_reference: ourRef,
-      gateway: "PaiementPro",
       customer: {
         name: data.customer?.name?.slice(0, 120) ?? "Client",
         email: data.customer?.email ?? undefined,
@@ -316,6 +317,7 @@ export const initiatePayment = createServerFn({ method: "POST" })
     let paymentUrl: string | null = null;
     let reference: string | null = null;
     let providerError: string | null = null;
+    let providerGateway: string | null = null;
     try {
       const res = await fetch(`${GENIUSPAY_BASE}/payments`, {
         method: "POST",
@@ -329,13 +331,14 @@ export const initiatePayment = createServerFn({ method: "POST" })
       });
       const json = (await res.json()) as {
         success?: boolean;
-        data?: { reference?: string; checkout_url?: string; payment_url?: string };
-        error?: { message?: string };
+        data?: { reference?: string; checkout_url?: string; payment_url?: string; gateway?: string; payment_method?: string };
+        error?: { message?: string; code?: string };
         message?: string;
       };
       if (res.ok && json.success && json.data?.reference) {
         reference = json.data.reference;
         paymentUrl = json.data.checkout_url ?? json.data.payment_url ?? null;
+        providerGateway = json.data.gateway ?? json.data.payment_method ?? null;
       } else {
         providerError = json.error?.message ?? json.message ?? `GeniusPay HTTP ${res.status}`;
       }
@@ -347,6 +350,7 @@ export const initiatePayment = createServerFn({ method: "POST" })
       .from("transactions")
       .update({
         reference: reference ?? `YP-${Date.now().toString().slice(-6)}`,
+        gateway: providerGateway,
         notes: providerError ?? "GeniusPay init OK",
         status: providerError ? "failed" : "pending",
       })
