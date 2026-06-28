@@ -152,6 +152,7 @@ export const initiatePayment = createServerFn({ method: "POST" })
           status: initialStatus,
           amount_xaf: amountXaf,
           payment_method: "geniuspay",
+          gateway: "PaiementPro",
           notes: TEST_AUTO_COMPLETE ? "Auto-validé (mode test)" : "Nouvelle tentative",
         })
         .eq("id", existing.id)
@@ -170,6 +171,7 @@ export const initiatePayment = createServerFn({ method: "POST" })
           amount_xaf: amountXaf,
           status: initialStatus,
           payment_method: "geniuspay",
+          gateway: "PaiementPro",
           notes: TEST_AUTO_COMPLETE ? "Auto-validé (mode test)" : null,
         })
         .select("id")
@@ -374,7 +376,7 @@ export const getTransactionStatus = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const { data: tx, error } = await supabase
       .from("transactions")
-      .select("id, status, kind, amount_xaf, reference, coupon_id, notes, created_at, payment_method")
+      .select("id, status, kind, amount_xaf, reference, coupon_id, notes, created_at, payment_method, gateway")
       .eq("id", data.transactionId)
       .eq("user_id", userId)
       .maybeSingle();
