@@ -214,6 +214,14 @@ function PaymentReturn() {
                 <span className="text-muted-foreground">Fournisseur</span>
                 <Badge variant="outline" className="border-primary/40 text-primary">{providerLabel}</Badge>
               </div>
+              {(query.data as { gateway?: string } | undefined)?.gateway && (
+                <div className="flex justify-between gap-3 items-center">
+                  <span className="text-muted-foreground">Passerelle</span>
+                  <Badge variant="outline" className="border-primary/40 text-primary">
+                    {(query.data as { gateway?: string }).gateway}
+                  </Badge>
+                </div>
+              )}
               <div className="flex justify-between gap-3 items-center">
                 <span className="text-muted-foreground">Statut</span>
                 <Badge
