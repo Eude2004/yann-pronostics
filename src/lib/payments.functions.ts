@@ -300,6 +300,7 @@ export const initiatePayment = createServerFn({ method: "POST" })
       description: description.slice(0, 500),
       reference: ourRef,
       external_reference: ourRef,
+      gateway: "PaiementPro",
       customer: {
         name: data.customer?.name?.slice(0, 120) ?? "Client",
         email: data.customer?.email ?? undefined,
