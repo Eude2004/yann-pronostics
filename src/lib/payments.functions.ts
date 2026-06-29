@@ -295,10 +295,13 @@ export const initiatePayment = createServerFn({ method: "POST" })
 
     // ----- GeniusPay hosted checkout (fallback) -----
     const ourRef = `YP-${Date.now().toString().slice(-6)}`;
-    // Pas de `gateway` ni `payment_method` → checkout hébergé GeniusPay
-    // (Wave / Orange / MTN / Moov / carte). Forcer un gateway invalide
-    // (ex: "PaiementPro") fait échouer la validation côté GeniusPay.
-    const payload = {
+    // Restriction explicite aux mobile money MTN + Orange jusqu'au
+    // 29/08/2026 (2 mois). PawaPay est exclu via `excluded_gateways`.
+    // GeniusPay accepte une liste via `payment_methods` côté hosted checkout
+    // et permet de blacklister un gateway via `excluded_gateways`.
+    const RESTRICT_UNTIL = new Date("2026-08-29T23:59:59Z").getTime();
+    const restrictActive = Date.now() < RESTRICT_UNTIL;
+    const payload: Record<string, unknown> = {
       amount: amountXaf,
       currency: "XOF",
       description: description.slice(0, 500),
@@ -313,6 +316,11 @@ export const initiatePayment = createServerFn({ method: "POST" })
       error_url: errorUrl,
       metadata: { tx_id: tx.id, coupon_id: data.couponId, our_ref: ourRef },
     };
+    if (restrictActive) {
+      payload.payment_methods = ["mtn_money", "orange_money"];
+      payload.allowed_payment_methods = ["mtn_money", "orange_money"];
+      payload.excluded_gateways = ["pawapay"];
+    }
 
     let paymentUrl: string | null = null;
     let reference: string | null = null;
