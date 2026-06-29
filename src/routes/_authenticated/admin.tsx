@@ -1229,6 +1229,95 @@ function SettingsAdmin() {
 
       <div>
         <h2 className="text-xl font-display mb-4 flex items-center gap-2">
+          <DollarSign className="w-5 h-5 text-primary" /> Restrictions GeniusPay
+        </h2>
+        <div className="rounded-xl border border-border/60 bg-card p-6 space-y-4">
+          <p className="text-xs text-muted-foreground">
+            Limite les méthodes de paiement proposées sur le checkout GeniusPay et bloque certains
+            gateways. Appliqué uniquement quand le fournisseur actif est GeniusPay, jusqu'à la date
+            limite ci-dessous (au-delà : checkout par défaut, toutes méthodes).
+          </p>
+
+          <div>
+            <Label className="mb-2 block">Méthodes autorisées</Label>
+            <div className="flex flex-wrap gap-2">
+              {ALL_METHODS.map((m) => {
+                const active = gpMethods.includes(m);
+                return (
+                  <button
+                    type="button"
+                    key={m}
+                    onClick={() =>
+                      setGpMethods((prev) => (active ? prev.filter((x) => x !== m) : [...prev, m]))
+                    }
+                    className={`px-3 py-1.5 rounded-full text-xs border transition ${
+                      active
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-muted text-muted-foreground border-border hover:bg-muted/70"
+                    }`}
+                  >
+                    {m}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Vide = toutes les méthodes GeniusPay sont proposées.
+            </p>
+          </div>
+
+          <div>
+            <Label className="mb-2 block">Gateways exclus</Label>
+            <div className="flex flex-wrap gap-2">
+              {ALL_GATEWAYS.map((g) => {
+                const active = gpExcluded.includes(g);
+                return (
+                  <button
+                    type="button"
+                    key={g}
+                    onClick={() =>
+                      setGpExcluded((prev) => (active ? prev.filter((x) => x !== g) : [...prev, g]))
+                    }
+                    className={`px-3 py-1.5 rounded-full text-xs border transition ${
+                      active
+                        ? "bg-destructive text-destructive-foreground border-destructive"
+                        : "bg-muted text-muted-foreground border-border hover:bg-muted/70"
+                    }`}
+                  >
+                    {g}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <Label className="mb-2 block">Actif jusqu'au</Label>
+            <Input
+              type="date"
+              value={gpUntil}
+              onChange={(e) => setGpUntil(e.target.value)}
+              className="w-full sm:w-60"
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Après cette date, les restrictions sont automatiquement levées.
+            </p>
+          </div>
+
+          <Button
+            onClick={saveGeniusRestrict}
+            disabled={savingGp}
+            className="bg-gold-gradient text-primary-foreground"
+          >
+            <Save className="w-4 h-4 mr-2" /> {savingGp ? "Enregistrement…" : "Enregistrer"}
+          </Button>
+        </div>
+      </div>
+
+
+
+      <div>
+        <h2 className="text-xl font-display mb-4 flex items-center gap-2">
           <FileText className="w-5 h-5 text-primary" /> Descriptions par défaut des coupons (FR / EN)
         </h2>
 
