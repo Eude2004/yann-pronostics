@@ -78,7 +78,13 @@ export const initiatePayment = createServerFn({ method: "POST" })
     const { data: settingsRows } = await supabaseAdmin
       .from("app_settings")
       .select("key, value")
-      .in("key", ["test_pay_mode", "payment_provider"]);
+      .in("key", [
+        "test_pay_mode",
+        "payment_provider",
+        "geniuspay_allowed_methods",
+        "geniuspay_excluded_gateways",
+        "geniuspay_restrict_until",
+      ]);
     const settingsMap = Object.fromEntries((settingsRows ?? []).map((r) => [r.key, r.value]));
     const testPayMode = settingsMap.test_pay_mode === "true";
     const selectedProvider: "pawapay" | "geniuspay" =
@@ -295,12 +301,19 @@ export const initiatePayment = createServerFn({ method: "POST" })
 
     // ----- GeniusPay hosted checkout (fallback) -----
     const ourRef = `YP-${Date.now().toString().slice(-6)}`;
-    // Restriction explicite aux mobile money MTN + Orange jusqu'au
-    // 29/08/2026 (2 mois). PawaPay est exclu via `excluded_gateways`.
-    // GeniusPay accepte une liste via `payment_methods` côté hosted checkout
-    // et permet de blacklister un gateway via `excluded_gateways`.
-    const RESTRICT_UNTIL = new Date("2026-08-29T23:59:59Z").getTime();
-    const restrictActive = Date.now() < RESTRICT_UNTIL;
+    // Restrictions configurables via app_settings (admin) :
+    //   - geniuspay_allowed_methods   (csv ex: "mtn_money,orange_money")
+    //   - geniuspay_excluded_gateways (csv ex: "pawapay")
+    //   - geniuspay_restrict_until    (ISO date — au-delà, restrictions levées)
+    const parseCsv = (v: unknown) =>
+      typeof v === "string" ? v.split(",").map((x) => x.trim()).filter(Boolean) : [];
+    const allowedMethods = parseCsv(settingsMap.geniuspay_allowed_methods);
+    const excludedGateways = parseCsv(settingsMap.geniuspay_excluded_gateways);
+    const restrictUntil = typeof settingsMap.geniuspay_restrict_until === "string" && settingsMap.geniuspay_restrict_until
+      ? new Date(settingsMap.geniuspay_restrict_until).getTime()
+      : 0;
+    const restrictActive = restrictUntil > 0 && Date.now() < restrictUntil;
+
     const payload: Record<string, unknown> = {
       amount: amountXaf,
       currency: "XOF",
@@ -317,9 +330,13 @@ export const initiatePayment = createServerFn({ method: "POST" })
       metadata: { tx_id: tx.id, coupon_id: data.couponId, our_ref: ourRef },
     };
     if (restrictActive) {
-      payload.payment_methods = ["mtn_money", "orange_money"];
-      payload.allowed_payment_methods = ["mtn_money", "orange_money"];
-      payload.excluded_gateways = ["pawapay"];
+      if (allowedMethods.length > 0) {
+        payload.payment_methods = allowedMethods;
+        payload.allowed_payment_methods = allowedMethods;
+      }
+      if (excludedGateways.length > 0) {
+        payload.excluded_gateways = excludedGateways;
+      }
     }
 
     let paymentUrl: string | null = null;

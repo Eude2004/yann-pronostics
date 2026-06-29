@@ -1021,6 +1021,13 @@ function SettingsAdmin() {
   const [savingAnon, setSavingAnon] = useState(false);
   const [descs, setDescs] = useState<Record<string, string>>({});
   const [savingDescs, setSavingDescs] = useState(false);
+  // GeniusPay payment-method restrictions
+  const ALL_METHODS = ["mtn_money", "orange_money", "wave", "moov_money", "card"] as const;
+  const ALL_GATEWAYS = ["pawapay", "wave", "orange_money", "mtn_momo", "moov_money"] as const;
+  const [gpMethods, setGpMethods] = useState<string[]>(["mtn_money", "orange_money"]);
+  const [gpExcluded, setGpExcluded] = useState<string[]>(["pawapay"]);
+  const [gpUntil, setGpUntil] = useState<string>(""); // YYYY-MM-DD
+  const [savingGp, setSavingGp] = useState(false);
   const toggleTestPay = useServerFn(setTestPayModeFn);
 
   useEffect(() => {
@@ -1040,6 +1047,14 @@ function SettingsAdmin() {
         }
       }
       setDescs(next);
+      const parseCsv = (s?: string | null) => (s ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+      if (map.geniuspay_allowed_methods !== undefined) setGpMethods(parseCsv(map.geniuspay_allowed_methods));
+      if (map.geniuspay_excluded_gateways !== undefined) setGpExcluded(parseCsv(map.geniuspay_excluded_gateways));
+      if (map.geniuspay_restrict_until) setGpUntil(map.geniuspay_restrict_until.slice(0, 10));
+      else {
+        const d = new Date(); d.setMonth(d.getMonth() + 2);
+        setGpUntil(d.toISOString().slice(0, 10));
+      }
       setLoading(false);
     })();
   }, []);
@@ -1060,6 +1075,24 @@ function SettingsAdmin() {
     await logAdminAction("update_payment_provider", "settings", null, { provider: next });
     toast.success(`Fournisseur de paiement: ${next === "pawapay" ? "PawaPay" : "GeniusPay"}`);
   };
+
+  const saveGeniusRestrict = async () => {
+    setSavingGp(true);
+    const untilIso = gpUntil ? new Date(`${gpUntil}T23:59:59Z`).toISOString() : "";
+    const payload = [
+      { key: "geniuspay_allowed_methods", value: gpMethods.join(","), updated_at: new Date().toISOString() },
+      { key: "geniuspay_excluded_gateways", value: gpExcluded.join(","), updated_at: new Date().toISOString() },
+      { key: "geniuspay_restrict_until", value: untilIso, updated_at: new Date().toISOString() },
+    ];
+    const { error } = await supabase.from("app_settings").upsert(payload, { onConflict: "key" });
+    setSavingGp(false);
+    if (error) return toast.error(error.message);
+    await logAdminAction("update_geniuspay_restrictions", "settings", null, {
+      methods: gpMethods, excluded: gpExcluded, until: untilIso,
+    });
+    toast.success("Restrictions GeniusPay enregistrées");
+  };
+
 
 
   const saveDescs = async () => {
@@ -1193,6 +1226,95 @@ function SettingsAdmin() {
           </Badge>
         </div>
       </div>
+
+      <div>
+        <h2 className="text-xl font-display mb-4 flex items-center gap-2">
+          <DollarSign className="w-5 h-5 text-primary" /> Restrictions GeniusPay
+        </h2>
+        <div className="rounded-xl border border-border/60 bg-card p-6 space-y-4">
+          <p className="text-xs text-muted-foreground">
+            Limite les méthodes de paiement proposées sur le checkout GeniusPay et bloque certains
+            gateways. Appliqué uniquement quand le fournisseur actif est GeniusPay, jusqu'à la date
+            limite ci-dessous (au-delà : checkout par défaut, toutes méthodes).
+          </p>
+
+          <div>
+            <Label className="mb-2 block">Méthodes autorisées</Label>
+            <div className="flex flex-wrap gap-2">
+              {ALL_METHODS.map((m) => {
+                const active = gpMethods.includes(m);
+                return (
+                  <button
+                    type="button"
+                    key={m}
+                    onClick={() =>
+                      setGpMethods((prev) => (active ? prev.filter((x) => x !== m) : [...prev, m]))
+                    }
+                    className={`px-3 py-1.5 rounded-full text-xs border transition ${
+                      active
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-muted text-muted-foreground border-border hover:bg-muted/70"
+                    }`}
+                  >
+                    {m}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Vide = toutes les méthodes GeniusPay sont proposées.
+            </p>
+          </div>
+
+          <div>
+            <Label className="mb-2 block">Gateways exclus</Label>
+            <div className="flex flex-wrap gap-2">
+              {ALL_GATEWAYS.map((g) => {
+                const active = gpExcluded.includes(g);
+                return (
+                  <button
+                    type="button"
+                    key={g}
+                    onClick={() =>
+                      setGpExcluded((prev) => (active ? prev.filter((x) => x !== g) : [...prev, g]))
+                    }
+                    className={`px-3 py-1.5 rounded-full text-xs border transition ${
+                      active
+                        ? "bg-destructive text-destructive-foreground border-destructive"
+                        : "bg-muted text-muted-foreground border-border hover:bg-muted/70"
+                    }`}
+                  >
+                    {g}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <Label className="mb-2 block">Actif jusqu'au</Label>
+            <Input
+              type="date"
+              value={gpUntil}
+              onChange={(e) => setGpUntil(e.target.value)}
+              className="w-full sm:w-60"
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Après cette date, les restrictions sont automatiquement levées.
+            </p>
+          </div>
+
+          <Button
+            onClick={saveGeniusRestrict}
+            disabled={savingGp}
+            className="bg-gold-gradient text-primary-foreground"
+          >
+            <Save className="w-4 h-4 mr-2" /> {savingGp ? "Enregistrement…" : "Enregistrer"}
+          </Button>
+        </div>
+      </div>
+
+
 
       <div>
         <h2 className="text-xl font-display mb-4 flex items-center gap-2">
