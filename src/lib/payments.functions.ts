@@ -78,7 +78,13 @@ export const initiatePayment = createServerFn({ method: "POST" })
     const { data: settingsRows } = await supabaseAdmin
       .from("app_settings")
       .select("key, value")
-      .in("key", ["test_pay_mode", "payment_provider"]);
+      .in("key", [
+        "test_pay_mode",
+        "payment_provider",
+        "geniuspay_allowed_methods",
+        "geniuspay_excluded_gateways",
+        "geniuspay_restrict_until",
+      ]);
     const settingsMap = Object.fromEntries((settingsRows ?? []).map((r) => [r.key, r.value]));
     const testPayMode = settingsMap.test_pay_mode === "true";
     const selectedProvider: "pawapay" | "geniuspay" =
