@@ -1076,6 +1076,24 @@ function SettingsAdmin() {
     toast.success(`Fournisseur de paiement: ${next === "pawapay" ? "PawaPay" : "GeniusPay"}`);
   };
 
+  const saveGeniusRestrict = async () => {
+    setSavingGp(true);
+    const untilIso = gpUntil ? new Date(`${gpUntil}T23:59:59Z`).toISOString() : "";
+    const payload = [
+      { key: "geniuspay_allowed_methods", value: gpMethods.join(","), updated_at: new Date().toISOString() },
+      { key: "geniuspay_excluded_gateways", value: gpExcluded.join(","), updated_at: new Date().toISOString() },
+      { key: "geniuspay_restrict_until", value: untilIso, updated_at: new Date().toISOString() },
+    ];
+    const { error } = await supabase.from("app_settings").upsert(payload, { onConflict: "key" });
+    setSavingGp(false);
+    if (error) return toast.error(error.message);
+    await logAdminAction("update_geniuspay_restrictions", "settings", null, {
+      methods: gpMethods, excluded: gpExcluded, until: untilIso,
+    });
+    toast.success("Restrictions GeniusPay enregistrées");
+  };
+
+
 
   const saveDescs = async () => {
     setSavingDescs(true);
