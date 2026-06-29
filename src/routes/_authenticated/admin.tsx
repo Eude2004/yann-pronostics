@@ -1047,7 +1047,7 @@ function SettingsAdmin() {
         }
       }
       setDescs(next);
-      const parseCsv = (s?: string) => (s ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+      const parseCsv = (s?: string | null) => (s ?? "").split(",").map((x) => x.trim()).filter(Boolean);
       if (map.geniuspay_allowed_methods !== undefined) setGpMethods(parseCsv(map.geniuspay_allowed_methods));
       if (map.geniuspay_excluded_gateways !== undefined) setGpExcluded(parseCsv(map.geniuspay_excluded_gateways));
       if (map.geniuspay_restrict_until) setGpUntil(map.geniuspay_restrict_until.slice(0, 10));
