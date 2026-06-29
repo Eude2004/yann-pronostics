@@ -1021,6 +1021,13 @@ function SettingsAdmin() {
   const [savingAnon, setSavingAnon] = useState(false);
   const [descs, setDescs] = useState<Record<string, string>>({});
   const [savingDescs, setSavingDescs] = useState(false);
+  // GeniusPay payment-method restrictions
+  const ALL_METHODS = ["mtn_money", "orange_money", "wave", "moov_money", "card"] as const;
+  const ALL_GATEWAYS = ["pawapay", "wave", "orange_money", "mtn_momo", "moov_money"] as const;
+  const [gpMethods, setGpMethods] = useState<string[]>(["mtn_money", "orange_money"]);
+  const [gpExcluded, setGpExcluded] = useState<string[]>(["pawapay"]);
+  const [gpUntil, setGpUntil] = useState<string>(""); // YYYY-MM-DD
+  const [savingGp, setSavingGp] = useState(false);
   const toggleTestPay = useServerFn(setTestPayModeFn);
 
   useEffect(() => {
