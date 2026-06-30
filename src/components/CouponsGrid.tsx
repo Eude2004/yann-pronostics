@@ -173,10 +173,10 @@ function ComingSoonCard({ type }: { type: CouponType }) {
   const title = COUPON_TYPE_LABEL[type];
   return (
     <div className="group relative rounded-2xl overflow-hidden glass-card opacity-80">
-      <div className="flex items-start justify-between px-3 pt-3">
-        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold glass-pill text-amber-300">
-          <Icon className="w-3 h-3" />
-          {title}
+      <div className="flex items-start justify-between gap-2 px-3 pt-3">
+        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold glass-pill text-amber-300 min-w-0 truncate">
+          <Icon className="w-3 h-3 shrink-0" />
+          <span className="truncate">{title}</span>
         </span>
         <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-extrabold bg-zinc-500/15 border border-zinc-400/50 text-zinc-200 tracking-wider whitespace-nowrap shrink-0">
           {t("coupon.coming_soon_short", { defaultValue: "BIENTÔT" }).toUpperCase()}
