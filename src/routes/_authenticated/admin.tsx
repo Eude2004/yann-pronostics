@@ -1064,6 +1064,11 @@ function SettingsAdmin() {
         const d = new Date(); d.setMonth(d.getMonth() + 2);
         setGpUntil(d.toISOString().slice(0, 10));
       }
+      const nextPrices: Record<string, string> = {};
+      for (const p of PRICE_TYPES) {
+        nextPrices[p.key] = (map[`price_${p.key}`] ?? String(p.def));
+      }
+      setPrices(nextPrices);
       setLoading(false);
     })();
   }, []);
