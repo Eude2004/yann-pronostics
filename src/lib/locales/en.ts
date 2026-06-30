@@ -80,6 +80,7 @@ export const en = {
     expired: "EXPIRED",
     expired_blocked: "This coupon has ended and is no longer available for purchase.",
     coming_soon: "Coming soon",
+    coming_soon_short: "SOON",
     in_progress: "LIVE",
     in_progress_aria: "Coupon in progress, purchase locked",
     in_progress_banner: "Coupon in progress, purchase no longer available",
