@@ -1223,6 +1223,45 @@ function SettingsAdmin() {
 
       <div>
         <h2 className="text-xl font-display mb-4 flex items-center gap-2">
+          <DollarSign className="w-5 h-5 text-primary" /> Prix par type de coupon
+        </h2>
+        <div className="rounded-xl border border-border/60 bg-card p-6 space-y-4">
+          <p className="text-xs text-muted-foreground">
+            Modifie le prix par défaut (FCFA) appliqué à chaque type de coupon.
+            Les coupons existants sont mis à jour automatiquement.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {PRICE_TYPES.map((p) => (
+              <div key={p.key}>
+                <Label>{p.label}</Label>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    min={1}
+                    step={100}
+                    inputMode="numeric"
+                    value={prices[p.key] ?? ""}
+                    onChange={(e) => setPrices((s) => ({ ...s, [p.key]: e.target.value }))}
+                    className="pr-16"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                    FCFA
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <Button onClick={savePrices} disabled={savingPrices} className="bg-gold-gradient text-primary-foreground">
+            <Save className="w-4 h-4 mr-2" />
+            {savingPrices ? "Enregistrement…" : "Enregistrer les prix"}
+          </Button>
+        </div>
+      </div>
+
+
+
+      <div>
+        <h2 className="text-xl font-display mb-4 flex items-center gap-2">
           <FlaskConical className="w-5 h-5 text-primary" /> Mode Test Pay
         </h2>
         <div className="rounded-xl border border-primary/40 bg-card p-6 space-y-3">
