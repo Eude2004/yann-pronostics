@@ -1028,6 +1028,15 @@ function SettingsAdmin() {
   const [gpExcluded, setGpExcluded] = useState<string[]>(["pawapay"]);
   const [gpUntil, setGpUntil] = useState<string>(""); // YYYY-MM-DD
   const [savingGp, setSavingGp] = useState(false);
+  // Prices per coupon type (stored in app_settings: price_<type>)
+  const PRICE_TYPES = [
+    { key: "cote_10", label: "Cote de 10+", def: 4000 },
+    { key: "cote_30", label: "Cote de 30+", def: 5000 },
+    { key: "cote_50", label: "Cote de 50+", def: 7000 },
+    { key: "pair_corner", label: "Coupon Total Pair Corner", def: 6000 },
+  ] as const;
+  const [prices, setPrices] = useState<Record<string, string>>({});
+  const [savingPrices, setSavingPrices] = useState(false);
   const toggleTestPay = useServerFn(setTestPayModeFn);
 
   useEffect(() => {
@@ -1055,6 +1064,11 @@ function SettingsAdmin() {
         const d = new Date(); d.setMonth(d.getMonth() + 2);
         setGpUntil(d.toISOString().slice(0, 10));
       }
+      const nextPrices: Record<string, string> = {};
+      for (const p of PRICE_TYPES) {
+        nextPrices[p.key] = (map[`price_${p.key}`] ?? String(p.def));
+      }
+      setPrices(nextPrices);
       setLoading(false);
     })();
   }, []);
@@ -1105,6 +1119,37 @@ function SettingsAdmin() {
     if (error) return toast.error(error.message);
     await logAdminAction("update_coupon_default_descriptions", "settings", null, { count: payload.length });
     toast.success("Descriptions par défaut enregistrées");
+  };
+
+  const savePrices = async () => {
+    // Validate
+    const parsed: Record<string, number> = {};
+    for (const p of PRICE_TYPES) {
+      const raw = (prices[p.key] ?? "").trim();
+      const n = Number(raw);
+      if (!Number.isFinite(n) || !Number.isInteger(n) || n <= 0) {
+        return toast.error(`Prix invalide pour ${p.label}`);
+      }
+      parsed[p.key] = n;
+    }
+    setSavingPrices(true);
+    const payload = PRICE_TYPES.map((p) => ({
+      key: `price_${p.key}`,
+      value: String(parsed[p.key]),
+      updated_at: new Date().toISOString(),
+    }));
+    const { error } = await supabase.from("app_settings").upsert(payload, { onConflict: "key" });
+    if (error) {
+      setSavingPrices(false);
+      return toast.error(error.message);
+    }
+    // Propagate to existing coupons of each type
+    for (const p of PRICE_TYPES) {
+      await supabase.from("coupons").update({ price_xaf: parsed[p.key] }).eq("coupon_type", p.key);
+    }
+    setSavingPrices(false);
+    await logAdminAction("update_coupon_prices", "settings", null, parsed);
+    toast.success("Prix des coupons enregistrés");
   };
 
 
@@ -1175,6 +1220,45 @@ function SettingsAdmin() {
           </Button>
         </div>
       </div>
+
+      <div>
+        <h2 className="text-xl font-display mb-4 flex items-center gap-2">
+          <DollarSign className="w-5 h-5 text-primary" /> Prix par type de coupon
+        </h2>
+        <div className="rounded-xl border border-border/60 bg-card p-6 space-y-4">
+          <p className="text-xs text-muted-foreground">
+            Modifie le prix par défaut (FCFA) appliqué à chaque type de coupon.
+            Les coupons existants sont mis à jour automatiquement.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {PRICE_TYPES.map((p) => (
+              <div key={p.key}>
+                <Label>{p.label}</Label>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    min={1}
+                    step={100}
+                    inputMode="numeric"
+                    value={prices[p.key] ?? ""}
+                    onChange={(e) => setPrices((s) => ({ ...s, [p.key]: e.target.value }))}
+                    className="pr-16"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                    FCFA
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <Button onClick={savePrices} disabled={savingPrices} className="bg-gold-gradient text-primary-foreground">
+            <Save className="w-4 h-4 mr-2" />
+            {savingPrices ? "Enregistrement…" : "Enregistrer les prix"}
+          </Button>
+        </div>
+      </div>
+
+
 
       <div>
         <h2 className="text-xl font-display mb-4 flex items-center gap-2">
