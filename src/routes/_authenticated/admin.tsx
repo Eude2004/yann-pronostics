@@ -1121,6 +1121,37 @@ function SettingsAdmin() {
     toast.success("Descriptions par défaut enregistrées");
   };
 
+  const savePrices = async () => {
+    // Validate
+    const parsed: Record<string, number> = {};
+    for (const p of PRICE_TYPES) {
+      const raw = (prices[p.key] ?? "").trim();
+      const n = Number(raw);
+      if (!Number.isFinite(n) || !Number.isInteger(n) || n <= 0) {
+        return toast.error(`Prix invalide pour ${p.label}`);
+      }
+      parsed[p.key] = n;
+    }
+    setSavingPrices(true);
+    const payload = PRICE_TYPES.map((p) => ({
+      key: `price_${p.key}`,
+      value: String(parsed[p.key]),
+      updated_at: new Date().toISOString(),
+    }));
+    const { error } = await supabase.from("app_settings").upsert(payload, { onConflict: "key" });
+    if (error) {
+      setSavingPrices(false);
+      return toast.error(error.message);
+    }
+    // Propagate to existing coupons of each type
+    for (const p of PRICE_TYPES) {
+      await supabase.from("coupons").update({ price_xaf: parsed[p.key] }).eq("coupon_type", p.key);
+    }
+    setSavingPrices(false);
+    await logAdminAction("update_coupon_prices", "settings", null, parsed);
+    toast.success("Prix des coupons enregistrés");
+  };
+
 
   const save = async () => {
     setSaving(true);
