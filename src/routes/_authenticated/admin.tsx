@@ -1028,6 +1028,15 @@ function SettingsAdmin() {
   const [gpExcluded, setGpExcluded] = useState<string[]>(["pawapay"]);
   const [gpUntil, setGpUntil] = useState<string>(""); // YYYY-MM-DD
   const [savingGp, setSavingGp] = useState(false);
+  // Prices per coupon type (stored in app_settings: price_<type>)
+  const PRICE_TYPES = [
+    { key: "cote_10", label: "Cote de 10+", def: 4000 },
+    { key: "cote_30", label: "Cote de 30+", def: 5000 },
+    { key: "cote_50", label: "Cote de 50+", def: 7000 },
+    { key: "pair_corner", label: "Coupon Total Pair Corner", def: 6000 },
+  ] as const;
+  const [prices, setPrices] = useState<Record<string, string>>({});
+  const [savingPrices, setSavingPrices] = useState(false);
   const toggleTestPay = useServerFn(setTestPayModeFn);
 
   useEffect(() => {
