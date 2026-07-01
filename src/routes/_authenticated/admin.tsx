@@ -1249,8 +1249,10 @@ function SettingsAdmin() {
                   <Input
                     type="number"
                     min={1}
+                    max={10000000}
                     step={100}
                     inputMode="numeric"
+                    required
                     value={prices[p.key] ?? ""}
                     onChange={(e) => setPrices((s) => ({ ...s, [p.key]: e.target.value }))}
                     className="pr-16"
