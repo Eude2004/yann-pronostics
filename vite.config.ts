@@ -6,10 +6,19 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
+// NOTE: Inside Lovable's hosted build, the nitro preset/output are forced to Cloudflare
+// (this override is ignored). When running `npm run build` LOCALLY (e.g. to deploy to
+// Hostinger), the "static" preset produces a plain `dist/` folder containing an
+// `index.html` + hashed assets, suitable for Apache/Nginx shared hosting.
 export default defineConfig({
   tanstackStart: {
-    // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-    // nitro/vite builds from this
     server: { entry: "server" },
+  },
+  nitro: {
+    preset: "static",
+    output: {
+      dir: "dist",
+      publicDir: "dist",
+    },
   },
 });
