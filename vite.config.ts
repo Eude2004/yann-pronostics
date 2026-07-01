@@ -18,8 +18,17 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
+    // Mode SPA "shell-only" : TanStack Start génère un `index.html` unique
+    // (aucun prerender de route côté serveur) et laisse le routeur client
+    // hydrater toutes les pages. Compatible avec Hostinger via `.htaccess`.
     spa: {
       enabled: true,
+    },
+    // Empêche Nitro de crawler / prerender les routes protégées ou API pendant
+    // le build statique — sinon on obtient "[404] Not Found" sur `/` et un
+    // build qui plante alors que `ssr: false` est actif partout côté client.
+    prerender: {
+      enabled: false,
     },
   },
   nitro: {
@@ -27,12 +36,6 @@ export default defineConfig({
     output: {
       dir: "dist",
       publicDir: "dist",
-    },
-    prerender: {
-      crawlLinks: false,
-      failOnError: false,
-      routes: ["/"],
-      ignore: ["/api", "/_authenticated"],
     },
   },
 });
