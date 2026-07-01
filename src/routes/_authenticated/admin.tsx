@@ -1122,13 +1122,24 @@ function SettingsAdmin() {
   };
 
   const savePrices = async () => {
-    // Validate
+    // Validation stricte : entier > 0, ≤ 10 000 000 FCFA, pas de vide / négatif / NaN.
+    const MIN_PRICE = 1;
+    const MAX_PRICE = 10_000_000;
     const parsed: Record<string, number> = {};
     for (const p of PRICE_TYPES) {
       const raw = (prices[p.key] ?? "").trim();
+      if (raw === "") {
+        return toast.error(`Prix requis pour ${p.label}`);
+      }
+      if (!/^\d+$/.test(raw)) {
+        return toast.error(`Prix invalide pour ${p.label} : entier positif uniquement (pas de décimales, signes ou espaces)`);
+      }
       const n = Number(raw);
-      if (!Number.isFinite(n) || !Number.isInteger(n) || n <= 0) {
-        return toast.error(`Prix invalide pour ${p.label}`);
+      if (!Number.isFinite(n) || !Number.isInteger(n) || n < MIN_PRICE) {
+        return toast.error(`Prix trop faible pour ${p.label} (min ${MIN_PRICE} FCFA)`);
+      }
+      if (n > MAX_PRICE) {
+        return toast.error(`Prix trop élevé pour ${p.label} (max ${MAX_PRICE.toLocaleString("fr-FR")} FCFA)`);
       }
       parsed[p.key] = n;
     }
