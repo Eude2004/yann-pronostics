@@ -81,8 +81,8 @@ export const initiatePayment = createServerFn({ method: "POST" })
       ]);
     const settingsMap = Object.fromEntries((settingsRows ?? []).map((r) => [r.key, r.value]));
     const testPayMode = settingsMap.test_pay_mode === "true";
-    const selectedProvider: "pawapay" | "geniuspay" =
-      settingsMap.payment_provider === "geniuspay" ? "geniuspay" : "pawapay";
+    const selectedProvider: "kpay" | "geniuspay" =
+      settingsMap.payment_provider === "geniuspay" ? "geniuspay" : "kpay";
 
     const { data: roles } = await supabase
       .from("user_roles")
