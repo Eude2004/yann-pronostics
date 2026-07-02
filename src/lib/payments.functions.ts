@@ -221,51 +221,53 @@ export const initiatePayment = createServerFn({ method: "POST" })
     // ============================================================
     // PROVIDER SELECTION — choisi par l'admin (app_settings.payment_provider)
     // ============================================================
-    const pawapayToken = process.env.PAWAPAY_API_TOKEN_SANDBOX;
-    const usePawapay = selectedProvider === "pawapay" && !!pawapayToken;
+    const kpayKey = process.env.KPAY_API_KEY;
+    const kpaySecret = process.env.KPAY_SECRET_KEY;
+    const useKpay = selectedProvider === "kpay" && !!kpayKey && !!kpaySecret;
 
-    if (usePawapay) {
-      // ----- PawaPay v2 Payment Page -----
-      const depositId = crypto.randomUUID();
-      const ppPayload = {
-        depositId,
+    if (useKpay) {
+      // ----- KPay hosted GATEWAY mode -----
+      // No phoneNumber / provider → hosted page where the customer chooses.
+      // `externalId` doubles as idempotency key on KPay's side.
+      const externalId = `YP-${tx.id.replace(/-/g, "").slice(0, 20)}`;
+      const kpayPayload: Record<string, unknown> = {
+        amount: amountXaf,
+        externalId,
         returnUrl: successUrl,
-        amountDetails: { amount: String(amountXaf), currency: "XOF" },
-        country: "CIV",
-        customerMessage: (description.slice(0, 22).replace(/[^a-zA-Z0-9 ]/g, "") || "Coupon"),
-        metadata: [
-          { fieldName: "txId", fieldValue: tx.id },
-          { fieldName: "couponId", fieldValue: data.couponId },
-        ],
+        cancelUrl: errorUrl,
+        description: description.slice(0, 120),
+        metadata: { txId: tx.id, couponId: data.couponId },
       };
-
-
+      if (data.customer?.email) kpayPayload.customerEmail = data.customer.email;
 
       let paymentUrl: string | null = null;
+      let kpayReference: string | null = null;
       let providerError: string | null = null;
       try {
-        const res = await fetch(`${PAWAPAY_SANDBOX_BASE}/v2/paymentpage`, {
+        const res = await fetch(`${KPAY_BASE}/payments/init`, {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${pawapayToken}`,
+            "X-API-Key": kpayKey!,
+            "X-Secret-Key": kpaySecret!,
             "Content-Type": "application/json",
             Accept: "application/json",
           },
-          body: JSON.stringify(ppPayload),
+          body: JSON.stringify(kpayPayload),
         });
         const json = (await res.json()) as {
+          id?: string;
+          reference?: string;
+          gatewayUrl?: string;
           status?: string;
-          redirectUrl?: string;
-          failureReason?: { failureCode?: string; failureMessage?: string };
-          errorMessage?: string;
+          message?: string;
+          error?: string;
+          statusCode?: number;
         };
-        if (res.ok && json.redirectUrl) {
-          paymentUrl = json.redirectUrl;
+        if (res.ok && json.gatewayUrl && json.reference) {
+          paymentUrl = json.gatewayUrl;
+          kpayReference = json.reference;
         } else {
-          providerError =
-            json.failureReason?.failureMessage ??
-            json.errorMessage ??
-            `PawaPay HTTP ${res.status}`;
+          providerError = json.message ?? json.error ?? `KPay HTTP ${res.status}`;
         }
       } catch (e) {
         providerError = e instanceof Error ? e.message : "Network error";
@@ -274,9 +276,10 @@ export const initiatePayment = createServerFn({ method: "POST" })
       await supabaseAdmin
         .from("transactions")
         .update({
-          reference: depositId,
-          payment_method: "pawapay",
-          notes: providerError ?? "PawaPay sandbox init OK",
+          reference: kpayReference ?? externalId,
+          payment_method: "kpay",
+          gateway: "KPay",
+          notes: providerError ?? "KPay init OK",
           status: providerError ? "failed" : "pending",
         })
         .eq("id", tx.id);
@@ -289,7 +292,7 @@ export const initiatePayment = createServerFn({ method: "POST" })
         mode: "live" as const,
         transactionId: tx.id,
         paymentUrl,
-        reference: depositId,
+        reference: kpayReference!,
       };
     }
 
