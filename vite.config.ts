@@ -6,14 +6,18 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
-// Mode SPA "shell-only" : TanStack Start génère un `index.html` unique
-// (aucun prerender de route côté serveur) et laisse le routeur client
-// hydrater toutes les pages. Compatible avec l'hébergement Lovable
-// (Cloudflare) et exportable statiquement via `.htaccess` sur Hostinger.
+// IMPORTANT: do not enable TanStack's `spa.enabled` here.
+// In the current TanStack/Nitro stack, SPA mode forcibly re-enables prerendering
+// and crawls `/` even when `prerender.enabled` is false. That prerender step runs
+// the Cloudflare/edge React stream in Node during production builds and crashes.
 export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
-    spa: { enabled: true },
-    prerender: { enabled: false, crawlLinks: false, routes: [] },
+    prerender: {
+      enabled: false,
+      crawlLinks: false,
+      autoStaticPathsDiscovery: false,
+      routes: [],
+    },
   },
 });
