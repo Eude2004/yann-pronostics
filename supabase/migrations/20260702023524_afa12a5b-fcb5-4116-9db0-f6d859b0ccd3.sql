@@ -1,0 +1,1 @@
+REVOKE SELECT (video_url, private_content) ON public.coupons FROM anon;
