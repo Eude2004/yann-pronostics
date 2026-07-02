@@ -30,13 +30,7 @@ function safeOrigin(candidate: string | undefined): string {
 }
 
 const GENIUSPAY_BASE = "https://geniuspay.ci/api/v1/merchant";
-const PAWAPAY_SANDBOX_BASE = "https://api.sandbox.pawapay.io";
-
-function pawapayStatementDesc(title: string): string {
-  // PawaPay statementDescription: 4-22 chars, alphanumeric + spaces only.
-  const cleaned = title.replace(/[^a-zA-Z0-9 ]/g, "").trim().slice(0, 22);
-  return cleaned.length >= 4 ? cleaned : "Yann Coupon";
-}
+const KPAY_BASE = "https://admin.kpay.site/api/v1";
 
 /**
  * GeniusPay payment orchestration — coupons uniquement.
