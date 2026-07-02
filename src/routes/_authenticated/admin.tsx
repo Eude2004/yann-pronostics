@@ -1014,7 +1014,7 @@ function SettingsAdmin() {
   const [siteName, setSiteName] = useState("");
   const [testPay, setTestPay] = useState(false);
   const [anonymous, setAnonymous] = useState(false);
-  const [provider, setProvider] = useState<"pawapay" | "geniuspay">("pawapay");
+  const [provider, setProvider] = useState<"kpay" | "geniuspay">("kpay");
   const [savingProvider, setSavingProvider] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1047,7 +1047,7 @@ function SettingsAdmin() {
       setSiteName(map.site_name ?? "YANN PRONOSTICS");
       setTestPay(map.test_pay_mode === "true");
       setAnonymous(map.anonymous_mode === "true");
-      setProvider(map.payment_provider === "geniuspay" ? "geniuspay" : "pawapay");
+      setProvider(map.payment_provider === "geniuspay" ? "geniuspay" : "kpay");
       const next: Record<string, string> = {};
       for (const lang of COUPON_DESC_LANGS) {
         for (const type of COUPON_DESC_TYPES) {
@@ -1073,7 +1073,7 @@ function SettingsAdmin() {
     })();
   }, []);
 
-  const onChangeProvider = async (next: "pawapay" | "geniuspay") => {
+  const onChangeProvider = async (next: "kpay" | "geniuspay") => {
     const prev = provider;
     setProvider(next);
     setSavingProvider(true);
@@ -1087,7 +1087,7 @@ function SettingsAdmin() {
       return toast.error(error.message);
     }
     await logAdminAction("update_payment_provider", "settings", null, { provider: next });
-    toast.success(`Fournisseur de paiement: ${next === "pawapay" ? "PawaPay" : "GeniusPay"}`);
+    toast.success(`Fournisseur de paiement: ${next === "kpay" ? "KPay" : "GeniusPay"}`);
   };
 
   const saveGeniusRestrict = async () => {
@@ -1307,19 +1307,19 @@ function SettingsAdmin() {
           </p>
           <Select
             value={provider}
-            onValueChange={(v) => onChangeProvider(v as "pawapay" | "geniuspay")}
+            onValueChange={(v) => onChangeProvider(v as "kpay" | "geniuspay")}
             disabled={savingProvider}
           >
             <SelectTrigger className="w-full sm:w-72">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="pawapay">PawaPay (sandbox)</SelectItem>
+              <SelectItem value="kpay">KPay (kpay.site)</SelectItem>
               <SelectItem value="geniuspay">GeniusPay</SelectItem>
             </SelectContent>
           </Select>
           <Badge className="bg-primary/15 text-primary border border-primary/30">
-            Actif : {provider === "pawapay" ? "PawaPay" : "GeniusPay"}
+            Actif : {provider === "kpay" ? "KPay" : "GeniusPay"}
           </Badge>
         </div>
       </div>
