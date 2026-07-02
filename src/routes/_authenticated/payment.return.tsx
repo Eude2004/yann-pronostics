@@ -57,7 +57,7 @@ function PaymentReturn() {
   const couponId = query.data?.coupon_id ?? null;
   const paymentMethod = (query.data as { payment_method?: string } | undefined)?.payment_method ?? null;
   const providerLabel =
-    paymentMethod === "pawapay" ? "PawaPay"
+    paymentMethod === "kpay" ? "KPay"
     : paymentMethod === "geniuspay" ? "GeniusPay"
     : paymentMethod ? paymentMethod : "—";
   const createdAt = query.data?.created_at ? new Date(query.data.created_at).getTime() : null;
