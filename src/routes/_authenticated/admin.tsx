@@ -1073,7 +1073,7 @@ function SettingsAdmin() {
     })();
   }, []);
 
-  const onChangeProvider = async (next: "pawapay" | "geniuspay") => {
+  const onChangeProvider = async (next: "kpay" | "geniuspay") => {
     const prev = provider;
     setProvider(next);
     setSavingProvider(true);
@@ -1087,7 +1087,7 @@ function SettingsAdmin() {
       return toast.error(error.message);
     }
     await logAdminAction("update_payment_provider", "settings", null, { provider: next });
-    toast.success(`Fournisseur de paiement: ${next === "pawapay" ? "PawaPay" : "GeniusPay"}`);
+    toast.success(`Fournisseur de paiement: ${next === "kpay" ? "KPay" : "GeniusPay"}`);
   };
 
   const saveGeniusRestrict = async () => {
