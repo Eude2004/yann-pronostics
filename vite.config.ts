@@ -13,11 +13,12 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
-    // NB: on n'active PAS `spa.enabled` ni `prerender` — sur l'infra Lovable
-    // (Cloudflare Workers) le layout de sortie n'est pas compatible avec la
-    // preview node du prerender-crawler, ce qui provoque
-    // « Cannot find module dist/server/server.js » lors du build.
-    // Le site reste 100 % SPA côté client (ssr:false sur __root et
-    // _authenticated) donc aucun contenu n'est réellement rendu côté serveur.
+  },
+  nitro: {
+    prerender: {
+      crawlLinks: false,
+      routes: [],
+      ignore: ["/"],
+    },
   },
 });
