@@ -1047,7 +1047,7 @@ function SettingsAdmin() {
       setSiteName(map.site_name ?? "YANN PRONOSTICS");
       setTestPay(map.test_pay_mode === "true");
       setAnonymous(map.anonymous_mode === "true");
-      setProvider(map.payment_provider === "geniuspay" ? "geniuspay" : "pawapay");
+      setProvider(map.payment_provider === "geniuspay" ? "geniuspay" : "kpay");
       const next: Record<string, string> = {};
       for (const lang of COUPON_DESC_LANGS) {
         for (const type of COUPON_DESC_TYPES) {
