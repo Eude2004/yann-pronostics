@@ -6,36 +6,18 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
-// NOTE: Inside Lovable's hosted build, the nitro preset/output are forced to Cloudflare
-// (this override is ignored). When running `npm run build` LOCALLY (e.g. to deploy to
-// Hostinger), the "static" preset produces a plain `dist/` folder containing an
-// `index.html` + hashed assets, suitable for Apache/Nginx shared hosting.
-//
-// SPA-only export : le site est déjà `ssr: false` (racine + `_authenticated`), donc on
-// désactive le crawler Nitro et on force un unique fallback `/` -> `index.html`.
-// Sans ces options, Rollup se plaint que l'input HTML n'est pas valide en SSR et Nitro
-// renvoie 404 en tentant de préredre des routes protégées.
+// Mode SPA "shell-only" : TanStack Start génère un `index.html` unique
+// (aucun prerender de route côté serveur) et laisse le routeur client
+// hydrater toutes les pages. Compatible avec l'hébergement Lovable
+// (Cloudflare) et exportable statiquement via `.htaccess` sur Hostinger.
 export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
-    // Mode SPA "shell-only" : TanStack Start génère un `index.html` unique
-    // (aucun prerender de route côté serveur) et laisse le routeur client
-    // hydrater toutes les pages. Compatible avec Hostinger via `.htaccess`.
-    spa: {
-      enabled: true,
-    },
-    // Empêche Nitro de crawler / prerender les routes protégées ou API pendant
-    // le build statique — sinon on obtient "[404] Not Found" sur `/` et un
-    // build qui plante alors que `ssr: false` est actif partout côté client.
-    prerender: {
-      enabled: false,
-    },
-  },
-  nitro: {
-    preset: "static",
-    output: {
-      dir: "dist",
-      publicDir: "dist",
-    },
+    // NB: on n'active PAS `spa.enabled` ni `prerender` — sur l'infra Lovable
+    // (Cloudflare Workers) le layout de sortie n'est pas compatible avec la
+    // preview node du prerender-crawler, ce qui provoque
+    // « Cannot find module dist/server/server.js » lors du build.
+    // Le site reste 100 % SPA côté client (ssr:false sur __root et
+    // _authenticated) donc aucun contenu n'est réellement rendu côté serveur.
   },
 });
