@@ -1307,19 +1307,19 @@ function SettingsAdmin() {
           </p>
           <Select
             value={provider}
-            onValueChange={(v) => onChangeProvider(v as "pawapay" | "geniuspay")}
+            onValueChange={(v) => onChangeProvider(v as "kpay" | "geniuspay")}
             disabled={savingProvider}
           >
             <SelectTrigger className="w-full sm:w-72">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="pawapay">PawaPay (sandbox)</SelectItem>
+              <SelectItem value="kpay">KPay (kpay.site)</SelectItem>
               <SelectItem value="geniuspay">GeniusPay</SelectItem>
             </SelectContent>
           </Select>
           <Badge className="bg-primary/15 text-primary border border-primary/30">
-            Actif : {provider === "pawapay" ? "PawaPay" : "GeniusPay"}
+            Actif : {provider === "kpay" ? "KPay" : "GeniusPay"}
           </Badge>
         </div>
       </div>
