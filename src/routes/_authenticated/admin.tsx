@@ -1014,7 +1014,7 @@ function SettingsAdmin() {
   const [siteName, setSiteName] = useState("");
   const [testPay, setTestPay] = useState(false);
   const [anonymous, setAnonymous] = useState(false);
-  const [provider, setProvider] = useState<"pawapay" | "geniuspay">("pawapay");
+  const [provider, setProvider] = useState<"kpay" | "geniuspay">("kpay");
   const [savingProvider, setSavingProvider] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
