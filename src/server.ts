@@ -1,22 +1,14 @@
 import "./lib/error-capture";
 
+import { createStartHandler, defaultRenderHandler } from "@tanstack/react-start/server";
+
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 
-type ServerEntry = {
-  fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
-};
-
-let serverEntryPromise: Promise<ServerEntry> | undefined;
-
-async function getServerEntry(): Promise<ServerEntry> {
-  if (!serverEntryPromise) {
-    serverEntryPromise = import("@tanstack/react-start/server-entry").then(
-      (m) => (m.default ?? m) as ServerEntry,
-    );
-  }
-  return serverEntryPromise;
-}
+// Use the non-streaming renderer for production/prerender stability.
+// The previous default stream handler can crash Node's prerender step with
+// `ReadableByteStreamController` when the Cloudflare/Nitro bundle is crawled.
+const startFetch = createStartHandler(defaultRenderHandler);
 
 // h3 swallows in-handler throws into a normal 500 Response with body
 // {"unhandled":true,"message":"HTTPError"} — try/catch alone never fires for those.
@@ -40,8 +32,9 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
-      const handler = await getServerEntry();
-      const response = await handler.fetch(request, env, ctx);
+      void env;
+      void ctx;
+      const response = await startFetch(request);
       return await normalizeCatastrophicSsrResponse(response);
     } catch (error) {
       console.error(error);

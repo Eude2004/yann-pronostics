@@ -19,6 +19,10 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
 });
 
 export const startInstance = createStart(() => ({
+  // Client-first SPA behavior without TanStack's `spa.enabled` prerender shell.
+  // This prevents the production build from crawling `/` during Nitro prerender,
+  // while keeping all pages rendered/navigated by the browser.
+  defaultSsr: false,
   functionMiddleware: [attachSupabaseAuth],
   requestMiddleware: [errorMiddleware],
 }));
