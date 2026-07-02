@@ -462,27 +462,30 @@ export const recheckGeniusPayStatus = createServerFn({ method: "POST" })
         .eq("status", "pending");
     };
 
-    // PawaPay branch
-    if (tx.payment_method === "pawapay") {
-      const ppToken = process.env.PAWAPAY_API_TOKEN_SANDBOX;
-      if (!ppToken) return { status: tx.status, changed: false };
+    // KPay branch
+    if (tx.payment_method === "kpay") {
+      const kKey = process.env.KPAY_API_KEY;
+      const kSec = process.env.KPAY_SECRET_KEY;
+      if (!kKey || !kSec) return { status: tx.status, changed: false };
       try {
         const res = await fetch(
-          `${PAWAPAY_SANDBOX_BASE}/v2/deposits/${encodeURIComponent(tx.reference)}`,
-          { headers: { Authorization: `Bearer ${ppToken}`, Accept: "application/json" } },
+          `${KPAY_BASE}/payments/${encodeURIComponent(tx.reference)}`,
+          {
+            headers: {
+              "X-API-Key": kKey,
+              "X-Secret-Key": kSec,
+              Accept: "application/json",
+            },
+          },
         );
-        const json = (await res.json()) as {
-          status?: string;
-          data?: { status?: string };
-        };
-        // v2 returns either { status:"FOUND", data:{ status:"COMPLETED" } } or flat.
-        const ppStatus = (json.data?.status ?? json.status ?? "").toUpperCase();
-        if (ppStatus === "COMPLETED") {
-          await markCompleted("PawaPay");
+        const json = (await res.json()) as { status?: string };
+        const s = (json.status ?? "").toUpperCase();
+        if (s === "COMPLETED") {
+          await markCompleted("KPay");
           return { status: "completed" as const, changed: true };
         }
-        if (ppStatus === "FAILED" || ppStatus === "REJECTED" || ppStatus === "EXPIRED") {
-          await markFailed("PawaPay", ppStatus);
+        if (s === "FAILED" || s === "CANCELLED" || s === "EXPIRED") {
+          await markFailed("KPay", s);
           return { status: "failed" as const, changed: true };
         }
         return { status: "pending" as const, changed: false };
