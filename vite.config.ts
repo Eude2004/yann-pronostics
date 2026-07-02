@@ -13,12 +13,7 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
-  },
-  nitro: {
-    prerender: {
-      crawlLinks: false,
-      routes: [],
-      ignore: ["/"],
-    },
+    spa: { enabled: true },
+    prerender: { enabled: false, crawlLinks: false, routes: [] },
   },
 });
